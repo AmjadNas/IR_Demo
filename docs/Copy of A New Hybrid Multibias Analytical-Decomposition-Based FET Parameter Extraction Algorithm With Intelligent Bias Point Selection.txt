@@ -1,0 +1,1055 @@
+IEEE TRANSACTIONS ON MICROWAVE THEORY AND TECHNIQUES, VOL. 51, NO. 3, MARCH 2003
+
+893
+
+A New Hybrid Multibias
+Analytical/Decomposition-Based FET
+Parameter Extraction Algorithm
+With Intelligent Bias Point Selection
+Cornell van Niekerk, Member, IEEE, Johan A. du Preez, Member, IEEE, and
+Dominique M. M.-P. Schreurs, Senior Member, IEEE
+
+Abstract—A new hybrid multibias analytical/decomposition-based parameter extraction procedure for GaAs FETs is
+described. The analytical calculations are integrated into an
+existing decomposition-based optimizer in a complementary
+approach, further increasing the robustness of the existing algorithm. It is illustrated that, in order to increase the reliability with
+which the full 15-element small-signal model can be extracted,
+it is necessary to exploit the underlaying characteristics of the
+system and the measured data used. This is achieved through the
+use of cold -parameter data, along with simple modifications to
+the extraction algorithm, and a new intelligent selection algorithm
+for the active bias points used in the multi-bias extraction. The
+selection algorithm employs a simple geometric abstraction for
+the -parameter data that allows it to select bias points that
+maximize the information available to the extraction procedure.
+The new selection algorithm shows for the first time what the
+influence of the bias points is on the performance of a multibias
+extraction procedure. Experimental results proving the robustness
+and accuracy of the described procedures are presented.
+Index Terms—Centroids, FET, modeling, multibias parameter
+extraction, -parameters, selection algorithms, small-signal.
+
+I. INTRODUCTION
+
+T
+
+HE ability to generate measurement-based GaAs FET
+device models that are accurate enough to allow first-time
+design success for a variety of systems has long been a major
+goal of device modeling orientated computer-aided design
+(CAD) algorithms. The extraction of the small-signal model
+shown in Fig. 1 plays a crucial role in the construction of a
+large number of the nonlinear models that have been created
+to satisfy this goal.
+The basic approach is to extract the small-signal model at
+a variety of different bias points and then use the variation
+of the intrinsic elements with bias to construct the nonlinear
+model. Such an experimental modeling approach requires that
+a large number of -parameter measurements be processed,
+creating the need for extraction algorithms that can robustly
+Manuscript received March 26, 2002.
+C. van Niekerk and J. A. du Preez are with the Department of Electrical and
+Electronic Engineering, University of Stellenbosch, Stellenbosch 7602, South
+Africa.
+D. M. M.-P. Schreurs is with the ESAT-TELEMIC, Department of Electronic
+Engineering, Catholic University of Leuven, Leuven, Belgium.
+Digital Object Identifier 10.1109/TMTT.2003.808631
+
+Fig. 1. 15-element small-signal model of a GaAs FET.
+
+perform large extractions without requiring user intervention or
+supervision. However, this requirement is made difficult by the
+ill-conditioned nature of the small-signal extraction problem.
+This causes both direct [1] and optimizer-based extraction
+procedures that process the data measured at different bias
+points separately to have difficulty in providing consistent
+solutions for all the elements in the small-signal model [2].
+Several optimizer driven multibias extraction procedures
+[3]–[5] that combine data measured at different bias points into
+one unified problem have been proposed. These methods all
+assume that the extrinsic elements of the model in Fig. 1 are
+bias-independent. By combining data from different sources in
+the extraction algorithm, more information becomes available
+for determining a more unique solution.
+In [3] a multibias parameter extraction algorithm that exploits
+a decomposition-based optimization algorithm was presented.
+The procedure uses multiple sets of -parameters measured at
+plane
+bias points in the active region of the device’s
+and has been successfully applied to the modeling of both
+GaAs high electron-mobility transistor (HEMT) and MESFET
+devices. Active bias points at which the device is behaving
+as a nonreciprocal two-port provide the maximum amount of
+measured information per bias point. The extraction algorithm
+is built around an adaptive decomposition-based optimizer. This
+optimization procedure is independent of initial values and well
+suited to the ill-conditioned nature of the extraction problem.
+The decomposition approach can also efficiently handle large
+dimensional problems and is not as susceptible to the curse of
+dimensionality, as in more traditional optimization approaches.
+
+0018-9480/03$17.00 © 2003 IEEE
+
+894
+
+IEEE TRANSACTIONS ON MICROWAVE THEORY AND TECHNIQUES, VOL. 51, NO. 3, MARCH 2003
+
+In [3] a 13-element small-signal model which neglects the
+and
+was extracted. The inclusion of the pareffect of
+asitic capacitors when dealing with on-wafer measured devices
+greatly increases the complexity of the problem. In practice, an
+extraction algorithm has to deal with several phenomena that
+make it difficult to achieve consistent results when extracting the
+full 15-element model shown in Fig. 1. One of the problems enand
+do not always
+countered is that the parasitic resistors
+adhere to the assumption of bias independence for the extrinsic
+elements. It has been found from experience that the value of
+can appear to have a large bias dependence and assume values
+and a variation with bias that does not correspond to the physical
+reality. This in turn can make the determination of the other less
+dominant elements difficult. Another difficulty is the small size
+, and
+of on-wafer measured
+of the parasitic inductors
+devices. The small series impedance resulting from the paraand
+from the
+sitic inductors and resistors that separate
+larger intrinsic capacitors makes it difficult to accurately extract
+the individual capacitor values. In many instances, device modelers are forced to absorb the effect of these two elements into
+the intrinsic capacitors by neglecting them from the small-signal
+can be especially difficult to determine, even for
+model.
+direct extraction algorithms that rely heavily on model simplican also be seen
+fications. The difficulty in determining
+, which exhibits
+in the variation of the extracted values of
+[6], [7]. Since most of the model
+strong interactions with
+elements have complex interactions with each other, it should
+be noted that these potential problems should not be viewed in
+isolation from each other. Also, not all devices will exhibit all
+of the above-mentioned modeling difficulties.
+This paper presents three extensions to the decompositionbased multibias extraction algorithm discussed in [3] which are
+able to overcome the discussed extraction difficulties.
+In Section II, a new hybrid optimizer/analytical procedure
+aimed at improving the robustness and speed of the original procedure is presented. Analytical equations for the calculation of
+the intrinsic elements are integrated into the existing extraction
+procedure. Unlike other published algorithms [4], [5], [8], the
+analytical calculations do not replace any section of the optimizer, but are used in a complementary approach.
+Section III will show how simple modifications to [3], along
+with the use of cold -parameter data, can be used to help over, and
+come the discussed difficulties in determining
+.
+The one aspect of multibias parameter extraction algorithms
+that has not been dealt with before is the influence of the bias
+points used in the extraction on the accuracy and the size of
+the network that can be extracted. In Section IV, an intelligent
+bias point selection algorithm is discussed that maximizes the
+information available to the extraction procedure. The aim of
+the selection algorithm is to find a relatively small number of
+bias points from which a consistent model representation can
+be extracted. Once accurate values for the extrinsic elements
+are known, they can be de-embedded from the complete set
+of multibias -parameters and a nonlinear model can be constructed as was done in [9]. The paper is concluded with a presentation and discussion of experimental results illustrating the
+
+accuracy and robustness of the enhanced multibias extraction
+algorithm.
+The goal of the work described here is to develop a modeling
+procedure that is capable of extracting all the elements of a
+small-signal model for the construction of bias-dependent smallsignal models and nonlinear models of commercial devices,
+as well as devices under development, using only measured
+data. This means that no process-related information, such as
+electromagnetic simulations of the device layout, is allowed as
+part of the modeling procedure. The reason for this restriction is
+due to the fact that process-related information is rarely available
+to users of commercial devices. The requirement of accurately
+extracting all of the small-signal model elements also places
+a limit on the complexity of the equivalent circuit models that
+are used in the modeling procedure. For the results presented
+in the subsequent sections, the widely published 15-element
+model topology in Fig. 1 is used.
+
+II. HYBRID ANALYTICAL/DECOMPOSITION-BASED OPTIMIZER
+Experience has shown that certain extraction problems are
+more difficult to solve reliably than others, regardless of the fact
+that the same type of device with similar dimensions is being
+modeled. Systematic measurement errors and the fact that the
+small-signal model is an imperfect approximation of the real
+device creates a variety of extraction difficulties. This ranges
+from extraction problems that differ in their sensitivity to the
+initial optimization values to model elements that consistently
+converge to nonphysical values. When dealing with measured
+data, the modeling algorithm therefore needs to be as robust as
+possible.
+Several methods that employ analytical equations as part of
+an optimization-based extraction approach have been published
+[4], [5], [8]. In these formulations, the extrinsic elements are
+optimized, while the intrinsic elements are calculated as a function of the extrinsic elements using analytical equations. The
+primary advantage of this approach is that it limits the dimensions of the optimization problem to be solved. The formulation
+in [4] is of special relevance since the procedure is expanded to
+multibias problems and the analytical equations used are more
+robust than the more traditional equations found in [10].
+The danger of using analytical equations to calculate the intrinsic elements is that the equations may fail in certain instances
+due to the measured data used and the ill-conditioned nature of
+the problem. The new hybrid procedure proposed here therefore
+always uses both optimization and analytical calculations to determine the intrinsic parameters. The two possible solutions for
+the intrinsic elements are then compared on an element-by-element basis and in each instance the model element providing
+the best solution is retained.
+The following steps describe the operation of the hybrid
+algorithm.
+1) Load the measured data and the optimization initial values
+and perform the required sensitivity calculations for the
+decomposition-based optimizer as outlined in [2], [3].
+2) Perform one optimization cycle of the subfunctions of the
+decomposition optimizer as described in [3].
+
+VAN NIEKERK et al.: FET PARAMETER EXTRACTION ALGORITHM WITH INTELLIGENT BIAS POINT SELECTION
+
+3) Perform the hybrid calculations.
+a) De-embed the current values of the extrinsic elements from the measured data.
+b) Calculate an alternative set of intrinsic elements for
+each bias point in the extraction using the analytical
+equations in [4].
+c) Compare each of the optimization-derived intrinsic elements with its corresponding calculated
+value and choose the element value that provides the
+lowest modeling error in the elements’ associated
+optimization subfunction. These subfunctions are the
+same error functions that are used by the decomposition-based optimizer when determining the model
+element values in step 2).
+4) Check if the search termination criteria are satisfied.
+5) If no, then go to 2)
+6) If yes, then stop.
+The above description illustrates how the analytical step is incorporated into the existing optimizer. If step 3) is disabled,
+the algorithm reverts to the normal decomposition-based optimizer. By using the suboptimization error functions in step 3c),
+it becomes possible to compare the two solutions on an element-by-element basis. This would not be possible if a global
+error representing the modeling accuracy of all four -parameters of a corresponding bias point was used. The global error
+would be mostly influenced by the dominant model parameters,
+creating the situation where possible good solutions for the less
+dominant elements are discarded.
+In addition to making the extraction more robust, the hybrid
+procedure shown above also increases the speed of convergence,
+especially during the first few iterations when the overall modeling error is large.
+III. DATA-DRIVEN EXTENSIONS TO THE MULTIBIAS
+EXTRACTION ALGORITHM
+Much attention has been paid in the literature to the difficul.
+ties involved in extracting the parasitic gate resistance
+is one of the least dominant elements in the model and is highly
+correlated with the intrinsic channel resistance . The ability
+to separate the values of these two elements has been one of the
+motivations behind the development of multibias extraction algorithms.
+However, less attention has been paid to the extraction of the
+. Experience has shown
+to be
+parasitic drain resistance
+the element that least conforms to the assumption of bias independence for the extrinsic elements when extracted from hot
+-parameters. For a variety of HEMTs that have been tested, it
+can assume either very large or very small
+was found that
+can tend toward
+nonphysical values, while for MESFETs
+negative values. In the case of MESFETs, the behavior of
+could possibly be linked to high field effects between the gate
+and drain terminals [11], but for HEMTs no satisfactory phys, which has very little inical explanation is known. Unlike
+is
+fluence on the overall extraction accuracy, the value of
+more critical for the successful determination of the other nondominant elements in the multibias extraction.
+
+895
+
+Fig. 2. Simplified representation of the output impedance of a GaAs FET.
+
+In [12], an extraction procedure for determining
+and
+using cold bias points with the gate held at a suitably large forward bias was used. Fig. 2 and the equation
+
+(1)
+show a simplified representation of the output impedance of a
+is increased,
+decreases, resulting in
+GaAs FET. When
+the real part of the FET output impedance being dominated by
+and . It is this behavior that is exploited in [12]. A careful
+asstudy of (1) shows that a similar result is obtained when
+is equal
+sumes very large values, as would be the case when
+to or less than the pinch-off voltage . Equation (1) also shows
+and
+on the output impedance can
+that the dominance of
+be further enhanced by using measured data from the upper
+measurement frequencies. It should be noted that the effect of
+is ignored in Fig. 2 and
+the parasitic drain capacitance
+(1). Unlike direct extraction algorithms, optimizer-based procedures do not need to achieve a near exact separation between the
+model elements. For a successful extraction, it is only required
+to find the conditions for which the influence of an element will
+be more dominant.
+A further advantage of using data from cold bias points with
+is that the intrinsic model reduces to the three intrinsic
+, and
+. The bias points therefore
+capacitor values
+add a minimum of extra parameters to the multibias extraction
+problem, while providing valuable additional information for
+determining the solution.
+The extraction algorithm in [3] is extended by allowing the
+user to lock a small-signal model element to a specified list of
+bias points. Only this subset of the data will be used for the determination of the particular model element. The user also has
+the possibility to specify the frequency range of the measured
+data that is to be used in the determination of an element. To determine , the user thus specifies a number of cold bias points
+along with the normally used nonreciprocal
+with
+is locked to the cold bias points
+data from active bias points.
+and no other data is used in the determination of the element.
+, only measurements
+To further aid in the determination of
+made at frequencies above 15 GHz are used.
+The second problem experienced in the extraction of the
+model in Fig. 1 is the separation of the parasitic capacitors
+
+896
+
+IEEE TRANSACTIONS ON MICROWAVE THEORY AND TECHNIQUES, VOL. 51, NO. 3, MARCH 2003
+
+and
+from the intrinsic capacitors. The parasitic capacitors
+are separated from the intrinsic capacitors by small series
+impedances and their values are small when compared to those
+of the intrinsic capacitors at most bias points. Their values
+are therefore easily absorbed into the values of the intrinsic
+capacitors due to the inability of the extraction algorithm to
+clearly distinguish their effect from the other model elements.
+and
+, the same extensions as
+In order to determine
+can be employed. The parasitic
+were used for determining
+capacitors are locked to the cold -parameter data with
+since the intrinsic capacitors generally assume their smallest
+values in this bias range. The extrinsic capacitors are therefore
+not as overshadowed as before by the size of the intrinsic capacitors. To further decrease any interaction between the different
+and
+are only determined from data
+extrinsic elements,
+measured at frequencies below 10 GHz, while the extrinsic inductors and resistors are determined from data measured at frequencies above 15 GHz.
+IV. MEASUREMENT-BASED ACTIVE BIAS POINT
+SELECTION ALGORITHM
+The previous section illustrates how cold measurements,
+along with suitable modifications to the extraction algorithm,
+can be used to enhance the ability to determine extrinsic
+elements that are otherwise difficult to extract. The majority of
+the measured data is, however, still obtained from active bias
+points where the device is acting as a nonreciprocal two-port.
+For the extractions presented in [3], the active bias points were
+selected by hand. A region denoted by a square is picked by the
+plane. Bias
+user in the saturated region of the device
+points at the corners and the center of this square are chosen.
+Should more bias points be required, they are picked from
+within the square so as to provide a uniform distribution.
+This procedure is in essence driven by the dc curves of the
+device since the selection tries to uniformly cover the saturated
+region of the bias plane. The characteristics of the -parameter
+data used in the extraction are therefore not considered in the
+selection of the bias points. The algorithm described in this section overcomes this deficiency by evaluating the -parameters
+when choosing suitable bias points.
+The algorithm can be divided into two distinct sections. The
+–
+first section of the algorithm selects a region of the
+plane in which it is expected that the small-signal model used
+will be able to accurately approximate the corresponding -parameter data and the intrinsic elements of the model have well
+defined values. This subset of the complete multibias data set
+will in subsequent sections be referred to as the region of reproducibility. The second part of the algorithm chooses a subset
+of bias points from this region so that the -parameters at the
+different bias points differ as much as possible from each other.
+The algorithm therefore tries to maximize the diversity of the
+measured data that is to be used in the extraction. The driving
+force behind this selection criterion is the following.
+By maximizing the diversity in the measured data used
+in the extraction, more emphasis is placed on the elements
+which are common to the -parameters from different bias
+points, namely the effect of the bias-independent extrinsic
+
+Fig. 3. Scatter plot of the centroids of the S S -parameters of a pHEMT
+device. Every  marker represents a centroid C of an S S -parameter curve
+at a different bias point. Changes in the position, orientation, and length of the
+S curves due to changes in the bias point of the device is reflected in the
+change of the C centroid’s position. The centroids marked with 5 markers
+represent bias points that were selected with the first algorithm described in
+Section IV-B. This algorithm performs an initial selection of centroids that are
+as widely distributed from each other as possible. In the legend this is referred
+to as the Initial Diversity Selection. Centroids marked with markers represent
+changes made in the initial selection (5 markers) by the second algorithm
+described in Section IV-B, which attempts to refine the initial selection by
+improving the distribution of the selected points. Instances where the 5 and
+markers overlap indicate centroids whose selection were not altered by the
+refinement procedure.
+
+elements. This aids in the consistent determination of their
+values, which in turn improves the accuracy with which all
+the other elements can be determined.
+Each bias point is represented by four different -parameters,
+of which each can be viewed as a curve in a complex plane.
+Each of these curves can change in position, orientation, and
+length as the bias voltages of the device are changed. In order to
+implement the above-mentioned algorithms, a simple geometric
+description of each -parameter curve is needed that will hide
+the complexity of each curve, yet make it possible to detect
+changes in the curve due to changes in the device bias point.
+The geometric description should not be sensitive to noise in the
+measured data and be simple to calculate. One such geometric
+description is the centroid of a curve. The centroid is the mean
+of the points in the complex plane that make up the -parameter
+curve. Each -parameter is now represented by one complex
+number and any changes in the length, orientation, or position
+of the curve is reflected by a change of the centroid’s position.
+In theory, there is an infinite number of curves with different
+orientations and lengths which will all have the same centroid.
+However, for the situation considered here, this is unlikely to
+occur and it is therefore not a practical concern. Fig. 3 illustrates
+-parameter of
+the concept by showing the centroids of the
+a pseudomorphic high electron-mobility transistor (pHEMT)
+device. Every marker in Fig. 3 represents a centroid of an
+-parameter curve at a different bias point.
+A. Selecting the Region of Reproducibility From the
+–
+Plane
+As stated before, the region of reproducibility is defined as
+–
+bias plane where it is expected that
+an area of the
+
+VAN NIEKERK et al.: FET PARAMETER EXTRACTION ALGORITHM WITH INTELLIGENT BIAS POINT SELECTION
+
+the small-signal model used will be able to accurately approximate the measured -parameters. In this region of the bias
+plane, it is also expected that the intrinsic model elements will
+have well-defined values, which implies that they can be extracted with acceptable accuracy. It is unreasonable to expect
+that the equivalent circuit small-signal model can provide the
+same quality of data approximation across the whole range of
+measured bias points. This observation is substantiated by a
+range of related experimental evidence [13], [14]. The multibias extraction procedure searches for a solution that simultaneously minimizes the least squares modeling error for a wide
+range of bias points by using a relatively small number of bias
+points from the total selection of available data. This solution
+can then be expanded to the rest of the data by deembedding the
+extrinsic elements and using analytical equations to determine
+the values of the intrinsic elements. It is therefore crucial that
+potential bias points that will negatively impact on the initial
+multibias extraction be excluded from the selection.
+The selection criteria for the region of reproducibility are the
+following.
+• The device must be suitably nonreciprocal at each of the
+bias points. This ensures that every -parameter data set
+used in the multibias extraction provides the maximum
+amount of additional information for the extraction algorithm. In order to determine if a device is suitably nonreciprocal, a reciprocity factor is calculated using the
+and
+. is defined as
+centroids for
+(2)
+where
+reciprocity factor at a specific bias point;
+centroid of
+at the corresponding bias point;
+centroid of
+at the corresponding bias point.
+The reciprocity factor is the magnitude of the vector difference between the two complex centroid points and will
+become zero as the device becomes reciprocal at
+or when
+decreases to the point where the device enters
+its cut-off region. The first step in the algorithm is to determine the bias point at which has its maximum value.
+are
+All bias points for which is less than 20% of
+that will
+discarded. This limits the minimum value of
+be used to define the safe region.
+–
+plane is excluded from
+• The linear region of the
+the allowed selection area. This region is characterized by
+element values, making the determination of the
+low
+data for these bias
+intrinsic elements difficult. The
+points also show large inductive impedances, leading to
+and . It
+the overestimation of the parasitic inductors
+that is used to isolate bias
+is this inductive behavior of
+–
+points in or very close to the linear region of the
+plane. All bias points for which the
+curve has any
+impedance points in the inductive region of the Smith chart
+are excluded from the safe selection region. This selection
+values of the
+criterion places a limit on the minimum
+safe region.
+is larger than
+is ex• Bias points for which
+is determined from
+cluded from the safe region.
+
+897
+
+Fig. 4. 3-D representation of I
+as a function of V
+and V . The bias
+points shown with a marker are the result of the region of reproducibility
+selection procedure.
+
+the bias point for which
+is a maximum. The intrinsic
+in seFET model in Fig. 1 does not contain a resistor
+. A study of the measured intrinsic
+of a
+ries with
+number of HEMT devices indicates that the influence of
+becomes more pronounced for high
+voltages and
+in the linear region. These observations also hold for alternative intrinsic FET models [15] since the assumptions
+on which they are based are not strictly valid at high
+voltages.
+is therefore taken as a convenient and
+conservative limit to exclude these areas.
+It is important to note that the described linear region idenis only directly
+tification step employing the phase of
+applicable to on-wafer and chip devices, since for packaged
+transistors the reactive influence of the packaging causes adand
+of the device. Further
+ditional phase shifts in the
+of
+more, if measured to a high enough frequency, the
+any device will eventually become inductive. Since the gain
+of the device decreases with frequency, this can be guarded
+.
+against in the identification algorithm by monitoring
+Of the three selection criteria, the last is the least critical. Depending on the range of bias points over which the device was
+characterized, it can either be ignored or replaced with a selection criterion that excludes bias points for which the power disexceeds a user-specified limit. Fig. 4 shows
+sipation
+as a function of
+a three-dimensional (3-D) representation of
+and
+for a pHEMT device. The selected bias points are
+indicated using solid circles. This subset of the measured data
+is now to be used in the diversity-driven selection algorithm.
+B. Diversity-Driven Bias Point Selection Algorithm
+The diversity driven selection procedure selects a subset of
+bias points from the region of reproducibility so that the centroids of the different -parameters are as far from each other as
+possible. The selection procedure is applied to each of the four
+-parameters separately to ensure that the diversity requirement
+is satisfied for all the data to be used in the multibias extraction.
+The results of the four separate selections are then combined
+to provide a list of distinct bias points for use in the multibias
+extraction.
+
+898
+
+IEEE TRANSACTIONS ON MICROWAVE THEORY AND TECHNIQUES, VOL. 51, NO. 3, MARCH 2003
+
+The following sequence of steps describes the initial selection
+algorithm.
+1) Initialize the algorithm.
+a) Get the user specified number of points to be se.
+lected
+b) Normalize the centroid data by removing the mean
+component from the data and scaling each axis of the
+two-dimensional (2-D) data set to range from 1 to 1.
+This set of normalized data is represented by .
+c) Select the centroid point furthest from the mean of
+the normalized data set . Point represents both the
+coordinates of the centroid point and the bias voltages
+and
+associated with the centroid.
+represents the th point in
+d)
+which is used to store the diversity
+the collection
+selected bias points.
+2) Evaluate the positions of the data points relative to each
+other.
+a) Calculate the distance from each point in to each
+of the selected points in .
+b) Store the minimum calculated distance for each
+centroid point in .
+3) Select the centroid point corresponding with the maximum distance stored in .
+. This represents the next point in the
+4)
+diversity selection.
+?
+5) Is
+6) If not, then go to step 2).
+7) If yes, then stop.
+The normalization of the centroid data as described in step 1b)
+of the selection algorithm is used to obtain a data set in which the
+real and imaginary components of the calculated centroids carry
+equal weight. It should be noted that the normalization procedure used will affect the operation of the selection procedure due
+to the influence that it has on the distribution of the centroids.
+Given the fact that there is currently no theoretical basis available for choosing an optimum normalization, the procedure in
+step 1b) was considered to be the safest alternative.
+centroid points
+The scatter plot in Fig. 3 containing the
+also shows four points selected with the diversity-driven selection algorithm, indicated with markers. The bias points selected with the above-described algorithm do not represent the
+optimum selection of bias points, but they do provide a selection
+that is close to a local minimum for the problem statement. The
+first selection can be refined by using a similar algorithm on the
+already selected points. The refinement step is described by the
+following sequence of operations.
+1) Initialize the algorithm.
+and the total
+a) Get the selection of bias points
+from which the selection was
+number of points
+made.
+.
+b) Set the counter
+
+2) Check if point
+should be adjusted to achieve better
+diversity
+a) Calculate the distance from every point in to each
+, where
+.
+selected point
+b) Store the minimum calculated distance for each
+point in in .
+with the bias point corresponding to
+c) Replace
+the maximum distance stored in .
+.
+3)
+the number of points in ?
+4) Does
+5) If no, then go to step 2)
+change?
+6) Did the content of selection
+7) If yes, then go to step 1b)
+8) If no, then stop
+The refinement algorithm is very similar to the initial selection procedure, but does not try to add more points to . It
+only makes adjustments to the positions of the known points to
+achieve a selection that provides a local optimum to the distribution problem. In Fig. 3, the result of the refinement step is
+shown with markers. The initial selection used in the refinement are the points indicated with the markers.
+The application of the selection and refinement algorithms described above to each of the four sets of centroids
+, and
+leads to four separate groups that
+now have to be combined into one unified group. The groups
+may overlap because the same bias point may satisfy the
+diversity selection criteria of more than one -parameter. This
+problem is solved by removing any duplicate bias points from
+the selection. A second situation is that different selection
+groups may have bias points which are distinct, but whose
+centroid points differ by very little. These bias points can
+therefore be represented by one bias point. This decreases the
+number of points in the selection without seriously decreasing
+the diversity of the -parameter data.
+While the removal of bias points that have been duplicated
+by the selection procedure is a trivial matter, the trimming of
+bias points that provide nearly the same information is less so.
+–
+plane
+When the selected bias points are plotted on the
+of the device (see Fig. 5), one might be tempted to remove selected points that are directly adjacent to each other. This might
+be in error since it does not take the -parameter characteristics
+of the device into account. The following trimming procedure
+was devised to remove a required number of points from a selection so as to provide the least disturbance to the diversity of
+the -parameter data.
+1) Initialize algorithm by getting the user specified number
+of data points to be trimmed from the selection.
+, and
+into
+2) Combine the selections
+one selection .
+3) Remove any duplicate points in .
+.
+4)
+with each point in
+that does not
+5) Substitute
+come from the same original subselection problem
+, or
+) as
+, and calculate the
+(
+distance of the shift in the centroid coordinates caused
+by each substitution.
+
+VAN NIEKERK et al.: FET PARAMETER EXTRACTION ALGORITHM WITH INTELLIGENT BIAS POINT SELECTION
+
+COMPARISON
+
+Fig. 5. I –V curves of a GaAs pHEMT with the bias points selected by
+various procedures. The bias points indicated by markers were selected by
+hand, while the points indicated with
+markers were determined with the
+diversity driven selection procedures. Two sets of bias points as identified by
+the trimming algorithm are also marked. In each case, these two bias points can
+be represented by one bias point without seriously decreasing the diversity of
+the S -parameter data.
+
+1
+
+6) Store the bias point which causes the minimum shift in
+in
+. This is the associated
+the centroid of point
+.
+bias point to
+.
+7)
+the total number of points in , then go to step
+8) if
+5).
+which are closest to
+9) Remove the bias points from
+their associated bias points in .
+10) Stop.
+In Fig. 5, the two sets of two points which are the closest to each
+other in terms of their associated -parameter data are shown in
+dashed lines. Note that for the second selection the bias points
+are not immediately adjacent to each other. In fact, the one remaining instance in which bias points are adjacent to each other
+provides relatively distinct -parameter data, highlighting the
+danger of making decisions purely on the I –V characteristics of the device.
+V. EXTRACTION RESULTS
+The effect of the algorithm extensions is illustrated by performing robustness tests on a lattice matched GaAs pHEMT device with a gate length of 0.2 m and a gate width of 100 m
+[16]. Certain examples of this device have been found difficult
+to model when using the conventional multibias decompositionbased optimizer [3]. The robustness test consists of repeating
+a particular extraction 20 times while using randomly chosen
+optimization starting values. The extraction starting values are
+chosen over a large range using a uniform distribution.
+Table I represents a summary of the extrinsic elements obtained with and without the hybrid search options described in
+Section II. The table provides the range for each element in
+which the optimization starting values were chosen, as well as
+the best value, the mean, and the variation of the extracted extrinsic element values. The best value is defined as the parameter corresponding to the extraction with the lowest modeling
+error, while the variation is defined as the difference between
+
+OF THE
+
+TABLE I
+EXTRACTION IN [3] WITH
+SEARCH ALGORITHM
+
+899
+
+THE
+
+NEW HYBRID
+
+TABLE II
+COMPARISON OF THE INFLUENCE OF THE ACTIVE BIAS POINT SELECTION
+METHOD ON THE HYBRID SEARCH WITH COLD BIAS POINT DRIVEN
+EXTENSIONS
+
+the maximum and minimum extracted element value, thus indicating the range of the solutions in absolute terms. Both multibias extraction experiments used 13 bias points selected using
+the conventional bias point selection procedure. Fig. 5 contains a
+plot of the I –V curves of the device. The active bias points
+used in the extraction are indicated using square markers. In
+all the experiments shown here, the measured -parameter data
+ranged from 1 to 45 GHz.
+Table II provides comparative test results showing the effect
+of combining cold -parameter data with the hybrid search as
+well as the effect of using active bias points selected with the diversity maximizing algorithm described in Section IV. Both experiments in Table II used the same cold -parameter data (five
+and the associated extensions disbias points) with
+cussed in Section III. In both cases, the same number of active
+bias points, namely 13, were used. Fig. 5 shows the distribution
+of the active bias points selected with the diversity driven selection procedure.
+Table I illustrates that it is not sufficient to simply improve
+the capabilities of the optimization procedure. The hybrid
+procedure in Table I does provide better modeling errors in
+many instances, but it is only when the underlying characteristics
+of the device and the data are exploited that the results of Table II
+are obtained. The importance of this is that many published
+algorithms focus exclusively on improving the capabilities of
+the optimization algorithm used. Both the experiments in Table I
+
+900
+
+IEEE TRANSACTIONS ON MICROWAVE THEORY AND TECHNIQUES, VOL. 51, NO. 3, MARCH 2003
+
+Fig. 6.
+
+Comparison of the extracted values of the parasitic extrinsic resistors
+, and R for three of the experiments presented in Tables I and II.
+Experiment 1 refers to the first test presented in Table I, while experiments 3
+and 4 refer to Table II.
+
+R ; R
+
+produced elements of whom the majority have values that are
+physically believable. The exceptions are the parasitic gate and
+and
+.
+has a wide range of extracted
+drain resistors
+values, with many tending to the lower optimization boundary.
+is far less, the value of
+is far
+While the variation in
+larger than what is realistically expected from such an HEMT
+device. The first experiment in Table II shows that the inclusion
+of the cold -parameter data dramatically improves the range
+of solutions obtained for the extrinsic elements. The mean
+, and
+are
+and best values of the parasitic resistors
+in their values
+closer to each other, but the total variation
+decreases considerably with
+is still large. This variation
+the use of active bias points selected with the diversity-driven
+selection procedure, as is illustrated by the second experiment
+in Table II. A comparison of the results in Tables I and II also
+shows that the various extensions discussed cause a decrease in
+the difference between the average element values and the best
+element values for the majority of the extrinsic parameters.
+The extrinsic elements obtained from the two experiments
+summarized in Table II are also consistent in their values with
+each other, despite using different active bias points for the
+extractions.
+A more graphical representation of the test results is given
+in Figs. 6 and 7. Fig. 6 contains the variation of the three para, and
+obtained in three of the robustness
+sitic resistors
+tests, namely the first experiment in Table I and the two experiments described in Table II. Fig. 7 provides similar results, but
+and
+and the parasitic infor the parasitic capacitors
+ductance . Experience has shown that, of the three parasitic
+can be surprisingly difficult to extract. Figs. 6 and
+inductors,
+7 clearly indicates how the extensions discussed in this paper
+help to improve the consistency of the solutions obtained. It also
+shows the wide range of optimization starting values used in the
+extractions.
+Fig. 8 compares the modeled and the measured -parameters
+V and
+mA. The
+for the bias point
+quality of the fit between the modeled and measured -parameters seen in Fig. 8 represents the largest modeling errors of all
+
+Fig. 7. Comparison of the extracted values of the parasitic extrinsic reactive
+elements C ; C , and L for three of the experiments presented in Tables I
+and II. Experiment 1 refers to the first test presented in Table I, while
+experiments 3 and 4 refer to Table II.
+
+Fig. 8. Comparison of the measured and modeled S -parameters for the bias
+point that resulted in the largest modeling error. This bias point is close to the
+knee region of the device I –V curves, which is one of the most difficult
+areas to model accurately. The measured data is represented by the  markers,
+while the model generated S -parameters are depicted with the solid line.
+
+the bias points used in the extraction. The indicated bias point
+–
+is the closest selected point to the knee region of the
+plane, a difficult area to model. The largest deviations occur in
+and
+and it is suspected that this is due to the omission
+in the small-signal model.
+is also smaller in this reof
+polar chart. For all
+gion, as is evident from the scale of the
+the bias points further from the knee region, the modeling deand
+are not present and an excellent fit is
+viations in
+achieved between the modeled and measured data. What is also
+clear from Fig. 8 is that the quality of the measured data is high,
+with no visible signs of resonances or other measurement deviations that can be used to explain the extraction difficulties
+experienced with this particular device.
+The work in [4] and [5] contain the only comparable experimental results for HEMT devices of which we are aware. In both
+
+VAN NIEKERK et al.: FET PARAMETER EXTRACTION ALGORITHM WITH INTELLIGENT BIAS POINT SELECTION
+
+cases, results are presented for optimization-orientated multibias extraction algorithms that have been subjected to a large
+number of randomly chosen starting values. Lin and Kompa [4]
+performed multibias extractions on a chip device that was wire
+bonded into a test fixture. This leads to far larger extrinsic inductors than those obtained from on-wafer measurements. The
+larger extrinsic reactive elements greatly help with the separation of the different elements, a fact that was confirmed with
+simulated measurements generated using the published model
+parameters [17].
+Ghazinour and Jansen [5] presented results from on-wafer
+-parameters extracted with a hybrid evolumeasured
+tionary/gradient optimization algorithm. Unfortunately, the
+data in [5] do not make it possible to perform a complete
+comparison. Ghazinour and Jansen [5] summarize the obtained
+results by providing the average and the standard deviation
+of the extracted elements but presents no further information
+regarding the distribution of the extracted elements. The best
+individual returned by the evolutionary search, namely the set
+of model elements providing lowest modeling error, is also
+not listed. The danger of only using the average and standard
+deviation in the presentation of the data is that the distribution
+of the extracted elements is in many instances not Gaussian
+[2], [17]. When a search fails to find an element, that element
+in many cases will tend to one of the optimization boundaries.
+The average value of the element will not always reflect this.
+Neither will the standard deviation do so if, as in most cases,
+one of the optimization boundaries are favored. An example
+in the first
+of this behavior can be seen for the element
+experiment in Table I and by looking at the graphical plot of the
+values in Fig. 6. In the discussion of the results
+extracted
+in [5], it is also stated that the values of the parasitic resistors
+and
+are very low compared to what is expected from
+physical considerations.
+In order to provide comparative results with [5], the last
+experiment in Table II was repeated 100 times using random
+starting values. The standard deviation of the elements was
+calculated and is expressed as a percentage of the average
+values obtained. The values found in [5] are also listed. The
+, the new
+comparison shows that, with the exception of
+procedure provides similar or smaller standard deviations for
+the reactive extrinsic elements. The average value reported
+in [5] is 18.30 pH, which is considerably larger than
+for
+the value listed in Table II. Such a large source inductance
+will have a far more dominant effect on the system, greatly
+influencing its extraction accuracy. The parasitic resistors
+and
+have larger standard deviations than those reported
+in [5], but their values correspond to what is expected from
+physical considerations and the solutions are centred around
+the average element values.
+VI. CONCLUSION
+An improved multibias extraction procedure for GaAs FETs
+has been presented. The experimental results show that the algorithm is starting value-independent and that it consistently converges to a very small range of solutions for all the model elements. The procedure exploits both the power of a new hybrid
+
+901
+
+search algorithm and the underlying characteristic of the device
+and the measured -parameter data to achieve this.
+The hybrid optimizer that was discussed favors neither the analytical nor the optimization algorithm. Instead it uses both, accepting the solution that provides the best modeling results. The
+new analytical calculations are easily integrated into the existing
+multibias search and add very little computational overhead to
+the search.
+The parameter extraction algorithm also exploits the underlying characteristics of both the device and the measured
+-parameter data to further increase its accuracy. While the
+use of cold bias points to achieve this goal has certain elements
+in common with direct extraction algorithms, the presented
+diversity selection algorithm takes the exploitation of the
+-parameter characteristics to a new level. The algorithms
+discussed are made possible by using a simple geometric
+abstraction for the -parameter curves. Further uses for these
+simple geometric representations of -parameter data are
+currently being investigated.
+A full 15-element small-signal model was extracted from
+measured -parameter data using a wide range of randomly
+chosen optimization starting values. The accuracy of the
+procedure is such that there is less than a 0.2- difference between the average and the best solution of the extracted values
+, and
+. For the
+of nondominant elements such as
+reactive extrinsic elements, the difference between the average
+and best element values are less than 1.5 nH for the parasitic
+inductors and less than 1.4 fF for the extrinsic capacitors. This
+indicates a very high consistency in the solutions obtained by
+the extraction procedure.
+For the development of table-based nonlinear models,
+-parameters are measured at anything between 500 and 1300
+bias points using an automated measurement system [18]. The
+parameter extraction approach that has been presented in this
+paper has attained the required level of robustness that allows
+it to efficiently process such large data sets. It forms an integral
+part of algorithms used in the generation of nonlinear models
+for the purposes of design and technology evaluation [9].
+
+REFERENCES
+[1] G. Dambrine, A. Cappy, F. Heliodore, and E. Playez, “A new method
+for determining the FET small-signal equivalent circuit,” IEEE Trans.
+Microwave Theory Tech., vol. 36, pp. 1151–1159, July 1988.
+[2] C. van Niekerk and P. Meyer, “Performance and limitations of decomposition-based parameter-extraction procedures for FET small-signal
+models,” IEEE Trans. Microwave Theory Tech., vol. 46, pp. 1620–1627,
+Nov. 1998.
+[3] C. van Niekerk, P. Meyer, D. Schreurs, and P. Winson, “A robust integrated multi-bias parameter extraction method for MESFET and HEMT
+models,” IEEE Trans. Microwave Theory Tech., vol. 48, pp. 777–786,
+May 2000.
+[4] F. Lin and G. Kompa, “FET model parameter extraction based on optimization with multiplane data-fitting and bidirectional search—A new
+concept,” IEEE Trans. Microwave Theory Tech., vol. 42, pp. 1114–1121,
+July 1994.
+[5] A. Ghazinour and R. H. Jansen, “Robust, model-independant generation
+of intrinsic characteristics and multi-bias parameter extraction for MESFETs/HEMTs,” in IEEE MTT-S Int. Microwave Symp. Dig., 1998, pp.
+149–152.
+[6] A. Eskandarian and S. Weinreb, “A note on experimental determination of small-signal equivalent circuit of millimeter-wave FETs,” IEEE
+Trans. Microwave Theory Tech., vol. 41, pp. 159–162, Jan. 1993.
+
+902
+
+IEEE TRANSACTIONS ON MICROWAVE THEORY AND TECHNIQUES, VOL. 51, NO. 3, MARCH 2003
+
+[7] R. Anholt and S. Swirhum, “Equivalent-circuit parameter extraction for
+cold GaAs MESFET’s,” IEEE Trans. Microwave Theory Tech., vol. 38,
+pp. 1243–1247, July 1991.
+[8] K. Shirakawa, H. Oikawa, T. Shimura, Y. Kawasaki, Y. Ohashi, T. Saito,
+and Y. Daido, “An approach to determining an equivalent circuit for
+HEMT’s,” IEEE Trans. Microwave Theory Tech., vol. 43, pp. 499–503,
+Mar. 1995.
+[9] D. Schreurs, C. van Niekerk, R. Vandersmissen, and G. Borghs, “Development of extraction and optimization based large-signal models for
+thinned metamorphic HEMT’s on germanium,” Int. J. RF Microwave
+Computer-Aided Eng., vol. 12, no. 5, pp. 439–447, Sept. 2002.
+[10] M. Berroth and R. Bosch, “Broad-band determination of the FET smallsignal equivalent circuit,” IEEE Trans. Microwave Theory Tech., vol. 38,
+pp. 891–895, July 1990.
+[11] T. González and D. Pardo, “Monte Carlo determination of the intrinsic
+small-signal equivalent circuit of MESFET’s,” IEEE Trans. Electron
+Devices, vol. 42, pp. 605–611, Apr. 1995.
+[12] D. Schreurs, Y. Baeyens, B. K. J. C. Nauwelaers, W. De Raedt, M.
+Van Hove, and M. Van Rossum, “S -Parameter measurement based quasistatic large-signal cold HEMT model for resistive mixer design,” Int.
+J. Microwave Millimeter-Wave Computer-Aided Eng., vol. 6, no. 4, pp.
+250–258, 1996.
+[13] R. Anholt, Electrical and Thermal Characterization of MESFET’s,
+HEMT’s, and HBTs. Norwood, MA: Artech House, 1995.
+[14] J. Staudinger, E. Y. Lan, R. Vaitkus, R. Lucero, and J. Hallmark, “An
+examination of data based large signal models for wireless amplifiers,”
+in IEEE MTT-S Int. Microwave Symp. Dig., 1996, pp. 1747–1750.
+[15] P. Jansen, D. Schreurs, W. de Raedt, B. Nauwelaers, and M. Van Rossum,
+“Consistent small-signal and large-signal extraction techniques for heterojunction FET’s,” IEEE Trans. Microwave Theory Tech., vol. 43, pp.
+87–93, Jan. 1995.
+[16] Y. Baeyens, T. Skrabka, M. Van Hove, W. De Raedt, B. Nauwelaers, and
+M. Van Rossum, “Performance of 0.2 m planar doped pseudomorfic
+and lattice matched HEMT’s on GaAs and InP for millimeterwave applications,” in Proc. 23rd Eur. Solid State Device Research Conf., Grenoble,
+France, Sept. 13–16, 1993, pp. 753–756.
+[17] C. van Niekerk, “Multi-bias decomposition-based optimization for the
+extraction of small-signal GaAs FET models,” Ph.D. dissertation, Univ.
+Stellenbosch, Stellenbosch, South Africa, 1999.
+[18] D. Schreurs, “Measurement based modeling of heterojunction field-effect devices for non-linear microwave circuit design,” Ph.D. dissertation,
+Catholic Univ. Leuven, Leuven, Belgium, 1997.
+
+Cornell van Niekerk (S’97–M’99) received the
+M.Eng. and Ph.D.(Eng.) degrees from the University
+of Stellenbosch, Stellenbosch, South Africa, in 1996
+and 1999, respectively.
+In 1998, he joined the staff of the Department of
+Electrical and Electronic Engineering, University
+of Stellenbosch, where he is currently a Senior
+Lecturer. His current research interests are the
+extraction of transistor CAD models and the use
+of optimization techniques for the synthesis and
+refinement of high-frequency designs.
+
+Johan A. du Preez (M’92) was born in South Africa,
+in 1958. He received the Ph.D. degree in electronic
+engineering from the University of Stellenbosch,
+Stellenbosch, South Africa, in 1998. His dissertation
+focused on efficient high-order hidden Markov
+modeling.
+After an initial four years with the Telecommunications Sector, he joined the Electrical and Electronic
+Engineering Department, University of Stellenbosch,
+in mid-1989. Active in the broader fields of signal
+processing and pattern recognition, his research focuses on biometrics and speech processing.
+
+Dominique M. M.-P. Schreurs (S’90–M’97–
+SM’02) received the M.Sc. degree in electronic
+engineering and Ph.D. degree (with honors) from
+the Katholieke Universiteit Leuven (K.U.Leuven),
+Leuven, Belgium, in 1992 and 1997, respectively.
+She is currently a Post-Doctoral Fellow with
+the Fund for Scientific Research-Vlaanderen and a
+Visiting Assistant Professor with the K.U.Leuven.
+She has been a Visiting Scientist with Agilent
+Technologies, the Eidgenössische Technische
+Hochschule (ETH), Zürich, Switzerland, and the
+National Institute of Standards and Technology (NIST). Her main research interest is the use of vectorial large-signal measurements for the characterization
+and modeling of nonlinear microwave devices.
+
+

@@ -1,0 +1,611 @@
+GEOPHYSICAL
+RESEARCH
+LETTERS,VOL. 17, NO. 3, PAGES199-202, MARCH
+1990
+
+AN AUTOMATIC
+
+EDITING
+
+ALGORITHM
+
+FOR GPS DATA
+
+Geoffrey Blewitt
+
+Jet PropulsionLaboratory,CaliforniaInstitute of Technology,
+Pasadena
+Abstract. An algorithm has been developed to edit
+automatically Global Positioning System data such that
+outlier deletion, cycle slip identification and correction
+are independent of clock instability, selective availabil-
+
+CASA Uno experiment made it clear that manual intervention in the data analysis had to be minimized since the
+
+task would have required many analysts,with a variety
+of non-reproducible editing styles.
+This paper presents a reliable, automatic algorithm for
+editing dual-frequency GPS carrier phase data from receivers with P code pseudorange capability. The technique is especially attractive because,unlike most algorithms, it does not require any differencing of data between receivers or satellites. The algorithm could, therefore, be implemented in real time by receiversin the field.
+In addition, a model of the geometrical delay is not necessary,thus the algorithm is applicableto kinematic GPS
+
+ity, receiver-satellitekinematics,and troposphericconditions. This algorithm, called TurboEdit, operates on
+undifferenced,dual frequency carrier phase data, and re-
+
+quires(1) the useof P codepseudorange
+data and (2) a
+smoothlyvarying ionosphericelectron content. The latter
+requirementcan be relaxed if the analysissoftwareincorporatesambiguity resolutiontechniquesto estimate unresolvedcycle slip parameters. TurboEdit was tested on
+the large data set from the CASA Uno experiment, which
+containedover 2500 cycle slips. Analyst intervention was
+requiredon 1% of the station-satellite passes,almost all
+of theseproblemsbeing due to difficultiesin extrapolatingvariationsin the ionosphericdelay. The algorithm is
+presentlybeing adapted for real time data editing in the
+Roguereceiverfor continuousmonitoring applications.
+
+(however,as will be explained,certain antenna effects
+mustbe accounted
+for).
+The algorithm has been incorporated into the GIPSY
+softwareas a module called TurboEdit. The principles
+of the algorithm are described here in some detail, followed by a discussionof its performance,and possible
+adaptation to codelessreceiversand ionosphericconditions which causeseverevariationsin phasedelay.
+
+Introduction
+
+Carrier phase data from the Global PositioningSystem (GPS) have been used in recentyears to measure
+regional
+scalegeodeticnetworkswith sub-centimeter
+pre-
+
+Observable
+
+Model
+
+and Definitions
+
+Many of the conceptsoutlined here were developedin
+
+Blewitt[1989]for purposes
+of carrierphaseambiguityres-
+
+cision[e.g.,Dongand Bock, 1989]. Resultsusingthe olution, which is the task of determiningthe integernumGIPSY(GPS-Inferred
+Positioning
+System)software
+show ber of wavelengthsassociatedwith the first phase mea-
+
+sub-centimeteragreement in the horizontal baselinecomponentswith solutionsinferred by very long baselinein-
+
+surement of a pass. Subsequentphase measurementswill
+have the same associatedinteger, provided the receiver
+tefferometry
+in California[Blewitt,1989].Threedimen- maintains lock on the G PS signal. Lossesof lock cause
+sionalbaselineaccuraciesof 1.5 parts in 10s have been
+integer discontinuitiesin the phasemeasurements,which
+
+demonstrated
+overdistances
+of 2000km [Lichtenand
+BerHõer,1989]. A prerequisiteto suchhigh precision in this paper axecalled "cycleslips.• (As a cautionary
+GPS-based
+geodesy
+is the reliabledetectionof and,where
+
+remark, some engineersdo not use this term if the discontinuity is caused by a low signal to noise ratio. For
+
+possible,
+correction
+of integerdiscontinuities
+(cycleslips) convenience,
+paper makesno suchdistinctions).A
+in thecarrierphasedata,causedby receivers
+losinglock time seriesof this
+phase data which has no cycle slipsis called
+
+onGPSsignals.Withoutan adequatedata editingcapa- a "phaseconnectedarc."The objective of GPS data editb]!ity,
+furtherprocessing
+of GPSdatato extractgeophys- ing is to (1) deletedata outliers,(2) identifycycleslips,
+ical results would be futile.
+GPS data editing has generally involved a variety of (3) correctcycleslipswhereverpossible,and (4) introheuristicmethods,most of which operateon differences duce a carrier phase ambiguity parameter for eachphase
+of data betweenpairs of stationsand pairs of satellites connected arc for further estimation using already estab[Blcwitt,1989;DongandBoek,1989].
+]norderto reduceinstrumentalbiases.Visual inspection lishedtechniques
+Consider the following model for the GPS carrier
+of the data usinginteractivegraphicsor printoutshave
+beenroutinelyusedby analyststo find and correctprob- phaseand pseudorangeobservablesspecificto a receiverdata)
+le• wherealgorithmshave failed. Suchlabor-intensive satellitepair (i.e., for undifferenced
+dat•preprocessing
+hasbeenthe majorobstacleto improvingbaseline
+production
+efficiency,
+uniformity,andrepro(la)
+ducibility.
+The > 2500cycleslipsin the data setfromthe
+(lb)
+•pyright 1990 by the AmericanGeophysicalUnion.
+Pa,•r n•r
+
+90GL00294.
+
+(D94-8276/90/90GL-00294503.00
+
+where • and •2 are the recorded carrier phases, L•
+and L• are the carrier phases expressed as raz•ges, P•
+199
+
+200
+
+Blewitt: An Automatic Editing Algorithm for GPS Data
+
+and Pz are the P code pseudoranges,c is the speed of
+light, the carrier frequenciesf• = 154 x 10.23MHz and
+
+To solvefor wide-lane cycle slips the following pseudorange combinationis subtractedfrom L,-
+
+fz = 120 x 10.23 MHz, and the wavelengths ).• - 19.0cm
+and Az • 24.4 cm. The term p refers to the non-dispersive
+delay, lureping together the effects of geometric delay,
+tropospheric delay, clock signatures, selective availabil-
+
+--pq-I f,f•/(f•--f2)
+
++ A)
+(a)
+
+ity (rapid variationsof the 10.23MHz GPS referencefrequency)and any other delaywhich affectsall data types
+identically.The term I in equations{1) is an ionospheric
+
+(4)
+
+(4)
+
+b•= •
+
+delay parameter; b• and b• are phase biases which can
+
+changespontaneously
+by integervalues{cycleslips).
+Termsignoredby equations{1) includedatanoise,mul-
+
+The •rboEdi% algorithm calculatestimeaveragesof •
+in equation(5) both beforeand after a cycleslip, •d
+
+tipath, phase center effects, and higher order ionospheric
+effects. The differential delay between the Lz and Lz an-
+
+the difference is required •o be close to •
+
+integer An• •
+
+(b•-b,) = A• - An•. The actualdecision
+• •o wha•
+
+tenna phasecenterscouldbe easilyaccountedfor [e.g., constitutesa cycle slip, •d whether ph•e conn•tion '•
+Blewitt, 1989]. Providedthe L• and Lz phasecenters successful,will be describedla•er.
+are less than about 2 cm apart, this term can be safely
+
+ignoredfor editing data from stationary antennas(but
+may be requiredfor movingantennas).
+
+The Ionospheric Combination
+
+The ionosphericph•e combinationis defined• lollova:
+
+Another term missing for kinematic GPS applications
+is due to antenna rotation causing a phase advance in
+the circularly polarized wavefront. This effect must be
+
+L• • L• - L•
+= I + Axbx- A•b2
+
+removedeither by (1) externalcalibration,(2) differencing the data betweentwo satellites,or (3) usingonlythe
+wide-lanephasecombination(• -(•z), which is rotationally invariant, but by itself is not suitable for regional
+geodesysince it is uncalibrated for ionosphericdelay.
+A cycle slip in L•, denoted An•, is defined as an integer
+discontinuity in the value of b•, and similarly for Ariz.
+Thus a cycle slip in dual frequencydata can be described
+by the expression
+
+= (hi -
+
+-
+
+(2)
+
+=• +• (• -O•)+(X•- •)•
+
+(•)
+
+= I + A•b• - Xlb2
+
+where the ionosphericwavelength),z =- (,•z - ,•x) --- 5.4
+cm. The correspondingpseudorangecombinationis
+
+Pz = P• - P• -- I
+
+(7)
+
+Unlike the wide-lane combination, the ionosphericcarrier
+
+phasecannot be successfully
+calibratedby the pseudorange, since it would require that multipath be controlled
+at the centimeter level. The approach that will be de-
+
+where b[ and b• are the new valuesof the phasebiases scribedassumesthat the ionosphericparmeter I behaves
+•fter the cycle slip. Most often, cycleslips occurconcuras a reasonably smooth function.
+rently and differentlyon the L_•and Lz channels,so that
+non-zero values of An• and An• must be independently
+
+Cycle slip Detection and Correction
+
+detectable.
+
+Linear Combinations
+
+Cycle Slip Detection in the Wide-Lane Combination
+
+of Data
+
+The wide-lanebias,equation(5), is estimatedindepenFor purposesof estimatingcycleslip parameters
+An•) we are free to choose2 linearcombinations
+of the dently at every data epoch. An a priori RMS scatterof
+in at4 observables,
+expressed
+in equations(1), whichare inde- 0.5 wide-lanecyclesis assumed(a goodassumption
+pendentof the term p. This will guaranteethat the data most all cases),and the algorithm sequentiallyupdates
+editing algorithm will be insensitiveto clock instability, (b,), the meanvalueof b,, and rr, the RMS scatter,using
+selectiveavailability, and receiver-satellite kinematics.
+
+the following recursive formulae:
+
+The Wide-lane Combination
+i
+
+As was shown for the problem of ambiguity resolu-
+
+tion [Blewitt,1989],the wide-lane
+phasecombination
+ß, -- (•x - •z) canbe adequately
+fit usingpseudorange
+data of the qualityproducedby TI-4100 receivers.From
+equations
+(1), thewide-lanephasedelaycanbewritten
+
+= ai_•+ •
+
+-
+
+}
+
+The calculationof the mean is exact; the calculationof
+the RMS is a good approximationto simplify the code,
+
+andhasthe diminishing
+errorterm of O(1/i•), where
+i
+is the current number of points in the data arc. Subsequent epochestimatesb•+• are requiredto lie within 4a•
+
+of the runningmean<b•)•.Isolatedoutliersare deleted.,
+and any two consecutiveoutliers lying within 1 cycle are
+
+consideredto indicatethe possibilitythat a cyclesliphas
+
+where the wide-lanewavelength,k, _-- c/(L86.2cm,and the wide-lanebias,b• ---_
+(b•- b,.).
+
+f•) -•
+
+occurred. Starting with these two points, a new aver-
+
+ageisstarted,andcontinues
+until a potentialcycleslip
+
+B!ewitt: An AutomaticEditing Algorithmfor GPS Data
+
+201
+
+againencountered.
+The values(5•) and crfor eachphase Equation(ga) is alsousedto identifyoutliers.The value
+connected
+arc are computedusingequations(8), andare of k defaultsto 6 cycles,but can be set to a more ap-
+
+storedfor further analysis.
+
+propriate value should ionosphericconditionsbe unusual.
+
+Wid½-lan• Phase Connection
+
+The reasons
+for havingsucha hightolerance
+(6 x 5.4ca)
+for ionospheric
+discontinuities
+arethat (1) therearequite
+
+The storedvaluesof (b•) for eachphaseconnectedarc
+
+oftenlargephasevariationsfor receiversat highlatitudes
+
+aredifferencedwith the value which has smalleststandard
+
+due to ionospheric activity which are not to be confused
+
+error
+inthemean
+crN/v/(N
+- 1),where
+N isthenumberwith cycleslipsand (2) the chancesof havingidentical
+of data in the arc. The integer offset between the two
+slips,An• = An2,of lessthan6 cyclesareveryslim,based
+arcs is determined by rounding of[ this difference if the
+
+on to our experience with the TI-4100 receiver. Note that
+
+standard
+error in the difference
+is lessthan 0.15 (~ 1/6)
+cycles,
+andthe fractionalpart of the differenceis lessthan
+0.30cycles(2 standarddeviations).
+As data arcsare phaseconnected,the time-average(56)
+
+equation
+(gb)ismuchmorestringent
+than(ga),because
+
+of the aggregatearc is computed at each step to statistically enhancesubsequentphase connection. For multiple
+lossesof lock which cause a sequenceof cycle slips to occur in a short period of time, the approach taken is to
+deleteall the data between the first and last cycle slip,
+andto subsequentlyconnect phase acrossthis gap, which
+
+the initial point in a data arc is oftenspuriousdue to the
+
+receiverhavingnot completelyrecovered
+fromlosinglock.
+œonosphericPhase Connection
+
+If wide-lane phase connection is successful,a polyno-
+
+mial fit is madeto /,• of equation(6) beforethe cycle
+slip, then extrapolated to data just after a cycle slip. Using our knowledge of An•, it is then straightforward to
+
+istypically
+a fewminutes.
+resolve
+An2= (b•- b•) by subtracting
+the extrapolated
+Usually,
+fortheTI-4!00 receiver,
+15minutesofcontinu- fit fromthefirstfewdatapointsafterthecycleslip.The
+ousphase
+databeforeandaftera cycleslipisadequate
+to orderof thepolynomial
+ischosen
+byincreasing
+theorder
+
+satisfythe criteria for wide-lane phase connection. For the
+
+until the subsequentreduction in post-fit residual scatter
+
+Roguereceiver[Thomas,1988]with a choke-ringback- is consistentwith that due to random noise. This proce-
+
+plane, 1 minute of data is sufficient. The critical factor dure most often selectsa quadratic fit.
+determiningthe required length of time is the accuracy
+Before attempting ionospheric phase connection, howof the pseudorangemeasurements, which is both a funcever, the validity of polynomial extrapolation is tested on
+tion of receiver precision and the effectivenessof antenna a set of at least 20 data which are free of cycleslips,immebackplanesin controlling multipath. Sample rate is not diately before the cycle slip in question. The procedure
+an importantfactor (assumingreceiversinternally aver- is consideredvalid if the backward extrapolation givesan
+agethe pseudorange
+signal), neither is the carrier phase estimate of the imaginary cycle slip of less than 0.25. If
+measurement accuracy.
+valid, then extrapolation acrossa biasbreak is attempted.
+If the cycleslip has an estimatedvalueof An2 • 0.5, then
+CycleSlip Detection in the Ionospheric Oornbination
+the cycle slip hypothesisis discarded. If An• > 0.5, then
+a cycle slip is asstuned, and the nearest integer value is
+First, the hypothesisis made that there are cycleslips taken if the deviation of the estimate from this integer is
+intheionospheric
+combination
+(L, of equation(6)) when- < 0.215.If the fit fails to connectphase,a secondattempt
+everthereare wide-lanecycleslips. We should,however, is made using twice as many points in the fit.
+
+bepreparedfor the extremelyunlikelyeventthat a cycle
+slipoccurssuchthat the widelanediscontinuityAn• = 0, Integer-Cycle Adjustment of Data
+ß
+i.e.,An• = An2. To guard againstthis, a polynomialfit
+Each carrier phase data point is correctedby aminteger
+• to Pt of equation(7) is subtractedfrom L•, and then
+number
+of cycles, and the 'phase connected ranges• are
+wesearchfor discontinuities
+in the residual,(L•- Q).
+(Thisfit to the pseudorange
+spansall the data, sincethe formed:
+pseudorange
+doesnot haveintegercyclediscontinuities).
+Standardstatistical techniquesfor optimizing the or-
+
+derof the polynomialfit are not applicablein this case
+because
+the pseudorangemultipath errors can be very
+correlatedwith high order polynomials. We have empiricallyfound it more effectiveto use the followinginteger arithmetic to compute the polynomial order: m
+
+The integer valuesof m• and rn2 for the first data epoch
+are arbitrary, but for reasons of convenience are chosen
+
+such that Ri and P• agree as closelyas possiblewith the
+min[(N/!00+l),6]. Undoubtedly,
+better algorithms pseudoranges,P1 and P•. Subsequentchangesin the bias
+couldbe developedfor fitting the ionosphere,but only values are calculated using the above algorithms:
+a crudefit is necessaryto search for discontinuitiesand
+
+•
+
+fit is not usedto infer the valueof the cycleslip.
+If we denotethe valueof the polynomial(• at epoch
+asQi, thenwe identifyi as the first gooddata pointafter
+theoccurrence
+of a cycleslip if bothof the followingtwo
+
+conditions are met:
+
+(L,,--Q,)-
+
+(L.r,_l- Q,-x) ;> k cycles
+- (L,, - Q,) <
+
+(6m, am) = (-am -
+
+(11)
+
+In the event of an unresolvedcycle slip, the best available
+
+valuesfor (Z•rnl,Am•) areusedand,as.described
+by Blewitt [1989],they are eventuallyresolved
+usingambiguity
+resolution techniquesafter Ks!man filtering all available
+
+data (assuming
+a sufficiently
+well-designed
+network).
+
+202
+
+Blewitt: An Automatic Editing Algorithm for GPS Data
+
+Discussionof the Algorithm
+
+Under conditionsof high ionosphericactivity, an •ternafire approach to using the ionosphericcombina-
+
+Properties
+
+tion is to usethe well-knownionosphere-free
+combination
+
+The algorithm is completely insensitiveto variations in
+non-dispersivedelay,whether they be due to clockbehavior, frequencyvariationsof selectiveavailability,receiversatellite relative motion, troposphericdelay, etc. However,the algorithmcan be sensitiveto ionosphericactivity
+and multipath environments. In addition, sincethe algorithm relies on time-averaging, it may not work too well
+if the receiver never maintains
+
+lock for more than about
+
+Lo -Assuming
+thatwide-laxm
+phaseconnection
+hasbeensuccessful,
+cycleslipsintheLc
+linear combination are integer multiples of 10.7 cm wave-
+
+lengths[c.f. Blewitt,1989].Unfortunately,
+this appro•
+is very sensitiveto clock variations. A possiblesolution
+
+to thisisto usehighqualityreceiver
+clocks.Differencing
+Lc databetween
+pairsof satellites
+mayalsobe effective;
+however, this increasesthe variability in the data due to
+satellite
+
+clocks and measurement
+
+noise.
+
+10 minutes. Ionospheric problems may be alleviated us-
+
+ing a higher data sampling rate. We suggestthat bad
+multipath conditionsand high cycleslip rates are better
+addressedby an appropriate selectionof field equipment
+and sitesrather than by data processingtechniques.
+Performance
+
+Studies with this algorithm applied to the vast CASA
+Uno data set indicate that the need for additional
+
+man-
+
+ual editing has been virtually eliminated. Over 99% of the
+station-satellite passesrequired no further analyst intervention. Almost all of the remaining 1% had incorrectly
+determined integer discontinuitiesdue to rapid variations
+in the ionosphericphase delay.
+Subjectively, the algorithm sometimesappears to be
+
+overly conservativein decidingwhether to correctfor cycle slips; however, experience has shown that the ana-
+
+lyst can be easily misled by anomalousclock and ionosphericbehavior. Therefore, the general philosophyrecommended here is for the algorithm to insert extra bias
+parameters when in doubt, leaving them to be resolved
+
+later by ambiguity resolutiontechniques.
+
+Conclusions
+
+An algorithm has been developed for rapid GPS data
+editing which can ultimately be implementedin real time
+field software for dual-frequency P code pseudorangereceivers. Most importantly, the algorithm is insensitiveto
+clock variations, satellite motion, and conditions of selective availability. Tests on the CASA Uno data sample
+with TI-4100 receivers show that 99% of station-satellite
+
+arcs require no further analyst intervention. The alg0rithm is adaptable to non P code receivers, or situations
+with high ionosphericactivity, provided a stable receiver
+clock is used. Developments are currently underway to
+implement code based on this algorithm in the Roguereceiver for continuously operating arrays.
+Acknowledgements. The research in this publication
+was carried out by the Jet Propulsion Laboratory, California Institute of Technology,under a contract with the
+National Aeronautics and Spa•e Administration. I thank
+JaxnesL. Davis and Wi!!iaxn E. Strange for their reviews.
+References
+
+Ej•ciency
+
+On a Digital MicroVAX II computer, the cpu time used
+by this algorithm was approximately 20 sec per station-
+
+Blewitt, G., Carrier phase axnbiguity resolution for the
+Global PositioningSystem applied to geodeticbaselines
+
+satellitearc (eachapproximatelyof 3 hoursduration,with
+a 30 secdata samplingrate), whichturnsout to be about
+
+up to 2000 km, J. Geophys.Res., 9j, (B8), 10,187-
+
+I day for the entire, 3 week CASA Uno data set. This
+number includes cpu time for various plotting computations to give a record of decisionsmade by the algorithm.
+
+Dong, D., and Y. Book, GPS network analysiswith phase
+ambiguity resolution applied to crustal deform•i0n
+
+Adaptations
+
+Lichten, S. M., and W. I. Bertiger, Demonstrationof submeter GPS orbit determination and 1.5 parts in 1•
+
+10,203, 1989.
+
+studiesin California,J. Geophys.Res., 9•, (B4), 394'93966, 1989.
+
+The algorithmabovecanbe adaptedfor (1) non-Pcode
+receiversand (2) bad ionospheric
+conditions.In the case
+of codelessreceivers, an alternative to using the pseudor-
+
+angeto calibratethe wide-lanephaseasin equation(5) is
+
+three-dimensional baseline accuracy, Bull. Geod., 65,
+167-189, 1989.
+
+Thomas, J. B., Functional descriptionof signal processing in the Rogue GPS receiver, JPL Pub. 88-15, jet
+Propulsion Lab., Pasadena, Calif., 1988.
+
+to fit the wide-lane phase using polynomials. The disadvantage to this is would be the algorithm's sensitivity to
+to clocks, satellite motion, etc. Should receiver clocks be
+insufficientlystable, the algorithm can still be applied to
+G. Blewitt, MS 238-625, Jet Propulsion Laboratory,
+differenceddata from a pair of satellites to a common re- 4800 Oak Grove Drive, Pasadena, CA 91109.
+ceiver. This still allowsthe algorithm to be implernented
+in real time on the receiver, but may fail under certain
+conditions of selective availability. Note that the diffi(ReceivedNovember!0, 1989;
+culty in editing wide-lane data for codeless receivers is
+RevisedJanuary 18, 1990;
+compoundedby half integer cycleslips.
+AcceptedJanuary19, 1990.)
+
+

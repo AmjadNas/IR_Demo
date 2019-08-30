@@ -1,0 +1,2236 @@
+0
+A survey on measuring indirect discrimination in machine learning
+
+arXiv:1511.00148v1 [cs.CY] 31 Oct 2015
+
+INDRĖ ŽLIOBAITĖ, Aalto University and Helsinki Institute for Information Technology HIIT
+
+Nowadays, many decisions are made using predictive models built on historical data. Predictive models
+may systematically discriminate groups of people even if the computing process is fair and well-intentioned.
+Discrimination-aware data mining studies how to make predictive models free from discrimination, when
+historical data, on which they are built, may be biased, incomplete, or even contain past discriminatory
+decisions. Discrimination refers to disadvantageous treatment of a person based on belonging to a category
+rather than on individual merit. In this survey we review and organize various discrimination measures that
+have been used for measuring discrimination in data, as well as in evaluating performance of discriminationaware predictive models. We also discuss related measures from other disciplines, which have not been used
+for measuring discrimination, but potentially could be suitable for this purpose. We computationally analyze
+properties of selected measures. We also review and discuss measuring procedures, and present recommendations for practitioners. The primary target audience is data mining, machine learning, pattern recognition, statistical modeling researchers developing new methods for non-discriminatory predictive modeling.
+In addition, practitioners and policy makers would use the survey for diagnosing potential discrimination
+by predictive models.
+General Terms: fairness in machine learning, predictive modeling, non-discrimination, discriminationaware data mining
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:2
+
+I. Žliobaitė
+
+Contents
+
+1 Introduction
+
+3
+
+2 Background
+2.1 Discrimination and law . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.2 Discrimination-aware machine learning and data mining . . . . . . . . .
+
+4
+4
+5
+
+3 Machine learning settings, definitions and scenarios
+3.1 Definition of fairness for machine learning . . . . . . . . . . . . . . . . .
+3.2 Machine learning task settings . . . . . . . . . . . . . . . . . . . . . . . .
+3.3 Principles for making machine learning non-discriminatory . . . . . . .
+
+6
+6
+6
+7
+
+4 Discrimination measures
+4.1 Statistical tests . . . . . . . . . . . . . . . . . . . .
+4.1.1 Regression slope test . . . . . . . . . . . . .
+4.1.2 Difference of means test . . . . . . . . . . .
+4.1.3 Difference in proportions for two groups . .
+4.1.4 Difference in proportions for many groups .
+4.1.5 Other tests and related fields . . . . . . . .
+4.2 Absolute measures . . . . . . . . . . . . . . . . . .
+4.2.1 Mean difference . . . . . . . . . . . . . . . .
+4.2.2 Normalized difference . . . . . . . . . . . .
+4.2.3 Area under curve (AUC) . . . . . . . . . . .
+4.2.4 Impact ratio . . . . . . . . . . . . . . . . . .
+4.2.5 Elift ratio . . . . . . . . . . . . . . . . . . . .
+4.2.6 Odds ratio . . . . . . . . . . . . . . . . . . .
+4.2.7 Mutual information . . . . . . . . . . . . . .
+4.2.8 Balanced residuals . . . . . . . . . . . . . .
+4.2.9 Other possible measures . . . . . . . . . . .
+4.2.10 Measuring for more than two groups . . . .
+4.3 Conditional measures . . . . . . . . . . . . . . . . .
+4.3.1 Unexplained difference . . . . . . . . . . . .
+4.3.2 Propensity measure . . . . . . . . . . . . . .
+4.3.3 Belift ratio . . . . . . . . . . . . . . . . . . .
+4.4 Structural measures . . . . . . . . . . . . . . . . .
+4.4.1 Situation testing . . . . . . . . . . . . . . .
+4.4.2 Consistency . . . . . . . . . . . . . . . . . .
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+8
+9
+9
+10
+10
+10
+10
+10
+10
+11
+11
+11
+11
+11
+12
+12
+12
+12
+13
+13
+13
+14
+14
+14
+15
+
+5 Analysis of core measures
+
+15
+
+6 Recommendations for researchers and practitioners
+
+19
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:3
+
+1. INTRODUCTION
+
+Nowadays, many decisions are made using predictive models built on historical data,
+for instance, personalized pricing and recommendations, credit scoring, automated
+CV screening of job applicants, profiling of potential suspects by the police, and
+many more. Penetration of machine learning technologies, and decisions informed
+by big data has raised public awareness that automated decision making may lead
+to discrimination [House 2014; Miller 2015; Burn-Murdoch 2013]. Predictive models
+may discriminate people, even if the computing process is fair and well-intentioned
+[Barocas and Selbst 2016; Citron and III 2014; Calders and Zliobaite 2013]. This is because most machine learning methods are based upon assumptions that the historical
+data is correct, and represents the population well, which is often far from reality.
+Discrimination-aware machine learning and data mining is an emerging discipline,
+which studies how to prevent discrimination in predictive modeling. It is assumed that
+non-discrimination regulations, such as which characteristics, or which groups of people are considered as protected, are externally defined by national and international
+legislation. The goal is to mathematically formulate non-discrimination constraints,
+and develop machine learning algorithms that would be able to take into account those
+constraints, and still be as accurate as possible.
+In the last few years researchers have developed a number of discrimination-aware
+machine learning algorithms, using a variety of performance measures. Nevertheless,
+there is a lack of consensus how to define fairness of predictive models, and how to
+measure the performance in terms of discrimination. Quite often research papers propose a new way to quantify discrimination, and a new algorithm that would optimize
+that measure. The variety of approaches to evaluation makes it difficult to compare
+the results and assess the progress in the discipline, and even more importantly, it
+makes it difficult to recommend computational strategies for practitioners and policy
+makers.
+The goal of this survey is to present a unifying view towards discrimination measures in machine learning, and understand the implications of choosing to optimize
+one or another measure, because measuring is central in formulating optimization criteria for algorithmic discrimination discovery and prevention. Hence, it is important
+to have a structured survey at an early stage of development of this research field, in
+order to present task settings in a systematic way for follow up research, and to enable
+systematic comparison of approaches. Thus, we review and categorize measures that
+have been used in machine learning and data mining, and also discuss existing measures from other fields, such as feature selection, which in principle could be used for
+measuring discrimination.
+There are several related surveys that can be viewed as complementary to this survey. A recent review [Romei and Ruggieri 2014] presents a multi-disciplinary context
+for discrimination-aware data mining. This survey contains a brief overview of discrimination measures with does not go into analysis and comparison of the measures,
+since the focus is on approaches to solutions across different disciplines (law, economics, statistics, computer science). Another recent review [Barocas and Selbst 2016]
+discusses legal aspects of potential discrimination by machine learning, mainly focusing on American anti-discrimination law. A matured handbook on measuring racial
+discrimination [Blank et al. 2004] focuses on surveying and collecting evidence for discrimination discovery. The book is not considering discrimination by algorithms, only
+by human decision makers.
+The remainder of the article is organized as follows. Section 2 presents legal context, terminology, and provides an overview of research in developing nondiscriminatory predictive modeling approaches. Our intention is to keep this section
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:4
+
+I. Žliobaitė
+
+brief. An interested reader is referred to focused surveys [Romei and Ruggieri 2014;
+Barocas and Selbst 2016] for more information. Section 4 reviews and organizes discrimination measures used in discrimination-aware machine learning and data mining, as well as potentially useful measures from other fields. Section 5 analyzes and
+compares a set of most popular measures, and discusses implications of using one or
+the other. Finally, Section 6 presents recommendations for researchers, and concludes
+the survey.
+2. BACKGROUND
+2.1. Discrimination and law
+
+Discrimination translates from latin as a distinguishing. While distinguishing is not
+wrong as such, discrimination has a negative connotation referring to adversary treatment of people based on belonging to some group rather than individual merits. Public attention to discrimination prevention has been increasing in the last few years.
+National and international anti-discrimination legislation are extending the scope of
+protection against discrimination, and expanding discrimination grounds.
+Adversary discrimination is undesired from the perspective of basic human rights,
+and in many areas of life non-discrimination is enforced by international and national
+legislation, to allow all individuals an equal prospect to access opportunities available
+in a society [for Fundamental Rights 2011]. Enforcing non-discrimination is not only
+for benefiting individuals. Considering individual merits rather than group characteristics is expected to benefit decision makers as well leading to more more informed,
+and thus likely more accurate decisions.
+Discrimination can be characterized by three main concepts: (1) what actions (2) in
+which situations (3) towards whom are considered discriminatory. Actions are forms of
+discrimination, situations are areas of discrimination, and grounds of discrimination
+describe characteristics of towards whom discrimination may occur.
+For example, the main grounds for discrimination defined in European Council directives [Commission 2011] (2000/43/EC, 2000/78/EC) are: race and ethnic origin, disability, age, religion or belief, sexual orientation, gender, nationality. Multiple discrimination occurs when a person is discriminated on a combination of several grounds. The
+main areas of discrimination are: access to employment, access to education, employment and working conditions, social protection, access to supply of goods and services.
+Discriminatory actions may take different forms, the two main of which are known
+as direct discrimination and indirect discrimination. A direct discrimination occurs
+when a person is treated less favorably than another is, has been or would be treated
+in a comparable situation on protected grounds. For example, property owners are not
+renting to a minority racial tenant. An indirect discrimination (also known as structural discrimination) occurs where an apparently neutral provision, criterion or practice would put persons of a protected ground at a particular disadvantage compared
+with other persons. For example, a requirement to produce an ID in a form of driver’s
+license for entering a club may discriminate visually impaired people, who cannot have
+a driver’s license. A related term statistical discrimination [Arrow 1973] is often used
+in economic modelling. It refers to inequality between demographic groups occurring
+even when economic agents are rational and non-prejudiced.
+Indirect discrimination applies to machine learning and data mining, since algorithms produce decision rules or decision models. While human decision makers may
+make biased decisions on case by case basis, rules produced by algorithms are applied consistently, and may discriminate more systematically and at a larger scale.
+Discrimination due to algorithms is sometimes referred to as digital discrimination
+(e.g. [Wihbey 2015]) .
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:5
+
+General population, and even many data scientists may think that algorithms are
+based on data, and, therefore, models produced by algorithms are always objective.
+However, models are as objective as the data on which they are applied, and as long
+as the assumptions behind the models perfectly match the reality. In practice, this is
+rarely the case. Historical data may be biased, incomplete, or record past discriminatory decisions that can easily be transferred to predictive models, and reinforced in
+new decision making [Calders and Zliobaite 2013]. Lately, awareness of policy makers and public attention to potential discrimination has been increasing [House 2014;
+Miller 2015; Burn-Murdoch 2013], but there is a long way ahead before we can fully
+understand how such discrimination happens and how to prevent it.
+2.2. Discrimination-aware machine learning and data mining
+
+Non-discriminatory machine learning and data mining, a discipline at an intersection of computer science, law and social sciences, focuses on two main research directions: discrimination discovery, and discrimination prevention. Discrimination discovery aims at finding discriminatory patterns in data using data mining methods. Data
+mining approach for discrimination discovery typically mines association and classification rules from the data, and then assesses those rules in terms of potential discrimination [Ruggieri et al. 2010; Romei et al. 2012; Hajian and Domingo-Ferrer 2013;
+Pedreschi et al. 2012; Luong et al. 2011; Mancuhan and Clifton 2014]. A more traditional statistical approach to discrimination discovery typically fits a regression model
+to the data including the protected features (such as race, gender), and then analyzes
+the magnitude and statistical significance of the regression coefficients at the protected
+attributes (e.g. [Edelman and Luca 2014]). If those coefficients appear to be significant,
+then discrimination is flagged.
+Discrimination prevention develops machine learning algorithms that would produce predictive models, ensuring that those models are free from discrimination, while,
+standard predictive models, induced by machine learning and data mining algorithms,
+may discriminate groups of people due to training data being biased, incomplete, or
+recording past discriminatory decisions. The goal is to have a model (decision rules)
+that would obey non-discrimination constraints, typically the constraints directly relate to the selected discrimination measure. Solutions for discrimination prevention in
+predictive models fall into three categories: data preprocessing, model postprocessing,
+and model regularization. Data preprocessing modifies the historical data such that
+the data no longer contains discrimination, and then uses regular machine learning
+algorithms for model induction. Data preprocessing may modify the target variable
+[Kamiran and Calders 2009; Mancuhan and Clifton 2014; Kamiran et al. 2013a], or
+modify input data [Feldman et al. 2015; Zemel et al. 2013]. Model postprocessing produces a regular model and then modifies it (e.g. by changing the labels of some leaves
+in a decision tree) [Kamiran et al. 2010; Calders and Verwer 2010]. Model regularisation adds optimization constraints in the model learning phase (e.g. by modifying the
+splitting criteria in decision tree learning) [Kamiran et al. 2010; Calders et al. 2013;
+Kamishima et al. 2012]. An interested reader is invited to consult an edited book
+[Custers et al. 2013], a special issue in a journal [Mascetti et al. 2014], and proceedings of three workshops in discrimination-aware data mining and machine learning
+[Calders and Zliobaite 2012; Barocas and Hardt 2014; Barocas et al. 2015] for more
+details.
+Defining coherent discrimination measures is central for both lines of research: discrimination discovery and discrimination prevention. Discrimination discovery needs
+a measure in order to judge whether there is discrimination in data. Discrimination
+prevention needs a measure as an optimization criteria in order to sanitize predictive
+models. Hence, our main focus in this survey is to review discrimination measures,
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:6
+
+I. Žliobaitė
+
+and analyze their properties, and understand implications of using one or another
+measure.
+3. MACHINE LEARNING SETTINGS, DEFINITIONS AND SCENARIOS
+3.1. Definition of fairness for machine learning
+
+In the context of machine learning non-discrimination can be defined as follows: (1)
+people that are similar in terms non-protected characteristics should receive
+similar predictions, and (2) differences in predictions across groups of people
+can only be as large as justified by non-protected characteristics.
+The first condition relates to direct discrimination, and can be illustrated by so called
+twin test: if gender is the protected attribute and we have two identical twins that
+share all characteristics, but gender, they should receive identical predictions. The
+first part is necessary but not sufficient condition to make sure that there is no discrimination in decision making.
+The second condition ensures that there is no indirect discrimination, also referred
+to as redlining. For example, banks used to deny loans for residents of selected neighborhoods. Even though race was not formally used as a decision criterion, it appeared
+that the excluded neighborhoods had much higher population of non-white people than
+average. Even though people from the same neighborhood (”twins”) are treated the
+same way no matter what the race is, artificial lowering of positive decision rates in
+the non-white-dominated neighborhoods would harm the non-white population more
+than white. Therefore, different decision rates across neighborhoods can only be as
+large as justified by non-protected characteristics, and this is what the second part of
+the definition controls.
+More formally, let X be a set of variables describing non-protected characteristics
+of a person, S be a set of variables describing the protected characteristics, and ŷ be
+the model output. A predictive model can be considered fair if: (1) the expected value
+for model output does not depend on the protected characteristics E(ŷ|X, S) = E(ŷ|X)
+for all X and S, that is, there is no direct discrimination; and (2) if non-protected
+characteristics and protected characteristics are not independent, then the expected
+value for model output dependence on those non-protected characteristics should be
+justified, that is if E(X|S) 6= E(X), then E(ŷ|X) = e⋆ (ŷ|X), where e⋆ is a constraint.
+Finding and justifying e⋆ is non-trivial and very challenging, and that is where a lot
+of ongoing effort in discrimination-aware machine learning concentrate.
+3.2. Machine learning task settings
+
+Machine learning settings for decision support, where discrimination may potentially
+occur, can take many different forms. The variable that is to be predicted – target variable – may be binary, ordinal, or numeric, corresponding to binary classification, multiclass classification or regression tasks. As an example of a binary classification task
+in the banking domain could be deciding whether to accept or decline loan application
+of a person. Multiclass classification task could be to determine to which customer benefit program a person should be assigned (e.g. ”golden clients”, ”silver clients”, ”bronze
+clients”). Regression task could be to determine the interest rate for a particular loan
+for a particular person.
+Discrimination can occur only when target variable is polar. That is, each task setting some outcomes should be considered superior to others. For example, getting a
+loan is better than not getting a loan, or the ”golden client” package is better than the
+”silver”, and ”silver” is better than ”bronze”, or assigned interest rate 3% is better than
+5%. If the target variable is not polar, there is no discrimination, because no treatment
+is superior or inferior to other treatment.
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:7
+
+Fig. 1. A typical machine learning setting.
+
+The protected characteristic, in machine learning settings referred to as the protected variable or sensitive attribute, may as well be binary, categorical or numeric,
+and it does not need to be polar. For example, gender can be encoded with a binary
+protected variable, ethnicity can be encoded with a categorical variable, and age can
+be encoded with a numerical variable. In principle, any combination one or more personal characteristics may be required to be protected. Discrimination on more than one
+ground is known as multiple discrimination, and it may be required to ensure prevention of multiple discrimination in predictive models. Thus, ideally, machine learning
+methods and discrimination measures should be able to handle any type or a combination of protected variables. For instance, the authorities may want to enforce nondiscrimination with respect to ethnicity in determining interest rate, or non discrimination with respect to gender and age in deciding whether to accept loan applications.
+In discrimination prevention it is assumed that the protected ground is externally
+given, for example, by law.
+3.3. Principles for making machine learning non-discriminatory
+
+A typical machine learning process is illustrated in Figure 1. A machine learning algorithm is a procedure used for producing a predictive model from historical data.
+A model is the resulting decision rule (or a collection of rules). The resulting model
+is used for decision making for new incoming data. The model would take personal
+characteristics as inputs (for example, income, credit history, employment status), and
+output a prediction (for example, credit risk level).
+Algorithms themselves do not discriminate, because they are not used for decision
+making. Models (decision rules) that are used for decision making may potentially
+discriminate people with respect to certain characteristics. Algorithms, on the other
+hand, may be discrimination-aware by employing specific procedures during model
+construction to enforce non-discriminatory constraints into the models. Hence, one of
+the main goals of discrimination-aware machine learning and data mining is to develop discrimination-aware algorithms, that would guarantee that non-discriminatory
+models are produced.
+There is an ongoing debate in the discrimination-aware data mining and machine
+learning community whether models should or should not use protected characteristics as inputs. For example, a credit risk assessment model may use gender as input,
+or may leave the gender variable out. Our position on the matter is as follows. Using
+the protected characteristic as model input may help to ensure that there is no indirect
+discrimination (for example, as demonstrated in the experimental section of []). However, if a model uses the protected characteristic as input, the model is not treating
+two persons that share identical characteristics except for the protected characteristic
+the same way, a direct discrimination would be propagated. Therefore, such a model
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:8
+
+I. Žliobaitė
+Table I. Discrimination measure types
+Measures
+Statistical tests
+Absolute measures
+Conditional measures
+Structural measures
+
+Indicate what?
+presence/absence of discrimination
+magnitude of discrimination
+magnitude of discrimination
+spread of discrimination
+
+Type of discrimination
+indirect
+indirect
+indirect
+direct or indirect
+
+would be discriminatory discriminatory due to violation of condition #1 in the definition in Section ??. Hence, the model should not use the protected characteristic for
+decision making.
+However, we see no problem in using the protected characteristic in the model learning process, which often may help to enforce non-discrimination constraints. Thus, machine learning algorithms can use the protected characteristic in the learning phase,
+as long as the resulting predictive model does not require the protected characteristic
+when used for decision making.
+Ensuring that there is no indirect discrimination is much more tricky. In order to
+verify to what extent non-discriminatory constraints are obeyed, and enforce fair allocation of predictions across groups of people, machine learning algorithms must have
+access to the protected characteristics in the historical data. We argue that if protected information (e.g. gender or race) is not available during the model learning
+building process, the learning algorithm cannot be discrimination-aware, because it
+cannot actively control non-discrimination. The resulting models produces without access to sensitive information may be discriminatory, may be not, but that is by chance
+rather than discrimination-awareness property of the algorithm.
+Non-discrimination can potentially be measured on data (historical data), on predictions made by models, or on models themselves. Different task settings and application goals may require different measurement techniques. In order to select appropriate measures, which also typically serve as optimisation constraints in the nondiscriminatory model learning process, it is important to understand underlying assumptions and basic principles behind different discrimination measures. The next
+section presents a categorized survey of measures used in the discrimination-aware
+data mining and machine learning literature, and discusses other existing measures
+that could in principle be used for measuring fairness of algorithms. The goal is to
+present arguments for selecting relevant measures for different learning settings.
+4. DISCRIMINATION MEASURES
+
+Discrimination measures can be categorized into (1) statistical tests, (2) absolute measures, (3) conditional measures, and (4) structural measures. We survey measures in
+this order due to historical reasons, which is more or less how they came into use.
+First statistics tests were used which would answer yes or no, then absolute measures came into play that allow quantifying the extent of discrimination, then conditional measures appeared that take into account possible legitimate explanations
+of differences between different groups of people. Statistical tests, absolute measures
+and conditional measures are designed for indicating indirect discrimination. Structural measures have been introduced mainly in accord to mining classification rules,
+aiming at discovering direct discrimination, but in principle they can also address indirect discrimination. All these types are not intended as alternatives, but rather reflect
+different aspects of the problem, as summarized in Table I.
+Statistical tests indicate presence or absence of discrimination at a dataset level,
+they do not measure the magnitude of discrimination, neither the spread of discrimination within the dataset. Absolute measures capture the magnitude of discrimination
+over a dataset taking into account the protected characteristic, and the prediction deciACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:9
+Table II. Solutions
+
+Symbol
+y
+yi
+s
+si
+X
+z
+zi
+N
+ni
+
+Explanation
+target variable, yi denotes the ith observation
+a value of a binary target variable, y ∈ {y + , y − }
+protected variable
+a value of a discreet/binary protected variable, s ∈ {s1 , . . . , sm }
+typically index 1 denotes a protected group, e.g. s1 - black, s0 - white race
+a set of input variables (predictors), X = {x(1) , . . . , x(l) }
+explanatory variable or stratum
+a value of explanatory variable z ∈ {z 1 , . . . , z k }
+number of individuals in the dataset
+number of individuals in group si
+
+sion; no other characteristics of individuals are considered. It is assumed that all individuals are alike, and there should be no differences in decisions for the protected and
+the general group of people, disregarding any possible explanation. Absolute measures
+generally are not for using stand alone on a dataset, but rather provide core principles
+for conditional measures, or statistical tests. Conditional measures capture the magnitude of discrimination, which cannot be explained by any non-protected characteristics of individuals. Statistical tests, absolute and conditional measures are designed to
+capture indirect discrimination at a dataset level. Structural measures do not measure
+the magnitude of discrimination, but the spread of discrimination, that is, a share of
+people in the dataset that are affected by direct discrimination.
+Our survey of measures will use mathematical notation as summarized in Table II.
+For simplicity we will use the following short probability notation: p(s = 1) will be
+encoded as p(s1 ), and p(y = +) will be encoded as p(y + ). Let s1 denote the protected
+community, and y + denote the desired decision (e.g. positive decision to grant a loan).
+Upper indices will denote values, lower indices will denote counters of variables.
+4.1. Statistical tests
+
+Statistical tests are the earliest measures for indirect discrimination discovery in data.
+Statistical tests are formal procedures to accept or reject statistical hypotheses, which
+check how likely the result is to have occurred by chance. In discrimination analysis
+typically the null hypothesis, or the default position, is that there is no difference
+between the treatment of the general group and the protected group. The test checks,
+how likely the observed difference between groups has occurred by chance. If chance
+is unlikely then the null hypothesis is rejected and discrimination is declared.
+Two limitations of statistical tests need to be kept in mind when using them for
+measuring discrimination.
+(1) Statistical significance does not mean practical significance; statistical tests do not
+show the magnitude of the the differences between the groups, which can be huge,
+or can be minor.
+(2) If the null hypothesis is rejected then discrimination is present, but if null hypothesis cannot be rejected, this does not prove that there is no discrimination. It maybe
+that the data sample is too small to declare discrimination.
+Standard statistical tests are typically applied for measuring discrimination. The
+same tests are used in clinical trials, marketing, and scientific research.
+4.1.1. Regression slope test. The test fits an ordinary least squares (OLS) regression
+to the data including the protected variable, and tests whether the regression coefficient of the protected variable is significantly different from zero. A basic version for
+discrimination discovery considers only the protected characteristic s and the target
+variable y [Yinger 1986]. In principle s and y can be binary or numeric, but typically
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:10
+
+I. Žliobaitė
+
+in discrimination testing s is binary. The regression may include only the protected
+variable s as a predictor, but it may also include variables from X that may explain
+some of the observed difference in decisions.
+The test statistic is t = b/σ, where b is the
+√ estimated regression coefficient of s, and
+Pn
+
+2
+i=1 (yi −f (yi ))
+Pn
+2
+(n−2)
+i=1 (si −s̄)
+
+σ is the standard error, computed as σ = √
+
+√
+
+, where n is the number of
+
+observations, f (.) is the regression model, .̄ indicates the mean. The t-test with n − 2
+degrees of freedom is applied.
+4.1.2. Difference of means test. The null hypothesis is that the means of the two groups
+0
+1
+√ )−E(y|s ) , where n0 is the number of indiare equal. The test statistic is t = E(y|s
+σ
+
+1/n0 +1/n1
+
+viduals
+p in the regular group, n1 is the number of individuals in the protected group,
+σ = ((n0 − 1)δ02 + (n1 − 1)δ12 )/(n0 + n1 − 2), where δ02 and δ12 are the sample target
+variances in the respective groups. The t-test with n0 − n1 − 2 degrees of freedom is
+applied.
+The test assumes independent samples, normality and equal variances.
+4.1.3. Difference in proportions for two groups. The null hypothesis is that the rates of
+positive outcomes within the two
+q groups are equal. The test statistic is
+
+z=
+
+p(y + |s0 )−p(y + |s0 )
+,
+σ
+
+where σ =
+
+p(y + |s0 )p(y − |s0 )
+n0
+
++
+
+p(y + |s1 )p(y − |s1 )
+.
+n1
+
+The z-test is used.
+
+4.1.4. Difference in proportions for many groups. The null hypothesis is that the probabilities or proportions are equal for all the groups. This can be used for testing many
+groups at once. For example, equality of decisions for different ethnic groups, or age
+groups. If the null hypothesis is rejected that means at least one of the groups has
+statistically significantly different proportion. The text statistic is
++ i 2
+P
+|s ))
+χ2 = ki=1 (ni −np(y
+, where k is the number of groups. The Chi-Square test is used
+p(y + |si )
+with k − 1 degrees of freedom.
+4.1.5. Other tests and related fields. Relation to clinical trials where protected attribute
+is the treatment, and outcome is recovery. Prove that there is an effect (there is a
+discrimination). Does not prove that there is no discrimination. Neither say anything
+about the magnitude. For example, reduce the flue recovery by 10 min. (practically
+irrelevant). It may be still relevant for discrimination. Also marketing (measuring the
+effects of intervention).
+Rank test MannWhitney U test is applied for comparing two groups when the normality and equal variances assumptions are not satisfied. The null hypothesis is that
+the distributions of the two populations are identical. The procedure is to rank all the
+observations from the largest y to the smallest. The test statistic is the sum of ranks
+of the protected group.
+4.2. Absolute measures
+
+Absolute measures are designed to capture the magnitude of the differences between
+(typically two) groups of people. The groups are determined by the protected characteristic (e.g. one group is males, another group is females). If more than one protected
+group is analyzed (e.g. different nationalities), typically each group is compared separately to the most favored group.
+4.2.1. Mean difference. Mean difference measures the difference between the means of
+the targets of the protected group and the general group, d = E(y + |s0 ) − E(y + |s1 ).
+If there is not difference then it is considered that there is no discrimination. The
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:11
+
+measure relates to the difference of means, and difference in proportions test statistics,
+except that there is no correction for the standard deviation.
+The mean difference for binary classification with binary protected feature, d = p(y + |s0 ) − p(y + |s1 ), is also known as the discrimination score
+[Calders and Verwer 2010], or sliftd [Pedreschi et al. 2009].
+Mean difference has been the most popular measure in early work on
+non-discriminatory machine learning and data mining [Pedreschi et al. 2009;
+Calders and Verwer 2010;
+Kamiran and Calders 2009;
+Kamiran et al. 2010;
+Calders et al. 2013; Zemel et al. 2013].
+4.2.2. Normalized difference. Normalized difference [Zliobaite 2015] is the mean difference for binary classification normalized
+by the rate of positive outcomes, δ =
+ +
+p(y + |s0 )−p(y + |s1 )
+p(y ) p(y − )
+, where dmax = min p(s0 ) , p(s1 ) . This measure takes into account
+dmax
+maximum possible discrimination at a given positive outcome rate, such that with
+maximum possible discrimination at this rate δ = 1, while δ = 0 indicates no discrimination.
+4.2.3. Area under curve (AUC). This measure relates to rank tests. It has been used in
+[Calders et al. 2013] for measuring discrimination between
+two
+P
+P groups when the tari
+
+i
+
+0
+
+j
+
+j
+
+1
+
+I(yi >yj )
+
+get variable is numeric (regression task), AU C = (s ,y )∈D n(s0 n,y1 )∈D
+, where
+I(true) = 1 and 0 otherwise.
+For large datasets computation becomes time and memory intensive, since a
+quadratic number of comparisons to the number of observations is required. The authors did not mention, but there is an alternative way to compute based on ranking,
+which, depending on the speed ranking algorithm, may be faster. Assign numeric ranks
+to all the observations, beginning with 1 for the smallest value. Let R0 be the sum of
+the ranks for the favored group. Then AU C = R0 − n0 (n20 +1) .
+We observe that if the target variable is binary, and in case of equality half of a point
+is added to the sum, then AUC linearly relates to mean difference as
+AU C = p(y + |s0 )p(y − |s1 ) + 0.5p(y + |s0 )p(y + |s1 ) + 0.5p(y − |s0 )p(y − |s0 ) = 0.5d + 0.5, where
+d denotes discrimination measured by the mean difference measure.
+4.2.4. Impact ratio. Impact ratio, also known as slift [Pedreschi et al. 2009], is the
+ratio of positive outcomes for the protected group over the general group, r =
+p(y + |s1 )/p(y + |s0 ). This measure is used in the US courts for quantifying discrimination, the decisions are deemed to be discriminatory if the ratio of positive outcomes
+for the protected group is below 80% of that of the general group. Also this is the form
+stated in the Sex Discrimination Act of U.K. r = 1 indicates that there is no discrimination.
+4.2.5. Elift ratio. Elift ratio [Pedreschi et al. 2008] is similar to impact ratio, but instead of dividing by the general group, the denominator is the overall rate of positive
+p(y,s)
+outcomes r = p(y + |s0 )/p(y + ). The same measure, expressed as p p(y)p(s)
+< 1 + η for all
+values of y and s, is later referred to as η-neutrality [Fukuchi et al. 2013].
+4.2.6. Odds ratio. Odds ratio of two proportions is often used in natural, social and
+biomedical sciences to measure the association between exposure and outcome. The
+popularity is due to convenient relation with the logistic regression. The exponential
+function of the logistic regression coefficient translates one unit increase in the odds
+ratio. Odds ratio has been used for measuring discrimination [Pedreschi et al. 2009] as
++ 0
+|s )p(y − |s1 )
+r = p(y
+p(y + |s1 )p(y − |s0 ) .
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:12
+
+I. Žliobaitė
+
+4.2.7. Mutual information. Mutual information (MI) is popular in information theory for
+measuring mutual dependence between variables. In discrimination literature this
+measure has been referred to as normalized prejudice index [Fukuchi et al. 2013], and
+used for measuring the magnitude of discrimination. Mutual information is measured
+in bits, but it can be normalized such that the result falls into the range between 0 and
+P
+p(s,y)
+1. For categorical variables M I = √ I(y,s) , where I(s, y) = (s,y) p(s, y) log p(s)p(y)
+,
+H(y),H(s)
+P
+and H(y) = − y p(y) log p(y). For numerical variables the summation is replaces by
+integral.
+4.2.8. Balanced residuals. While other measures work on datasets, balanced residuals is for machine learning model outputs. This measure characterizes the difference between the actual outcomes recorded in the dataset, and the model outputs. The requirement is that underpredictions and overpredictions should be balanced within the protected and regular groups. [Calders et al. 2013] proposed balanced residuals as a criteria, not a measure. That is, the average residuals should
+be equal,
+but in principle
+the difference could be used as a measure of discrimination
+P
+P
+j∈D0 yj −ŷj
+i∈D1 yi −ŷi
+d =
+−
+, where y is the true target value, ŷ is the prediction.
+n1
+n0
+Positive values of d would indicate discrimination towards the protected group. One
+should; however, use and interpret this measure with caution. If the learning dataset
+is discriminatory, but the predictive model makes ideal predictions such that all the
+residuals are zero, this measure would show no discrimination, even though the predictions would be discriminatory, since the original data is discriminatory. Suppose,
+another predictive model makes a constant prediction for everybody, and the constant
+prediction is equal to the mean of the regular group. If the learning dataset contains
+discrimination, then the residuals for the regular group would be smaller than for the
+protected group, and the measure would indicate discrimination, however, a constant
+prediction to everybody means tat everybody is treated equally, and there should be no
+discrimination detected.
+4.2.9. Other possible measures. There are many established measures in feature selection literature [Guyon and Elisseeff 2003] for measuring the relation between two
+variables, which, in principle, can be used as absolute discrimination measures. The
+stronger the relation between the protected variable s and the target variable y, the
+larger the absolute discrimination.
+There are three main groups of measures for relation between variables: correlation
+based, information theoretic, and one-class classifiers. Correlation based measures,
+such as the Person correlation coefficient, are typically used for numeric variables.
+Information theoretic measures, such as mutual information mentioned earlier, are
+typically used for categorical variables. One-class classifiers present an interesting
+option. In discrimination the setting would be to predict the target y solely on the
+protected variable s, and measure the prediction accuracy. We are not aware of such
+attempts in the non-discriminatory machine learning literature, but it would be a valid
+option to explore.
+4.2.10. Measuring for more than two groups. Most of the absolute discrimination measures
+are for two groups (protected group vs. regular group). Ideas, how to apply those for
+more than two groups, can be borrowed from multi-class classification [Bishop 2006],
+multi-label classification [Tsoumakas and Katakis 2007], and one-class classification
+[Tax 2001] literature. Basically, there are three options how to obtain sub-measures:
+measure pairwise for each pair of groups (k(k−1)/2 comparisons), measure one against
+the rest for each group (k comparisons), measure each group against the regular group
+(k − 1 comparisons). The remaining question is how to aggregate the sub-measures.
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:13
+
+Table III. Summary of absolute measures. Checkmark (X) indicates that it is directly applicable in a given
+machine learning setting. Tilde (∼) indicates that a straightforward extension exists (for instance, measuring
+pairwise).
+
+Protected variable
+Measure
+Mean difference
+Normalized difference
+Area under curve
+Impact ratio
+Elift ratio
+Odds ratio
+Mutual information
+Balanced residuals
+Correlation
+
+Binary
+
+Categoric
+
+X
+X
+X
+X
+X
+X
+X
+X
+X
+
+∼
+∼
+∼
+∼
+∼
+∼
+X
+∼
+
+Target variable
+
+Numeric
+
+X
+X
+
+Binary
+
+Ordinal
+
+X
+X
+X
+X
+X
+X
+X
+∼
+X
+
+Numeric
+X
+
+X
+
+X
+
+X
+X
+
+X
+X
+X
+
+Based on personal conversations with legal experts, we advocate for reporting the maximum from all the comparisons as the final discrimination score. Alternatively, all the
+scores could be summed weighing by the group sizes to obtain an overall discrimination score.
+Even though absolute measures do not take into account any explanations of possible differences of decisions across groups, they can be considered as core building
+blocks for developing conditional measures. Conditional measures do take into account
+explanations in differences, and measure only discrimination that cannot be explained
+by non-protected characteristics.
+Table III summarizes applicability of absolute measures in different machine learning settings.
+4.3. Conditional measures
+
+Absolute measures take into account only the target variable y and the protected variable s. Absolute measures consider all the differences in treatment between the protected group and the regular group to be discriminatory. Conditional measure, on the
+other hand, try to capture how much of the difference between the groups is explainable by other characteristics of individuals, recorded in X, and only the remaining
+differences are deemed to be discriminatory. For example, part of the difference in
+acceptance rates for natives and immigrants may be explained by the difference in
+education level. Only the remaining unexplained difference should be considered as
+discrimination. Let z = f (X) be an explanatory variable. For example, if z i denotes a
+certain education level. Then all the individuals with the same level of education will
+form a strata i. Within each strata the acceptance rates are required to be equal.
+4.3.1. Unexplained difference. Unexplained difference [Kamiran et al. 2013b] is measured, as the name suggests, as the overall mean difference minus the differences
+that can be explained by other legitimate variable. Recall that mean difference is
++ 0
++ 1
+d = p(y
+Pm|s ) − p(y |s ). Then the unexplained difference du = d − de , where
+de = i=1 p⋆ (y + |z i )(p(z i |s0 ) − p(z i |s1 )), where p⋆ (y + |z i ) is the desired acceptance rate
++
+
+0
+
+i
+
++
+
+1
+
+i
+
+|s ,z )
+within the strata i. The authors recommend using p⋆ (y + |z i ) = p(y |s ,z )+p(y
+. In
+2
+the simplest case z bay be equal one of the variables in X. The authors also use clustering on X to take into account more than one explanatory variable at the same time.
+Then z denotes a cluster, one strata is one cluster.
+
+4.3.2. Propensity measure. Propensity models [Rosenbaum and Rubin 1983] are typically used in clinical trials or marketing for estimating the probability that an indiACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:14
+
+I. Žliobaitė
+
+vidual would receive a treatment. Given the estimated probabilities, individuals can
+be stratified according to similar probabilities of receiving a treatment, and the effects
+of treatment can be measured within each strata separately. Propensity models have
+been used for measuring discrimination [Calders et al. 2013], in this case a function
+was learned to model the protected characteristic based on input variables X, that
+is s1 = f (X). A logistic regression was used for modeling f (.). Then the estimated
+propensity scores ŝ1 were split into five ranges, where each range formed one strata.
+Discrimination was measured within each strata, treating each strata as a separate
+dataset, and using absolute discrimination measures discussed in the previous section. The authors did not aggregate the resulting discrimination into one measure,
+but in principle the results can be aggregated into one measure, for instance, using
+the unexplained difference formulas, reported above. In such a case each strata would
+correspond to one value of an explanatory variable z.
+4.3.3. Belift ratio. Belift ratio [Mancuhan and Clifton 2014] is similar to Elift ratio in
+absolute measures, but here the probabilities of positive outcome are also conditioned
++ 1
+|s ,X r ,X a )
+on input attributes, belif t = p(y p(y
+, where X = X r ∪ X 6r is a set of input vari+ |X a )
+r
+ables, X denotes so caller redlining attributes, the variables which are correlated
+with the protected variable s. The authors proposed estimating the probabilities via
+bayesian networks. A possible difficulty for applying this measure in practice may be
+that not everybody, especially non-machine learning users, are familiar enough with
+the Bayesian networks to an extent needed for estimating the probabilities. Moreover, construction of a Bayesian network may be different even for the same problem
+depending on assumptions made about interactions between the variables. Thus, different users may get different discrimination scores for the same application case.
+A simplified approximation of belift could be to treat all the attributes as redlining
+attributes, and instead of conditioning on all the input variables, condition on a summary of input variables z, where z = f (X). Then the measure for strata i would be
+p(y + |s1 ,z i )
+.
+p(y + )
+The measure has a limitation that neither the original version, nor the simplified
+version allow differences to be explained by variables that are correlated with the
+protected variable. That is, if a university has two programmes, say medicine and
+computer science, and the protected group, e.g. females, are more likely to apply for a
+more competitive programme, then the programmes cannot have different acceptance
+rates. That is, if the acceptance rates are different, all the difference is considered to
+discriminatory.
+4.4. Structural measures
+
+Structural measures are targeted at quantifying direct discrimination. The main idea
+behind structural measures is for each individual in the dataset to identify whether
+s/he is discriminated, and then analyze how many individuals in the dataset are affected. Currently
+4.4.1. Situation testing. Situation testing [Luong et al. 2011] measures which fraction
+of individuals in the protected group are considered discriminated, as f =
+P
+yi ∈D(y0 |s1 ) I(diff
+|D(y 0 |s1 )|
+
+(yi )≥t)
+
+, where t is a user defined threshold, I is the indicator function
+that takes P
+1 if true, 0 otherwise. The
+P situation testing for an individual i is computed as
+y ∈D0 κ−nearest −neighbours
+
+j
+−
+diff (yi ) =
+κ
+nation is handled separately.
+
+yj ∈D1 κ−nearest −neighbours
+
+κ
+
+. Positive and negative discrimi-
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:15
+
+The idea is to compare each individual to the opposite group and see if the decision
+would be different. In that sense, the measure relates to propensity scoring (Section
+4.3), used for identifying groups of people similar according to the non-protected characteristics, and requiring for decisions within those groups to be balanced. The main
+difference is that propensity measures would signal indirect discrimination within a
+group, and situation testing aims at signalling direct discrimination for each individual in question.
+4.4.2. Consistency. Consistency measure [Zemel et al. 2013] compares the predictions for each individual with his/her nearest neighbors. C
+= 1 −
+1 PN P
+|y
+−
+y
+|.
+Consistency
+measure
+is
+closely
+related
+to sitj
+i=1
+yj ∈Dκ−nearest −neighbours i
+κN
+uation testing, but considers nearest neighbors from any group (not from the opposite group). Due to this choice, consistency measure should be used with caution in
+situations where there is a high correlation between the protected variable and the
+legitimate input variables. For example, suppose we have only one predictor variable
+- location of an apartment, and the target variable is to grant a loan or not. Suppose
+all non-white people live in one neighborhood (as in the redlining example), and all
+the white people in the other neighborhood. Unless the number of nearest neighbors
+to consider is very large, this measure will show no discrimination, since all the neighbors will get the same decision, even though all black residents will be rejected, and all
+white will be accepted (maximum discrimination). Perfect consistency, but maximum
+discrimination. In their experimental evaluation the authors have used this measure
+in combination with the mean difference measure.
+5. ANALYSIS OF CORE MEASURES
+
+Even though absolute measures are naive in a sense that they do not take any possible explanations of different treatment into account, and due to that may show more
+discrimination that there actually is, these measures provide core mechanisms and a
+basis for measuring indirect discrimination. Conditional measures are typically built
+upon absolute measures. In addition, statistical tests often directly relate to absolute
+measures. Thus, to provide a better understanding of properties and implications of
+choosing one measure over another, in this section we computationally analyze a set of
+absolute measures, and discuss their properties.
+We analyze the following measures, introduced in Section 4.2: mean difference,
+normalized difference, mutual information, impact ratio, elift and odds ratio. From
+the measures analyzed in this section, mean difference and area under curve can
+be directly used in regression tasks. We focus on the classification scenario, since
+this scenario has been studied more extensively in the discrimination-aware data
+mining and machine learning literature, and there are more measures available for
+classification than for regression; the regression setting, except for a recent work
+[Calders et al. 2013], remains a subject of future research, and therefore is out of the
+scope of a survey paper.
+Table IV summarizes boundary conditions of the selected measures. In the difference
+based measures 0 indicates no discrimination, in the ratio based measures 1 indicates
+no discrimination, in AUC 0.5 means no discrimination. The boundary conditions are
+reached when one group gets all the positive decisions, and the other group gets all the
+negative decisions.
+Next we experimentally analyze the performance of the selected measures. We leave
+out AUC from the experiments, since in classification it is equivalent to the mean difference measure. The goal of the experiments is to demonstrate how the performance
+depends on variations in the overall rate of positive decisions, balance between classes
+and balance between the regular and protected groups of people in data.
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:16
+
+I. Žliobaitė
+Table IV. Limits
+Measure
+Differences
+Mean difference
+Normalized difference
+Mutual information
+Ratios
+Impact ratio
+Elift
+Odds ratio
+AUC
+Area under curve (AUC)
+
+Maximum
+discrimination
+
+No
+discrimination
+
+Reverse
+discrimination
+
+1
+1
+1
+
+0
+0
+0
+
+−1
+−1
+1
+
+0
+0
+0
+
+1
+1
+1
+
++∞
++∞
++∞
+
+1
+
+0.5
+
+0
+
+For this analysis we use synthetically generated data which allows to represent different task settings and control the levels of underlying discrimination. Given four
+parameters: the proportion of individuals in the protected group p(s1 ), the proportion
+of positive outputs p(y + ), the underlying discrimination d ∈ [−100%, 100%], and the
+number of data points n, data is generated as follows. First n data points are generated assigning a score in [0, 1] uniformly at random, and assigning group membership
+at random according to the probability p(s1 ). This data contains no discrimination,
+because the scores are assigned at random. If would contain full discrimination if we
+ranked the observations according to the assigned scores and all the members of the
+regular group would appear before all the members of the protected group. Following
+this reasoning, half-discrimination would be if in a half of the data the members of the
+regular group appear before all the members of the protected group in the ranking, and
+the other half of the data would show a random mix of both groups in the ranking. For
+the experimental analysis purposes we define this as 50% discrimination. It is difficult
+to measure discrimination in data this way, but it is easy to generate such a data. For a
+given level of desired discrimination d we select dn observations at random, sort them
+according to their scores, and then permute group assignments within this subsample
+in such a way that the highest scores get assigned to the regular group, and the lowest
+scores get assigned to the protected group. Finally, since the experiment is about classification, we round the scores to zero-one in such a way that the proportion of ones is
+as desired by p(y + ). Then we apply different measures of discrimination to data generated this way, and investigate, how these measures can reconstruct the underlying
+discrimination. For each parameter setting we generate n = 10000 data points, and
+average the results over 100 such runs1
+Figure 2 depicts the performance of mean difference, normalized difference and mutual information. Ideally, the performance should be invariant to balance of the groups
+(p(s1 0)) and the proportion of positive outputs (p(y + )), and thus run along the diagonal
+line in as many plots, as possible. We can see that the normalized difference captures
+that. The mean difference captures the trends, but the indicated discrimination highly
+depends on the balance of the classes and balance of the groups, therefore, this measure to be interpreted with care when data is highly imbalanced. The same holds for
+mutual information. For instance, at p(s1 ) = 90% and p(y + ) = 90% the true discrimination in data may be near 100%, i.e. nearly the worst possible, but both measures would
+indicate that discrimination is nearly zero. The normalized difference would capture
+the situation as desired. In addition to that, we see that the mean difference and normalized difference are linear measures, while mutual information is non-linear, and
+would show less discrimination that actually in the medium ranges. Moreover, mutual
+1 The
+
+code for our experiments is made available at https://github.com/zliobaite/paper-fairml-survey.
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+measured discrim.
+
+measured discrim.
+
+70%
+
+90%
+
+1
+
+1
+
+1
+
+0
+
+0
+
+0
+
+0
+
+0
+
+−1
+1
+
+−1
+
+0
+
+1
+
+1
+
+0
+
+−1
+1
+
+1
+
+−1
+
+0
+
+1
+
+1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+1
+
+0
+
+1
+
+−1
+1
+
+−1
+
+0
+
+1
+
+0
+
+1
+
+discrim. in data
+
+−1
+
+−1
+1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+1
+
+0
+
+1
+
+−1
+1
+
+−1
+
+0
+
+1
+
+0
+
+1
+
+discrim. in data
+
+−1
+
+−1
+1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+1
+
+0
+
+1
+
+−1
+1
+
+−1
+
+0
+
+1
+
+0
+
+1
+
+−1
+
+discrim. in data
+
+−1
+1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+0
+
+−1
+
+0
+
+1
+
+−1
+1
+
+0
+
+−1
+
+0
+
+1
+
+−1
+1
+
+0
+
+−1
+
+−1
+
+0
+
+0
+
+−1
+
+−1
+1
+
+0
+
+0
+
+−1
+
+−1
+
+0
+
+0
+
+−1
+
+−1
+1
+
+0
+
+0
+
+−1
+
+−1
+
+0
+
+0
+
+−1
+
+−1
+1
+
+0
+
+0
+
+−1
+
+−1
+1
+
+0
+
+−1
+
+−1
+
+0
+
+0
+
+−1
+
+−1
+
+p(s1 ) = 10%
+
+50%
+
+1
+
+30%
+
+30%
+
+1
+
+50%
+
+measured discrim.
+
+measured discrim.
+
+measured discrim.
+
+p(y ) = 10%
+
+mutual information
+
+70%
+
+normalized difference
+
++
+
+90%
+
+mean difference
+
+0:17
+
+0
+
+−1
+
+0
+
+1
+
+discrim. in data
+
+−1
+
+discrim. in data
+
+Fig. 2. Analysis of the measures based on differences: discrimination in data vs. measured discrimination.
+
+information dos not indicate the sign of discrimination, that is, the outcome does not
+indicate whether discrimination is reversed or not. For these reasons, we do not recommend using mutual information for the purpose of quantifying discrimination. Therefore, from the difference based measures we advocate normalized difference, which
+was designed to be robust to imbalances in data. The normalized difference is somewhat more complex to compute than the mean difference, which may be a limitation
+for practical applications outside research. Therefore, if data is closed to balanced in
+terms of groups and positive-negative outputs, then the mean difference can be used.
+Figure 3 presents similar analysis of the measures based on ratios: impact ratio,
+elift and odds ratio. We can see that the odds ratio, and the impact ratio are very sensitive to imbalances in groups and positive outputs. The elift is more stable in that
+respect, but still has some variations, particularly at high imbalance of positive outputs (p(y + ) = 90% or 10%), when discrimination may be highly exaggerated (far from
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:18
+
+I. Žliobaitė
+
+measured discrim.
+
+measured discrim.
+
+70%
+
+90%
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+1
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+1
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+1
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+1
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+−1
+
+0
+
+1
+
+0
+3
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+1
+
+1
+
+0
+
+−1
+
+0
+
+1
+
+discrim. in data
+
+0
+
+−1
+
+0
+
+1
+
+discrim. in data
+
+0
+
+−1
+
+0
+
+1
+
+discrim. in data
+
+0
+
+−1
+
+0
+
+1
+
+discrim. in data
+
+0
+
+p(s1 ) = 10%
+
+50%
+
+3
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+−1
+
+0
+
+1
+
+30%
+
+30%
+
+3
+
+50%
+
+measured discrim.
+
+measured discrim.
+
+measured discrim.
+
+p(y ) = 10%
+
+odds ratio
+
+70%
+
+elift
+
++
+
+90%
+
+impact ratio
+
+discrim. in data
+
+Fig. 3. Analysis of the measures based on ratios: discrimination in data vs. measured discrimination.
+
+the diagonal line). In addition, measured discrimination by all ratios grows very fast
+at low rates of positive outcome (e.g. see the plot p(y + ) = 10% and p(s1 ) = 90%), while
+there is almost no discrimination in the data, measures indicate high discrimination.
+We also can see that all the ratios are asymmetric in terms of reverse discrimination.
+One unit of measured discrimination is not the same as one unit of reverse discrimination. This makes ratios a bit more difficult to interpret than differences, analyzed
+earlier, especially at large scale explorations and comparisons of, for instance, different computational methods for prevention. Due to these reasons, we do not recommend
+using ratio based discrimination measures, since they are much more difficult to interpret correctly, and may easily be misleading. Instead recommend using and building
+upon difference based measures, discussed in Figure 2.
+The core measures that we have analyzed form a basis for assessing fairness of
+predictive models, but it is not enough to use them directly, since they do not take
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:19
+
+into account possible legitimate explanations of differences between the groups, and
+instead consider any differences between the groups of people undesirable. The basic
+principle is to try to stratify the population in such a way that in each stratum contains
+people that are similar in terms of their legitimate characteristics, for instance, have
+similar qualifications if the task is candidate selection for job interviews. propensity
+score matching, reported in Section 4.3, is one possible way to stratification, but it is
+not the only one, and outcomes may vary depending on internal parameter choices.
+Thus, the principle to measuring is available, but there are still open challenges ahead
+to make the approach more robust to different users, and more uniform across different
+task setting, such that one could diagnose potential discrimination or declare fairness
+with more confidence.
+6. RECOMMENDATIONS FOR RESEARCHERS AND PRACTITIONERS
+
+As attention of researchers, media and general public to potential discrimination is
+growing, it is important to be able to measure fairness of predictive models in a systematic and accountable way. We have surveyed measures used (and potentially usable) for measuring indirect discrimination in machine learning, and experimentally
+analyzed the performance of the core measures in classification tasks. Based on our
+analysis we generally recommend using the normalized difference, and in case the
+classes and groups of people in the data are well balanced, it may be sufficient to use
+the simple (unnormalized) mean difference. We do not recommend using ratio based
+measures challenges associated with their interpretation in different situation.
+The core measures stand alone are not enough for measuring fairness correctly.
+These measures can only be applied to uniform populations considering that everybody within the population is equally qualified to get a positive decision. In reality this
+is rarely the case, for example, different salary levels may be explained by different
+education levels. Therefore, the main principle of applying the core measures should
+be by first segmenting the population into more or less uniform segments according to
+their qualifications, and then applying core measures within each segment. Some of
+such measuring techniques have been surveyed in Section 4.3 (Conditional measures),
+but generally there is no one easy way to approach it, and presenting sound arguments
+to justify the methods of allocating people into segments is very important in research
+and practice.
+We hope that this survey can establish a basis for further research developments
+in this important topic. So far most of the research has concentrated on binary classification with binary protected characteristic. While this is a base scenario, relatively
+easy to deal with in research, many technical challenges for future research lie in addressing more complex learning scenarios with different types and multiple protected
+characteristics, in multi-class, multi-target classification and regression settings, with
+different types of legitimate variables, noisy input data, potentially missing protected
+characteristics, and many more.
+REFERENCES
+Kenneth. J. Arrow. 1973. The Theory of Discrimination. In Discrimination in Labor Markets, O. Ashenfelter
+and A. Rees (Eds.). Princeton University Press, 3–33.
+Solon Barocas, Sorelle Friedler, Moritz Hardt, Josh Kroll, Suresh Venkatasubramanian, and Hanna Wallach
+(Eds.). 2015. 2nd International Workshop on Fairness, Accountability, and Transparency in Machine
+Learning (FATML). http://www.fatml.org
+Solon Barocas and Moritz Hardt (Eds.). 2014. International Workshop on Fairness, Accountability, and
+Transparency in Machine Learning (FATML). http://www.fatml.org/2014
+Solon Barocas and Andrew D. Selbst. 2016. Big Data’s Disparate Impact. California Law Review 104 (2016).
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+0:20
+
+I. Žliobaitė
+
+Christopher M. Bishop. 2006. Pattern Recognition and Machine Learning (Information Science and Statistics). Springer-Verlag New York, Inc.
+Rebecca M. Blank, Marilyn Dabady, Constance Forbes Citro, and National Research Council (U.S.) Panel
+on Methods for Assessing Discrimination. 2004. Measuring racial discrimination. National Academies
+Press.
+John Burn-Murdoch. 2013. The problem with algorithms: magnifying misbehaviour. The Guardian (2013).
+http://www.theguardian.com/news/datablog/2013/aug/14/problem-with-algorithms-magnifying-misbehaviour
+Toon Calders, Asim Karim, Faisal Kamiran, Wasif Ali, and Xiangliang Zhang. 2013. Controlling Attribute
+Effect in Linear Regression. In Proc. of the 13th Int. Conf. on Data Mining (ICDM). 71–80.
+Toon Calders and Sicco Verwer. 2010. Three Naive Bayes Approaches for Discrimination-free Classification.
+Data Min. Knowl. Discov. 21, 2 (2010), 277–292.
+Toon Calders and Indre Zliobaite (Eds.). 2012. IEEE ICDM 2012 International Workshop on Discrimination
+and Privacy-Aware Data Mining (DPADM). https://sites.google.com/site/dpadm2012/
+Toon Calders and Indre Zliobaite. 2013. Why Unbiased Computational Processes Can Lead to Discriminative Decision Procedures. In Discrimination and Privacy in the Information Society - Data Mining and
+Profiling in Large Databases. 43–57.
+Danielle K. Citron and Frank A. Pasqualle III. 2014. The Scored Society: Due Process for Automated Predictions. Washington Law Review 89 (2014).
+European Commission. 2011. How to present a discrimination claim: Handbook on seeking remedies under
+the EU Non-discrimination Directives. EU Publications Office.
+Bart Custers, Toon Calders, Bart Schermer, and Tal Zarsky (Eds.). 2013. Discrimination and Privacy in the
+Information Society. Springer.
+Benjamin G. Edelman and Michael Luca. 2014. Digital Discrimination: The Case of Airbnb.com. Working
+Paper 14-054. Harvard Business School NOM Unit.
+Michael Feldman, Sorelle A. Friedler, John Moeller, Carlos Scheidegger, and Suresh Venkatasubramanian.
+2015. Certifying and Removing Disparate Impact. In Proc. of the 21th ACM SIGKDD Int. Conf. on
+Knowledge Discovery and Data Mining. 259–268.
+European Union Agency for Fundamental Rights. 2011. EU Publications Office.
+Kazuto Fukuchi, Jun Sakuma, and Toshihiro Kamishima. 2013. Prediction with Model-Based Neutrality. In
+Proc. of European conference on Machine Learning and Knowledge Discovery in Databases. 499–514.
+Isabelle Guyon and André Elisseeff. 2003. An Introduction to Variable and Feature Selection. Journal of
+Machine Learning Research 3 (2003), 1157–1182.
+Sara Hajian and Josep Domingo-Ferrer. 2013. A Methodology for Direct and Indirect Discrimination Prevention in Data Mining. IEEE Trans. Knowl. Data Eng. 25, 7 (2013), 1445–1459.
+The White House. 2014. Big Data: Seizing Opportunities, Preserving Values. Executive Office of the President.
+Faisal Kamiran and Toon Calders. 2009. Classification without Discrimination. In Proc. nd IC4 conf. on
+Computer, Control and Communication. 1–6.
+Faisal Kamiran, Toon Calders, and Mykola Pechenizkiy. 2010. Discrimination Aware Decision Tree Learning. In Proc. of the 2010 IEEE International Conference on Data Mining (ICDM). 869–874.
+Faisal Kamiran, Indre Zliobaite, and Toon Calders. 2013a. Quantifying explainable discrimination and removing illegal discrimination in automated decision making. Knowl. Inf. Syst. 35, 3 (2013), 613–644.
+Faisal Kamiran, Indre Zliobaite, and Toon Calders. 2013b. Quantifying explainable discrimination and removing illegal discrimination in automated decision making. Knowl. Inf. Syst. 35, 3 (2013), 613–644.
+Toshihiro Kamishima, Shotaro Akaho, Hideki Asoh, and Jun Sakuma. 2012. Fairness-Aware Classifier with
+Prejudice Remover Regularizer. In Proc. of European Conference on Machine Learning and Knowledge
+Discovery in Databases (ECMLPKDD). 35–50.
+Binh Thanh Luong, Salvatore Ruggieri, and Franco Turini. 2011. k-NN As an Implementation of Situation
+Testing for Discrimination Discovery and Prevention. In Proc. of the 17th ACM SIGKDD Int. Conf. on
+Knowledge Discovery and Data Mining (KDD). 502–510.
+Koray Mancuhan and Chris Clifton. 2014. Combating Discrimination Using Bayesian Networks. Artif. Intell.
+Law 22, 2 (2014), 211–238.
+Sergio Mascetti, Annarita Ricci, and Salvatore Ruggieri (Eds.). 2014. Special issue: Computational Methods
+for Enforcing Privacy and Fairness in the Knowledge Society. Vol. 22. Artificial Intelligence and Law.
+Issue 2.
+Claire Cain Miller. 2015. When Algorithms Discriminate. New York Times (2015).
+http://www.nytimes.com/2015/07/10/upshot/when-algorithms-discriminate.html
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+Discrimination measures
+
+0:21
+
+Dino Pedreschi, Salvatore Ruggieri, and Franco Turini. 2008. Discrimination-aware data mining. In Proc. of
+the 14th ACM SIGKDD Int. Conf. on Knowledge Discovery and Data Mining (KDD). 560–568.
+Dino Pedreschi, Salvatore Ruggieri, and Franco Turini. 2009. Measuring Discrimination in SociallySensitive Decision Records. In Proc. of the SIAM Int. Conf. on Data Mining (SDM). 581–592.
+Dino Pedreschi, Salvatore Ruggieri, and Franco Turini. 2012. A Study of Top-k Measures for Discrimination
+Discovery. In Proc. of the 27th Annual ACM Symposium on Applied Computing (SAC). 126–131.
+Andrea Romei and Salvatore Ruggieri. 2014. A multidisciplinary survey on discrimination analysis. Knowledge Eng. Review 29, 5 (2014), 582–638.
+Andrea Romei, Salvatore Ruggieri, and Franco Turini. 2012. Discovering Gender Discrimination in Project
+Funding. In Proc. of the 2012 IEEE 12th Int. Conf. on Data Mining Workshops (ICDMW). 394–401.
+Paul R. Rosenbaum and Donald B. Rubin. 1983. The central role of the propensity score in observational
+studies for causal effects. Biometrika 1 (1983), 41–55. Issue 70.
+Salvatore Ruggieri, Dino Pedreschi, and Franco Turini. 2010. Data Mining for Discrimination Discovery.
+ACM Trans. Knowl. Discov. Data 4, 2, Article 9 (May 2010), 40 pages.
+David Tax. 2001. One-class classification. Ph.D. Dissertation. Delft University of Technology.
+Grigorios Tsoumakas and Ioannis Katakis. 2007. Multi-label classification: an overview. International Journal of Data Warehousing & Mining 3, 3 (2007), 1–13.
+John Wihbey. 2015. The possibilities of digital discrimination: Research on e-commerce, algorithms and big
+data. Journalist’s resource (2015). http://journalistsresource.org/
+John Yinger. 1986. Measuring Racial Discrimination with Fair Housing Audits: Caught in the Act. The
+American Economic Review 76, 5 (1986), 881–893.
+Richard S. Zemel, Yu Wu, Kevin Swersky, Toniann Pitassi, and Cynthia Dwork. 2013. Learning Fair Representations. In Proc. of the 30th Int. Conf. on Machine Learning. 325–333.
+Indre Zliobaite. 2015. On the relation between accuracy and fairness in binary classification. In The 2nd
+workshop on Fairness, Accountability, and Transparency in Machine Learning (FATML) at ICML’15.
+
+ACM Journal Name, Vol. 0, No. 0, Article 0, Publication date: October 2015.
+
+

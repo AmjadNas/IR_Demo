@@ -1,0 +1,1552 @@
+A Confidence-Based Approach for Balancing Fairness and Accuracy
+Benjamin Fish
+
+Jeremy Kun
+
+Ádám D. Lelkes∗†
+
+arXiv:1601.05764v1 [cs.LG] 21 Jan 2016
+
+January 22, 2016
+Abstract
+We study three classical machine learning algorithms in
+the context of algorithmic fairness: adaptive boosting,
+support vector machines, and logistic regression. Our
+goal is to maintain the high accuracy of these learning algorithms while reducing the degree to which they
+discriminate against individuals because of their membership in a protected group.
+Our first contribution is a method for achieving fairness by shifting the decision boundary for the protected
+group. The method is based on the theory of margins
+for boosting. Our method performs comparably to or
+outperforms previous algorithms in the fairness literature in terms of accuracy and low discrimination, while
+simultaneously allowing for a fast and transparent quantification of the trade-off between bias and error.
+Our second contribution addresses the shortcomings
+of the bias-error trade-off studied in most of the algorithmic fairness literature. We demonstrate that even
+hopelessly naive modifications of a biased algorithm,
+which cannot be reasonably said to be fair, can still
+achieve low bias and high accuracy. To help to distinguish between these naive algorithms and more sensible
+algorithms we propose a new measure of fairness, called
+resilience to random bias (RRB). We demonstrate that
+RRB distinguishes well between our naive and sensible
+fairness algorithms. RRB together with bias and accuracy provides a more complete picture of the fairness of
+an algorithm.
+
+ual people, and not always for the better. Consequently,
+there has been a growing concern that machine learning
+algorithms, which are often poorly understood by those
+that use them, make discriminatory decisions.
+If the data used for training the algorithm is biased,
+a machine learning algorithm will learn the bias and perpetuate discriminatory decisions against groups that are
+protected by law, even in the absence of “discriminatory
+intent” by the designers. A typical example is an algorithm serving predatory ads to protected groups. Such
+issues resulted in a 2014 report from the US Executive
+Office [12] which voiced concerns about discrimination
+in machine learning. The primary question we study in
+this paper is
+How can we maintain high accuracy of a learning
+algorithm while reducing discriminatory biases?
+
+In this paper we will focus on the issue of biased training
+data, which is one of the several possible causes of
+discriminatory outcomes in machine learning. In this
+setting, we have a protected attribute (e.g. race or
+gender) which we assert should be independent from the
+target attribute. For example, if the goal is to decide
+creditworthiness for loans and the protected attribute
+is gender, a classifier’s prediction should not correlate
+with an applicant’s gender. We say that the classifier
+achieves statistical parity if the protected subgroup is as
+likely as the broader population to have a given label.
+Of course, there might be situations where the
+target label depends on legitimate factors that correlate
+with the protected attribute. For example, if the
+1 Background and Motivation
+protected attribute is gender and the target label is
+1.1 Motivation Machine learning algorithms as- income, some argue that lower salaries for women can
+sume an increasingly large role in making decisions be partly explained by the fact that on average, men
+across many different areas of industry, finance, and work longer hours than women. In this paper we assume
+government, from facial recognition and social network that this is not the case. The issue of “explainable
+analysis to self-driving cars to data-based approaches in discrimination” in machine learning was studied in [8].
+commerce, education, and policing. The decisions made
+In our setting, since we only have biased data,
+by algorithms in these domains directly affect individ- we cannot evaluate our classifiers against an unbiased
+ground truth. In particular only a biased classifier
+could achieve perfect accuracy; to achieve statistical
+∗ University of Illinois at Chicago, Department of Mathematics,
+parity in general one must be willing to reduce accuracy.
+Statistics, and Computer Science
+† {bfish3, jkun2, alelke2}@uic.edu
+Hence the natural goal is to find a classifier that
+
+achieves statistical parity while minimizing error, or example in S C having label 1, i.e.
+more generally to study the trade-off between bias and
+B(D, S) = Pr [l(x) = 1] − Pr [l(x) = 1].
+accuracy so as to make favorable trade-offs.
+x∼D|S C
+x∼D|S
+The bias of a hypothesis h is the same quantity with
+h(x) replacing l(x). If a hypothesis has low bias in
+absolute value we say it achieves statistical parity. Note
+that S represents the group we wish to protect from
+discrimination, and the bias represents the degree to
+which they have been discriminated against. The sign of
+bias indicates whether S or S C is discriminated against.
+A similar statistical measure called disparate impact was
+introduced and studied by Friedler et al. [4] based on the
+“80% rule” used in United States hiring law.
+Dwork et al. [3] point out that statistical parity is
+only a measure of population-wide fairness. They provide a laundry list of ways one could achieve statistical
+parity while still exhibiting serious and unlawful discrimination. In particular, one can achieve statistical
+parity by flipping the labels of a certain number of arbitrarily chosen members of the disadvantaged group,
+regardless of the relation between the individuals and
+the classification task. In our experiments we show this
+already outperforms some of the leading algorithms in
+the fairness literature.
+Despite this, it is important to study the ability
+for learning algorithms to achieve statistical parity. For
+example, it might be reasonable to flip the labels of
+the “most qualified” individuals of the disadvantaged
+group who are classified negatively. Some previous
+approaches assume the existence of a ranking or metric
+on individuals, or try to learn this ranking from data [6,
+3]. By contrast, our SDB achieves statistical parity
+without the need for such a ranking.
+kN N -consistency: The second notion, due to [3],
+calls a classifier “individually fair” if it classifies similar
+individuals similarly. They use k-nearest-neighbor to
+measure the consistency of labels of similar individuals.
+Note that “closeness” is defined with respect to a metric
+chosen as part of the data cleaning and feature selection
+1.3 Existing notions of fairness The study of
+process. By contrast SDB does not require a metric on
+fairness in machine learning is young, but there has
+individuals.
+been a lot of disparate work studying notions of what it
+means for data to be fair. Finding the “right” definition
+1.4 Previous work on fair algorithms Learning
+of fairness is a major challenge; see the extensive
+algorithms studied previously in the context of fairness
+survey of [13] for a detailed discussion. Two prominent
+include naive Bayes [1], decision trees [7], and logistic
+definitions of fairness that have emerged are statistical
+regression [9]. To the best of our knowledge we are the
+parity and k-nearest-neighbor consistency. We review
+first to study boosting and SVM in this context, and
+them briefly now.
+our confidence-based analysis is new for both these and
+Statistical parity: Let D be a distribution over a set
+logistic regression.
+of labeled examples X with labels l : X → {−1, 1} and
+The two main approaches in the literature are masa protected subset S ⊂ X. The bias of l with respect
+saging and regularization. Massaging means changing
+to D is defined as the difference in probability of an
+the biased dataset before training to remove the bias
+example in S having label 1 and the probability of an
+in the hope that the learning algorithm trained on the
+
+1.2 Contributions Our first contribution in this paper is a method for optimizing this trade-off which we
+call the Shifted Decision Boundary (SDB). SDB is a
+generic method based on the theory of margins [2, 15],
+and it can be combined with any learning algorithm that
+produces a measure of confidence in its prediction (Section 2.1). In particular we combine SDB with boosting,
+support vector machines, and logistic regression, and it
+performs comparably to or outperforms previous algorithms in the fair learning literature. See Section 3 for
+its empirical evaluation. We also give a theorem based
+on the analysis in [15] bounding the loss of accuracy for
+SDB under weighted majority schemes (Section 2.4).
+SDB makes the assumptions on the bias explicit and
+transparent, so that the trade-off can be understood
+without a detailed understanding of the learning algorithm itself.
+Unfortunately, studying the bias-error trade-off is
+an incomplete picture of the fairness of an algorithm.
+The shortcomings were discussed in [3], e.g., in terms of
+how an adversary could achieve statistical parity while
+still targeting the protected group unfairly. We demonstrate these shortcomings in action even in the absence
+of adversarial manipulation. Among other methods, we
+show that modifying a classifier by randomly flipping
+certain output labels with a certain probability already
+outperforms much of the prior fairness literature in both
+accuracy and bias. Such a naive algorithm is obviously
+unfair because the relabeling is independent of the classification task. Our second contribution is a measure of
+fairness that addresses this shortcoming, which we call
+resilience to random bias. We define it in Section 2.5
+and demonstrate that it distinguishes well between our
+naive baseline algorithms and SDB.
+
+now unbiased data will be fair. Massaging is done in the
+previous literature based on a ranking learned from the
+biased data [6]. The regularization approach consists of
+adding a regularizer to an optimization objective which
+penalizes the classifier for discrimination [10]. While
+SDB can be thought of as a post-processing regularization, it does so in a way that makes the trade-off between
+bias and accuracy transparent and easily controlled.
+There are two other notable approaches in the
+fairness literature. The first, introduced in [3], is a
+framework for maximizing the utility of a classification
+with the constraint that similar people be treated
+similarly. One shortcoming of this approach is that
+it relies on a metric on the data that tells us the
+similarity of individuals with respect to the classification
+task. Moreover, the work in [3] suggests that learning a
+suitably fair similarity metric from the data is as hard
+as the original problem of finding a fair classifier. Our
+SDB method does not require such a metric.
+The “Learning Fair Representations” method of
+Zemel et al. [17] formulates the problem of fairness in
+terms of intermediate representations: the goal is to
+find a representation of the data which preserves as
+much information as possible from the original data
+while simultaneously obfuscating membership in the
+protected class. Given that in this paper we seek to
+make explicit the trade-off between bias and accuracy,
+we will not be able to hide membership in the protected
+class as Zemel et al. seeks to do. Rather, we align with
+the central thesis of [3], that knowing the protected
+feature is useful to promote fairness.
+
+majority voting scheme satisfies the following for every
+θ > 0:
+Pr[yf (x) ≤ 0] ≤ Pr[yf (x) ≤ θ]+
+D
+
+S
+
+O
+
+1
+√
+m
+
+
+
+1/2 !
+d log2 (m/d)
++ log(1/δ)
+θ2
+
+In other words, the generalization error is bounded
+by the probability of a small margin on the sample. One
+can go on to show AdaBoost [14], a popular algorithm
+that produces a weighted voting scheme, performs well
+in this respect. Recall that the output of AdaBoost
+is a hypothesisPwhich outputs the sign of a weighted
+majority vote
+i αi , hi (x). Rather than measure the
+margin we measure the signed confidence of the boosting
+hypothesis on an unlabeled example x as
+PT
+αi hi (x)
+.
+conf(x) = i=1
+PT
+i=1 αi
+The magnitude of the confidence measures the agreement of the voters in their classification of an example.
+The theoretical work on margins for boosting suggests that examples with small confidence are more
+likely to have incorrect labels than examples with large
+confidence. For example, we display in Figure 1 the
+signed confidence values for all examples and incorrectly
+predicted examples respectively. The incorrect examples have confidence centered around zero. One can
+leverage this for fairness by flipping negative labels of
+members of the protected class with a small confidence
+value. This is a rough sketch of the SDB method. The
+empirical results of SDB suggest that SDB achieves statistical parity with relatively little loss in accuracy. Indeed, we state a similar guarantee to Theorem 1.1 in
+Section 2.4 that solidifies this intuition.
+The idea of a signed confidence generalizes nicely to
+other machine learning algorithms. We study support
+vector machines (SVM) which have a natural geometric
+notion of margin, and logistic regression which outputs
+a confidence in its prediction. For background on SVM,
+logistic regression, and AdaBoost, see [16].
+
+1.5 Margins The theory of margins has provided a
+deep, foundational explanation for the generalization
+properties of algorithms such as AdaBoost and softmargin SVMs [2, 15]. A hypothesis f : X → [−1, 1]
+induces a margin for a labeled example marginf (x, y) =
+y · f (x), where x ∈ X is a data point and y ∈ {−1, 1} is
+the correct label for x. The sign of the margin is positive
+if and only if f correctly labels x, and the magnitude
+indicates how confident f is in its prediction.
+As an example of the power of margins, we quote
+a celebrated theorem on the generalization accuracy
+of weighted majority voting schemes in PAC-learning.
+1.6 Interpretations of signed confidence Here
+Here a weighted majority vote is a function f (x) =
+PN
+we state how signed confidence is defined for each of
+i=1 αi hi (x) for some hypotheses hi ∈ H and αi ≥ the learning methods.
+P
+0, i αi = 1.
+Theorem 1.1. (Schapire et al. [15]) Let D be a
+distribution over X × {−1, 1} and S be a sample of m
+examples chosen i.i.d. at random according to D. Let
+H be a set of hypotheses of VC-dimension d. Then for
+any δ > 0, with probability at least 1 − δ every weighted
+
+1.6.1 AdaBoost Boosting algorithms work by combining base hypotheses, “rules of thumb” that have a
+fixed edge over random guessing, into highly accurate
+predictors. In each round, a boosting algorithm finds
+the base hypothesis that achieves the smallest weighted
+error on the sample. It then increases the weights of
+
+1200
+1000
+800
+600
+400
+200
+0
+1.0
+
+with the standard logistic loss `(w, (x, y)) = log(1 +
+e−yhw,xi ) and L2 regularization. Here we define the
+confidence of logistic regression simply as the value
+that the classifier takes before rounding: conf(x) =
+φ(hw, xi).
+
+Confidence Values of All Examples
+
+0.5
+
+0.0
+
+0.5
+
+1.0
+
+2
+
+Methods and Technical Solutions
+
+2.1 Shifted decision boundary In this section we
+define our methods. In what follows X is a labeled
+250
+dataset, l(x) are the given labels, and S ⊂ X is the
+200
+protected group. We further assume that members of S
+150
+100
+are less likely than S C to have label 1. First we describe
+50
+our proposed method, called shifted decision boundary
+0
+1.0
+0.5
+0.0
+0.5
+1.0
+(SDB), and then we describe three techniques we use
+for baseline comparisons (in addition to comparing to
+previous literature).
+Figure 1: Histogram of boosting confidences for the
+Let conf : X → [−1, 1] be a function corresponding
+Census data set. The top histogram shows the distribu- to a classifier h(x) = sign(conf(x)), and define the
+tion of confidence values for the entire dataset, and the decision boundary shift of λ for S as the classifier
+bottom shows the confidence for only mislabeled exam- h : X → {−1, 1}, defined as
+λ
+ples. The vast majority of women are classified as −1,
+(
+and the incorrect classifications are closer to the deci1
+if x ∈ S, conf(x) ≥ −λ
+sion boundary.
+hλ (x) =
+sign(conf(x)) otherwise.
+Confidence Values of Mislabeled Training Examples
+population
+protected
+
+the incorrectly classified examples, thus forcing the base
+learner to improve the classification of difficult examples. In this paper we study AdaBoost, a ubiquitous
+boosting algorithm. For more on boosting, we refer the
+reader to [14].
+Let H be a set of base classifiers, and let (αt , ht )Tt=1
+be the weights and hypotheses output by AdaBoost
+after T rounds.
+The signed confidence of the hypothesis
+PT
+α h (x)
+PT i i
+is conf(x) = i=1
+. In all of our experiments we
+i=1 αi
+boost decision stumps for T = 20 rounds.
+1.6.2 SVM The soft-margin SVM of Vapnik [2] outputs a maximum margin hyperplane w in a highdimensional space implicitly defined by a kernel K, and
+w can be expressed implicitly as a linear combination of
+the input vectors, say w0 . We define the confidence as
+the distance of a point from the separating hyperplane,
+i.e. conf(x) = K(w0 , x). For the Census Income and
+Singles datasets we use the standard Gaussian kernel,
+and for the German dataset we use a linear kernel (the
+datasets are described in Section 3).
+1.6.3 Logistic regression The classifier output by
+logistic regression has the form
+h(x) = sign(φ(hw, xi) − 1/2)
+where φ(z) = 1+e1−z is the logistic function, and the
+vector w is found by empirical risk minimization (ERM)
+
+The SDB algorithm accepts as input confidences conf
+and finds the minimal error decision boundary shift for
+S that achieves statistical parity. That is, given conf
+and ε > 0, it produces a value λ such that hλ has
+minimal error subject to achieving statistical parity up
+to bias ε.
+2.2 Naive baseline algorithms We define two
+naive baseline methods which are intended to be both
+baseline comparisons for our SDB algorithm and illustrations of the shortcomings of the bias-error trade-off.
+Similarly to SDB, the random relabeling (RR) algorithm modifies a given hypothesis h by flipping labels.
+In particular, RR computes the probability p for which,
+if members of S with label −1 under h are flipped by h0
+to +1 randomly and independently with probability p,
+the bias of h0 is zero in expectation. The classifier h0 is
+then defined as the randomized classifier that flips members of S with label −1 with probability p and otherwise
+is the same as h.
+Next, we define random massaging (RM). Massaging strategies, introduced by [6], involve eliminating the
+bias of the training data by modifying the labels of data
+points, and then training a classifier on this data in the
+hope that the statistical parity of the training data will
+generalize to the test set as well. In our experiment,
+we massage the data randomly; i.e. we flip the labels
+of S from −1 to +1 independently at random with the
+probability needed to achieve statistical parity in expec-
+
+tation, as in RR.
+As we have already noted, these two baseline methods perform comparably to much of the previous literature in both bias and error. This illustrates that the
+semantics of why an algorithm achieves statistical parity is crucial part of its evaluation. As such, these two
+baselines can be useful for any analysis that measures
+bias and accuracy. Moreover, they can be used to determine the suitability of a new proposed measure of
+fairness.
+2.3 Fair weak learning Finally, we include a
+method which is based on a natural idea but is empirically suboptimal to SDB. Recall that boosting works
+by combining weak learners into a “strong” classifier.
+It is natural to ask whether boosting keeps the fairness
+properties of the weak learners. Weak learners used in
+practice, such as decision stumps, have very low complexity, therefore it is easy to impose fairness constraints
+on them. In our fair weak learning (FWL) baseline we
+replace a standard boosting weak learner with one which
+tries to minimize a linear combination of error and bias
+and run the resulting boosting algorithm unchanged.
+The weak learner we use computes the decision stump
+which minimizes the sum of label error and bias of its
+induced hypothesis.
+2.4 Theoretical properties of SDB Because the
+SDB method only flips the labels of examples with small
+signed confidence, margin theory implies that it will not
+increase the error too much. We formalize this precisely
+below. This theorem, a direct corollary of Theorem 1.1,
+provides strong theoretical justification for our SDB
+method. To the best of our knowledge, SDB is the first
+empirically tested method for fair learning that has any
+specific guarantees for its accuracy.
+Informally, the theorem says that when a majority
+voting scheme is post-processed by the SDB technique,
+the resulting hypothesis maintains the generalization
+accuracy bounds in terms of the margin on the sample
+when the shift is small (λ ≤ θ). But as the shift
+grows, the error bound increases proportionally to the
+fraction of the protected population that has large
+enough negative margins (i.e., in [−λ, −θ]).
+Theorem 2.1. Let X be finite and D, S, m, H, and d
+be as in Theorem 1.1. Let T ⊂ S be the subset of the
+sample in the protected class. Let δ > 0. Let err(m)
+be the tail error function from Theorem 1.1. For any
+A ⊂ X let Aλ,θ = {a ∈ A : −λ ≤ conf(a) ≤ −θ}.
+Then with probability at least 1 − δ, every function
+hλ post-processed by SDB with weighted majority vote
+conf(x) and shift λ > 0 satisfies the following for every
+
+θ > 0:
+Pr[yhλ (x) ≤ 0] ≤ Pr [y · conf(x) ≥ −θ] Pr[x ∈ Tλ,θ ]
+D
+
+Tλ,θ
+
++
++
+
+S
+
+Pr [y · conf(x) ≤ θ] Pr[x 6∈ Tλ,θ ]
+
+S−Tλ,θ
+
+S
+
+C
+max(err(|Tλ,θ |), err(|Tλ,θ
+|))
+
+Proof. The bound follows by conditioning on the event
+that hλ flips the label, noticing − conf(x) is also a
+majority function, and applying Theorem 1.1 twice.
+2.5 Resilience to random bias One of the biggest
+challenges for designers of fair learning algorithms is
+the lack of good measures of fairness. The most
+popular measures are statistical measures of bias such as
+statistical parity. As Dwork et al. [3] have pointed out,
+statistical parity fails to capture all important aspects
+of fairness. In particular, it is easy to achieve statistical
+parity simply by flipping the labels of an arbitrary
+set of individuals in the protected class. A real-world
+example would be giving a raise to a random group of
+women to eliminate the gender disparity in wages. The
+root cause of this problem is that one does not have
+access to reliable (unbiased) ground truth labels. We
+propose to compensate for this by evaluating algorithms
+on synthetic bias. In doing this we make transparent the
+kind of bias a claimed “fair” algorithm protects against,
+and we can accurately measure its resilience to said bias.
+We introduce a new notion of fairness called resilience to random bias (RRB). Informally we introduce
+a new, random feature which has no correlation with the
+target attribute, and then we introduce bias against individuals which have a certain value for this new feature.
+We call an algorithm fair if it can recover the original,
+unbiased labels. For RRB in particular, the synthetic
+bias is i.i.d. random against the protected group.
+Certainly, in practice, bias may not be of this form
+and we do not pretend that this notion captures all
+forms of bias. Rather, this notion seeks to model
+a comparatively mild form of bias – if an algorithm
+cannot recover from this type of random bias against
+a protected class then there is little reason to think
+it can handle other types of bias. In other words, we
+propose this as a minimally necessary condition but not
+necessarily a sufficient condition for individual fairness.
+Relating our RRB measure more formally to other
+notions of individual fairness is left for future work.
+We formally define RRB as follows. Let X be a
+set of examples and D be a distribution over examples,
+with l : X → {−1, 1} a target labeling function. We
+first define a randomized process mapping (X, D, l) →
+(X̃, D̃, ˜l). Let X̃ = X × {−1, 1} and D̃ be the
+distribution on X̃ which is independently D on the
+X coordinate and uniform on the {−1, 1} coordinate.
+
+Denote by X̃0 = {(x, b) ∈ X̃ | b = 0} and call this
+the protected set. Finally, ˜l(x, b) is fixed to either l(x)
+or −l(x) independently at random for each (x, b) ∈ X̃
+according to the following:
+(
+1
+if b = 1 or l(x) = −1
+.
+Pr[˜l(x, b) = l(x)] =
+1 − η if b = 0 and l(x) = 1
+In other words, the positive labels of a randomly
+chosen protected subgroup are flipped to negative independently at random with probability η. We emphasize
+that the process mapping l 7→ ˜l is randomized, but the
+map ˜l(x, b) itself is fixed and deterministic. So an algorithm which queries labels from ˜l is given consistent
+answers. Now we define the resilience to random bias
+as follows:
+Definition 1. Let (X, D, l), (X̃, D̃, ˜l) be as above. Let
+h = A(D̃, ˜l) be the output classifier of a learning
+algorithm A when given biased data as input. The
+resilience to random bias (RRB) of A with respect to
+(X, D, l) and discrimination rate 0 ≤ η < 1/2, denoted
+RRBη (A), is
+RRBη (A) = Pr[h(x, b) = l(x) | b = 0, l(x) = 1]
+D̃
+
+considered good credit risk, whereas of the 25 or older
+group, 72% are creditworthy, making the bias 13%.
+In the Singles dataset, extracted from the marketing
+dataset of [5] by taking all respondents who identified as
+“single,” the goal is to predict whether annual income
+of a household is greater than $25K from 13 other
+demographic attributes. The protected attribute is
+gender. The dataset contains 3, 653 data points, 1, 756
+(48%) of which belong to the protected group. 34% of
+the dataset has a positive label. The bias is 9.8%.
+
+Method
+SVM
+SVM (RR)
+SVM (RM)
+SVM (SDB)
+LR
+LR (RR)
+LR (RM)
+LR (SDB)
+AB
+AB (RR)
+AB (RM)
+AB (SDB)
+AB (FWL)
+
+Census
+0.2702
+0.2821
+0.2545
+0.3172
+0.4647
+0.4696
+0.4282
+0.5402
+0.4372
+0.4661
+0.4410
+0.5461
+0.5174
+
+German
+0.6756
+0.7827
+0.6232
+0.8619
+0.3070
+0.8564
+0.6741
+0.8687
+0.6774
+0.8629
+0.6965
+0.8596
+0.6879
+
+Singles
+0.2424
+0.2588
+0.2552
+0.3064
+0.1971
+0.3213
+0.2117
+0.8596
+0.2864
+0.3996
+0.3325
+0.4027
+0.2971
+
+Similarly to calculating statistical parity, RRB is
+estimated on a fixed dataset by simulating the process
+Table 1: The RRB numbers for each of our methods
+described above and outputing an empirical average.
+and baselines. In each column and section the largest
+values are shown in bold, and they are almost always
+3 Empirical Evaluation
+SDB.
+We measure our methods on label error, statistical
+parity, and RRB with η = 0.2. In all of our experiments
+we split the datasets randomly into training, test, and 3.2 Results and analysis In this section we state
+model-selection subsets, and we output the average of our experimental results. They are summarized in
+Figure 2 for the Census Income, German, and Sin10 experiments.1
+gles datasets, and the full set of numbers are in Ta3.1 Datasets The Census Income dataset [11], ex- bles 2, 3, and 4 respectively. For comparison, we
+tracted from the 1994 Census database, contains de- also included the numbers for the Learning Fair Repmographic information about 48842 American adults. resentations (LFR) method of [17] for the Census InThe prediction task is to determine whether a person come dataset, for Classification with No Discrimination
+earns over $50K a year. The dataset contains 16, 192 (CND) method of [6], and for the Discrimination Aware
+females (33%) and 32, 650 males. Note 30.38% of men Decision Tree (DADT) technique of [7] (specifically we
+and 10.93% of women reported earnings of more than use the numbers for the “IGC+IGS Relab” method).
+In [17] the authors implemented three other learning
+$50K, therefore the bias of the dataset is 19.45%.
+The German credit dataset [11] contains financial algorithms, these are unregularized logistic regression,
+information about 1000 individuals who are classified Fair Naive-Bayes [6], and Regularized Logistic Regresinto groups of good and bad credit risk. The “good” sion [10]. These methods all had errors above 20% on
+credit group contains 699 individuals. Following the the Census dataset and so we omit them for brevity.
+work of [6], we consider age as the protected attribute In [7] the authors implemented variations on the deciwith a cut-off at 25. Only 59% of the younger people are sion tree learning scheme, and the one we include has
+the highest accuracy, though they are all closely com1 The code is available for reproducibility at https://github.
+parable. We reported all biases as unsigned. We were
+com/j2kun/fkl-SDM16
+unable to access implementations of the prior authors’
+
+LR AB
+0.20 SVM
+SVM AB
+AB
+LR
+LR
+
+0.16
+
+FWL
+SVM
+
+DADT
+
+0.05
+
+0.29
+
+FWL
+
+0.28
+
+AB CND
+0.27
+LR
+LR AB
+0.26 LR
+
+0.10
+
+AB
+LR
+
+0.15
+0.20
+0.25
+Average unsigned bias
+
+0.24
+0.30
+
+0.35
+
+0.23
+0.00
+
+SVM
+SVM
+
+AB
+LR
+
+AB
+0.05
+
+0.32
+
+RM
+Vanilla
+Other
+SDB
+RR
+
+SVM
+SVM
+
+0.25
+SVM
+
+0.14
+0.00
+
+0.30
+
+Average error rate
+
+Average error rate
+
+0.22
+
+0.18
+
+0.31
+
+Vanilla
+Other
+RM
+RR
+SDB
+
+LFR
+
+0.30
+0.29
+
+0.15
+0.20
+0.25
+Average unsigned bias
+
+0.30
+
+0.35
+
+AB
+AB
+
+LR
+
+SVM
+AB
+
+0.28
+0.27
+
+0.10
+
+LR
+
+0.31
+
+Average error rate
+
+0.24
+
+0.26
+0.00
+
+SVM
+LR
+SVM
+
+SVM
+FWL
+0.05
+
+RM
+Vanilla
+Other
+SDB
+RR
+
+LR
+AB
+0.10
+
+0.15
+0.20
+0.25
+Average unsigned bias
+
+0.30
+
+0.35
+
+Figure 2: A summary of our experimental results for our three datasets, from left to right: Census Income,
+German, Singles. Labels show which learning algorithm is used and the colors give which method for achieving
+fairness was used. The parameters of each algorithm were chosen to minimize bias. The size of a point is
+proportional to the RRB of the learner (only for those algorithms for which we have the RRB numbers), where
+larger dots mean there is a larger probability of correcting a label.
+algorithms, so we were not able to reproduce their results or measure their algorithms with respect to RRB.
+To investigate the trade-offs made by our SDB
+method more closely, Figures 3, 4, and 5 show the rate
+at which error increases as bias goes to zero. In many
+cases, a substantial reduction in bias can be achieved
+before there is any significant drop-off in accuracy.
+For the Census Income dataset, the three SDB techniques outperform the baselines and outperform all the
+prior literature except for DADT. Both SDB algorithms
+achieve statistical parity with about 18% error. Moreover, these two SDB algorithms have the highest RRB,
+while SVM appears to overfit the random bias introduced by RRB more than the other algorithms. While
+DADT appears to achieve lower label error and comparable bias, we note that the standard deviation of the
+bias reported in [7] is 0.015 while for SDB (on the Census Income dataset) the standard deviations are at least
+one order of magnitude smaller.
+The singles dataset shows a similar pattern, with
+SDB combined with logistic regression outperforming
+all other baselines. Note that in the instances where
+the baselines perform comparably to SDB, SDB tends
+to have a much larger resilience to random bias.
+The German dataset is more puzzling. While two
+of the SDB techniques outperform the prior literature
+by a moderate margin, they do not outperform random
+relabeling or random massaging by a significant margin
+(and these baselines already outperform CND). Another
+curious observation is that label error stays constant as
+the decision boundary is shifted, as Figure 4 shows.
+Note again the difference in SVM kernels between
+the datasets. The Gaussian kernel performs well for the
+Census Income and Singles dataset. However, in the
+case of the German dataset, which is the smallest of the
+
+three, with the Gaussian kernel every point becomes
+a support vector. This is not only a clear sign of
+overfitting but it also makes SDB useless since the model
+gives the same confidence for almost every data point.
+These facts seem to be evidence that the German
+dataset (which has only about a thousand records) is too
+small to draw a significant conclusion. We nevertheless
+include it here for completeness and to show comparison
+with the previous literature.
+Fair weak learning (FWL) does empirically reduce
+bias but does not achieve statistical parity in two of the
+three data sets. FWL performs worse on either label
+error or bias on each of the data sets and the trade-off
+between label error and bias cannot easily be controlled.
+It also does not seem easy to control this trade-off using
+either random massaging and random relabeling.
+One notable advantage of SDB is that the tradeoff between label error and bias can be controlled after
+training. To decide how much bias and error we want
+to allow, we do not have to pick a hyper-parameter
+before training the algorithm, unlike for most other fair
+learning methods. This means that the computational
+cost of choosing the best point on the trade-off curve is
+very low, and the trade-off is transparent.
+The results also highlight the usefulness of RRB
+as a measure of fairness. The RRB values across all
+datasets and algorithms we studied are in Table 1. In
+cases where random relabeling or random massaging
+performs comparably to SDB, the RRB measure is
+able to distinguish them, giving a lower score to the
+less reasonable baselines and a higher score to SDB.
+This suggests that the performance of fair learning
+algorithms should not be evaluated solely by their
+accuracy and bias.
+
+4
+
+Significance and Impact
+
+In this paper, we introduced a general method for balancing discrimination and label error. This method,
+which we call shifted decision boundary (SDB), is applicable to any learning algorithm which has an efficiently
+computable measure of confidence. We studied three
+such algorithms – AdaBoost, support vector machines,
+and linear regression – compared our methods to other
+methods proposed in the earlier literature and our own
+baselines, and empirically evaluated our methods’ performances in terms of their resilience to random bias.
+Our method, in addition to outperforming much
+of the previous literature, has several other desirable
+properties. Unlike most other fair learning algorithms,
+SDB applied to AdaBoost has theoretical bounds on
+generalization error. Also, since the margin shift can be
+specified after the original learner has been trained on
+the data, a practitioner can easily evaluate the trade-off
+between error and bias and choose the most desirable
+point on the trade-off curve. This makes SDB a fast
+and transparent way to study the fairness properties of
+an algorithm.
+Our resilience to random bias (RRB) measure is a
+novel approach to evaluate the fairness of a learning
+algorithm. Although i.i.d. random bias is a simplified
+model of real-world discrimination, we posit that any
+algorithm which can be considered fair must be fair
+with respect to RRB. Moreover, RRB generalizes to an
+arbitrary distribution over the input data, and one could
+adapt it to well-studied models of bias in social science.
+Acknowledments
+
+[6]
+
+[7]
+
+[8]
+
+[9]
+
+[10]
+
+[11]
+[12]
+
+[13]
+
+[14]
+[15]
+
+We would like to thank Lev Reyzin for helpful discussions.
+[16]
+
+References
+[17]
+[1] Toon Calders and Sicco Verwer. Three naive bayes
+approaches for discrimination-free classification. Data
+Mining and Knowledge Discovery, 21(2):277–292, 2010.
+[2] Corinna Cortes and Vladimir Vapnik. Support-vector
+networks. Machine learning, 20(3):273–297, 1995.
+[3] Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer
+Reingold, and Richard Zemel. Fairness through awareness. In Proceedings of the 3rd Innovations in Theoretical Computer Science Conference, pages 214–226.
+ACM, 2012.
+[4] Michael Feldman, Sorelle A. Friedler, John Moeller,
+Carlos Scheidegger, and Suresh Venkatasubramanian.
+Certifying and removing disparate impact. Proceedings
+of the 21th ACM SIGKDD Intl. Conference on Knowledge Discovery and Data Mining, pages 259–268, 2015.
+[5] Trevor Hastie, Robert Tibshirani, and Jerome Fried-
+
+man. The Elements of Statistical Learning, volume 2.
+Springer, 2009.
+Faisal Kamiran and Toon Calders. Classifying without
+discriminating. In 2nd Intl. Conference on Computer,
+Control and Communication, 2009., pages 1–6. IEEE,
+2009.
+Faisal Kamiran, Toon Calders, and Mykola Pechenizkiy. Discrimination aware decision tree learning.
+In 2010 IEEE 10th Intl. Conference on Data Mining
+(ICDM), pages 869–874. IEEE, 2010.
+Faisal Kamiran, Indrė Žliobaitė, and Toon Calders.
+Quantifying explainable discrimination and removing
+illegal discrimination in automated decision making.
+Knowledge and Information Systems, 35(3):613–644,
+2013.
+Toshihiro Kamishima, Shotaro Akaho, Hideki Asoh,
+and Jun Sakuma. Fairness-aware classifier with prejudice remover regularizer.
+In Machine Learning
+and Knowledge Discovery in Databases, pages 35–50.
+Springer, 2012.
+Toshihiro Kamishima, Shotaro Akaho, and Jun
+Sakuma. Fairness-aware learning through regularization approach. In Data Mining Workshops (ICDMW),
+2011 IEEE 11th Intl. Conference on, pages 643–650.
+IEEE, 2011.
+M. Lichman. UCI machine learning repository, 2013.
+John Podesta, Penny Pritzker, Ernest J. Moniz, John
+Holdren, and Jeffrey Zients. Big data: Seizing opportunities, preserving values, 2014.
+Andrea Romei and Salvatore Ruggieri. A multidisciplinary survey on discrimination analysis. The Knowledge Engineering Review, 29:582–638, 11 2014.
+Robert E. Schapire and Yoav Freund. Boosting: Foundations and Algorithms. MIT Press, 2012.
+Robert E. Schapire, Yoav Freund, Peter Bartlett, and
+Wee Sun Lee. Boosting the margin: A new explanation
+for the effectiveness of voting methods. Annals of
+Statistics, pages 1651–1686, 1998.
+Shai Shalev-Shwartz and Shai Ben-David. Understanding Machine Learning: From Theory to Algorithms.
+Cambridge University Press, 2014.
+Rich Zemel, Yu Wu, Kevin Swersky, Toni Pitassi, and
+Cynthia Dwork. Learning fair representations. In
+Proceedings of the 30th International Conference on
+Machine Learning (ICML-13), pages 325–333, 2013.
+
+Shifted Decision Boundary Bias vs Error
+
+0.6
+
+0.6
+
+Shifted Decision Boundary Bias vs Error
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0.2
+
+0.0
+
+0.0
+
+Label error
+Bias
+
+0.2
+
+0.0
+
+Label error
+Bias
+
+0.2
+0.4
+
+0.4
+
+0.6
+
+0.6
+
+0.6
+
+0.8
+0.8
+
+0.8
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.0
+
+(a) Boosting
+
+0.4
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+
+Label error
+Bias
+
+0.2
+
+0.4
+
+0.6
+
+Shifted Decision Boundary Bias vs Error
+
+0.6
+
+0.6
+
+0.8
+2.0
+
+1.5
+
+1.0
+
+(b) Logistic Regression
+
+0.5
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+(c) SVM
+
+Figure 3: Trade-off between (signed) bias and error for SDB on the Census Income data. The horizontal axis is
+the threshold used for SDB.
+
+Shifted Decision Boundary Bias vs Error
+
+1.0
+
+1.0
+
+Shifted Decision Boundary Bias vs Error
+
+0.8
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.6
+
+Label error
+Bias
+
+0.4
+
+Label error
+Bias
+
+0.4
+0.2
+
+0.2
+
+0.0
+
+0.0
+
+0.0
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.2
+0.6
+
+(a) Boosting
+
+0.4
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+
+Label error
+Bias
+
+0.4
+
+0.2
+
+0.2
+1.0
+
+Shifted Decision Boundary Bias vs Error
+
+1.0
+
+0.6
+
+0.2
+20
+
+15
+
+10
+
+(b) Logistic Regression
+
+5
+
+0
+
+5
+
+10
+
+(c) SVM
+
+Figure 4: Trade-off between (signed) bias and error for SDB on the German data. The horizontal axis is the
+threshold used for SDB.
+
+Shifted Decision Boundary Bias vs Error
+
+0.6
+
+0.6
+
+0.4
+
+Shifted Decision Boundary Bias vs Error
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0.2
+
+0.0
+
+0.0
+
+0.0
+
+Label error
+Bias
+
+0.2
+
+Label error
+Bias
+
+0.2
+0.4
+
+0.4
+
+0.6
+
+0.6
+
+0.6
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+
+(a) Boosting
+
+0.6
+
+0.8
+
+1.0
+
+0.8
+0.6
+
+0.4
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+
+(b) Logistic Regression
+
+Label error
+Bias
+
+0.2
+
+0.4
+
+0.8
+0.8
+
+Shifted Decision Boundary Bias vs Error
+
+0.6
+
+0.6
+
+0.8
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+(c) SVM
+
+Figure 5: Trade-off between (signed) bias and error for SDB on the Singles data. The horizontal axis is the
+threshold used for SDB.
+
+label error
+bias
+RRB
+label error
+bias
+RRB
+label error
+bias
+RRB
+
+SVM
+0.1471 (5.7e-17)
+0.1689 (5.7e-17)
+0.2702 (0.014)
+LR
+0.1478 (4.8e-04)
+0.1968 (0.003)
+0.4647 (0.013)
+AdaBoost
+0.1529 (0.002)
+0.1856 (0.012)
+0.4372 (0.032)
+
+SVM (RR)
+0.2007 (0.002)
+0.0050 (0.003)
+0.2926 (0.004)
+LR (RR)
+0.2077 (0.004)
+0.0044 (0.006)
+0.4696 (0.009)
+AB (RR)
+0.2078 (0.004)
+0.0091 (0.006)
+0.4661 (0.019)
+
+SVM (SDB)
+0.1869 (0.004)
+0.0036 (0.009)
+0.3172 (0.025)
+LR (SDB)
+0.1802 (0.002)
+0.0060 (0.011)
+0.5402 (0.011)
+AB (SDB)
+0.1822 (0.005)
+0.0013 (0.007)
+0.5461 (0.015)
+
+SVM (RM)
+0.1740 (0.003)
+0.0795 (0.010)
+0.2545 (0.007)
+LR (RM)
+0.1810 (0.003)
+0.0262 (0.008)
+0.4282 (0.019)
+AB (RM)
+0.1864 (0.004)
+0.0381 (0.013)
+0.4410 (0.013)
+
+LFR [17]
+0.2299
+0.0020
+n/a
+DADT [7]
+0.1600
+0.0090 (0.015)
+n/a
+AB (FWL)
+0.1860 (0.004)
+0.0682 (0.004)
+0.4321 (0.016)
+
+Table 2: A summary of our experimental results for the Census Income data for relabeling, massaging, and the
+fair weak learner. The threshold for SDB was chosen to achieve perfect statistical parity on the training data.
+Standard deviations are reported in parentheses when known.
+
+label error
+bias
+RRB
+label error
+bias
+RRB
+label error
+bias
+RRB
+
+SVM
+0.2823 (0)
+0.0886 (4.2e-17)
+0.6756 (0.081)
+LR
+0.2541 (0.005)
+0.1383 (0.014)
+0.3070 (0.067)
+AdaBoost
+0.2602 (0.009)
+0.2617 (0.272)
+0.6774 (0.219)
+
+SVM (RR)
+0.2778 (0.025)
+0.0732 (0.066)
+0.7827 (0.054)
+LR (RR)
+0.2656 (0.020)
+0.0095 (0.064)
+0.8564 (0.045)
+AB (RR)
+0.2429 (0.010)
+0.0376 (0.044)
+0.8629 (0.051)
+
+SVM (SDB)
+0.2979 (0.022)
+0.0266 (0.085)
+0.8619 (0.041)
+LR (SDB)
+0.2685 (0.021)
+0.0142 (0.219)
+0.8687 (0.042)
+AB (SDB)
+0.2745 (0.010)
+0.0034 (0.064)
+0.8596 (0.067)
+
+SVM (RM)
+0.3000 (0.017)
+0.0445 (0.028)
+0.6232 (0.070)
+LR (RM)
+0.2625 (0.011)
+0.0202 (0.566)
+0.6741 (0.045)
+AB (RM)
+0.2637 (0.019)
+0.0391 (0.023)
+0.6965 (0.037)
+
+CND [6]
+0.2757
+0.0327
+n/a
+
+AB (FWL)
+0.2859 (0.016)
+0.0093 (0.035)
+0.6879 (0.042)
+
+Table 3: A summary of our experimental results for the German data for relabeling, massaging, and the fair weak
+learner. The threshold for SDB was chosen to achieve perfect statistical parity on the training data. On this
+dataset SVM was run with a linear kernel. Standard deviations are reported in parentheses when known.
+
+label error
+bias
+RRB
+label error
+bias
+RRB
+label error
+bias
+RRB
+
+SVM
+0.2718 (5.7e-17)
+0.0550 (1.4e-17)
+0.2424 (0.045)
+LR
+0.2742 (1.14e-16)
+0.1468 (9.99e-18)
+0.1971 (0.036)
+AdaBoost
+0.2690 (0.004)
+0.0966 (0.020)
+0.2864 (0.057)
+
+SVM (RR)
+0.2793 (0.009)
+0.1460 (0.017)
+0.2588 (0.009)
+LR (RR)
+0.3130 (0.011)
+0.3025 (0.040)
+0.3213 (0.035)
+AB (RR)
+0.3088 (0.009)
+0.2123 (0.013)
+0.3996 (0.105)
+
+SVM (SDB)
+0.2716 (0.013)
+0.0106 (0.035)
+0.3064 (0.042)
+LR (SDB)
+0.2745 (0.010)
+0.0034 (0.640)
+0.8596 (0.067)
+AB (SDB)
+0.2990 (0.008)
+0.0140 (0.017)
+0.4027 (0.061)
+
+SVM (RM)
+0.2876 (0.015)
+0.0260 (0.047)
+0.2552 (0.032)
+LR (RM)
+0.2966 (0.008)
+0.0732 (0.024)
+0.2117 (0.036)
+AB (RM)
+0.2860 (0.019)
+0.0180 (0.037)
+0.3325 (0.060)
+
+AB (FWL)
+0.2687 (0.008)
+0.0463 (0.016)
+0.2971 (0.028)
+
+Table 4: A summary of our experimental results for the Singles data for relabeling, massaging, and the fair weak
+learner. The threshold for SDB was chosen to achieve perfect statistical parity on the training data. Standard
+deviations are reported in parentheses when known.
+
+

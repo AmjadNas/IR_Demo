@@ -1,0 +1,1249 @@
+2016 IEEE 28th International Conference on Tools with Artificial Intelligence
+
+Analyzing and Preventing Bias in Text-based
+Personal Trait Prediction Algorithms
+Işıl Doğa Yakut Kılıç
+
+Shimei Pan
+
+University of Maryland, Baltimore County
+Baltimore, MD, USA
+yakut1@umbc.edu
+
+University of Maryland, Baltimore County
+Baltimore, MD, USA
+shimei@umbc.edu
+
+Abstract—Personality prediction based on textual data is one
+topic gaining attention recently for its potential in large-scale
+personalized applications such as social media-based marketing
+and political campaigning. However, when applying this technology in real-world applications, users often encounter situations
+in which the personality traits derived from different sources
+(e.g., social media posts versus emails) are inconsistent. Varying
+results for the same individual renders the tool ineffective and
+hard to trust. This paper demonstrates the impact of domain bias
+in automated text-based personality prediction, and proposes a
+novel method to correct domain bias. The proposed approach
+is generic since it requires neither retraining the system using
+examples from an application domain, nor any knowledge of
+the original training data used by a personal trait analysis
+tool. We conduct comprehensive experiments to evaluate the
+effectiveness of the method, and the ﬁndings indicate a signiﬁcant
+improvement of prediction accuracy (e.g., a 20-30% relative error
+reduction) with the proposed method.
+
+interviewed for a podcast)... ”. Aside from observations at
+individual level, the discrepancy at the population level can be
+shown using distributions of predicted traits. Figure 1 shows
+the distributions of predicted ”Conscientiousness” scores, one
+of the Big Five Personality traits, of the users from three
+datasets: Facebook, Quora, and Twitter. As can be seen, all
+three distributions are very different. The discrepancy of the
+predicted traits between Twitter and Quora (Figures 1b and
+1c) is even more disturbing since the same set of individuals
+were used in collecting both datasets.
+Fig. 1: The Distributions of the Derived Conscientiousness
+Scores from three datasets: Facebook, Quora and Twitter.
+
+I. I NTRODUCTION
+Research in psycholinguistics has shown that it is possible
+to infer personal traits from one’s linguistic footprints [1], [2].
+Recently, an array of automated personality analysis tools and
+services has emerged as the amount of user-generated data,
+such as social media posts and consumer reviews, has increased signiﬁcantly [3], [4]. Text-based personality prediction
+services such as IBM’s personality insights [5], offer analysis
+of textual data authored by an individual (e.g., one’s social
+media posts), and generate a personality proﬁle based on the
+results [5]. These results can point to consumer behavior or
+brand preferences [6]. Consequently, marketing and public
+relation teams increasingly utilize these type of services,
+and include them in their decision-making processes such
+as targeted marketing or customer care [7], [8]. Businesses
+often use tweets, product reviews, blog posts, publications, and
+other data they have access to improve marketing and services.
+Nonetheless, they may encounter varying to contradictory results for the same person due to source difference (e.g., social
+media posts versus emails), which renders the tool ineffective
+and untrustworthy. For instance, an excerpt from a Quora user
+commenting on the results from IBM’s Personality Insights
+Service showcases contradictory results: ”... My results were,
+quite simply, all over the map. ... my results with respect
+to the Big Five personality characteristic of ”artistic interest”
+ranged from zero (from a technical answer about 401(K)s and
+inheritance) to 90% (an answer about the experience of being
+2375-0197/16 $31.00 © 2016 IEEE
+DOI 10.1109/ICTAI.2016.160
+
+(a) Facebook
+
+(b) Quora
+
+(c) Twitter
+
+Although the same person might behave differently in different circumstances, for instance, one might be shy in a classroom but quite outgoing on Facebook, this does not change
+one’s personality from ”introverted” to ”extroverted”. Here, we
+deﬁne ”personality traits” as enduring personal characteristics
+that are generally stable over time [9]. Typically, personality
+traits are measured by standard psychometric surveys (e.g.,
+IPIP survey) which are questionnaire-based, independent of
+domain, situation and text. Since personality traits obtained
+from a psychometric survey are the ground truth (the objective
+target values) used to train and evaluate an automated personal
+trait prediction system, the discrepancy in the predicted results
+is mainly due to domain overﬁtting in machine learning (ML)
+rather than situation-dependent personality change. Speciﬁcally, most automated systems employ supervised ML to learn
+a personality prediction model based on a set of training
+examples [2], [10]. From these examples, the system learns
+a function that maps a set of linguistic features extracted
+from text to a personality ground truth. Thus, if an automated
+systems could predict personality extremely well, in principle
+they will output the same personality values as those obtained
+from psychometric surveys, regardless of the situation or text.
+1059
+1060
+
+In reality, most personality tools are developed and trained
+using text samples from one particular domain (e.g., IBM’s
+Personality Insights was trained using tweets [10]). Since most
+machine learning algorithms work under the assumption that
+the test data will be drawn from the same population as the
+training data, when an application domain is very different
+from the training domain -as is often the case in real-world
+applications- accuracy suffers.
+This paper proposes a novel approach that identiﬁes and
+reduces domain bias in personality prediction systems. Since
+users of a personality prediction tool (e.g., a retailer) often do
+not have access to the training data (e.g., the dataset used
+to train IBM’s Personality Insights), the proposed method
+employs a blackbox approach that assumes access to neither
+the training data used to develop the tool nor new training
+data from the target domain (e.g., the application domain).
+Based on a survey of existing literature, domain bias reduction
+without information about the training data and target domain
+is novel and has not been explored before.
+The proposed solution speciﬁcally aims to accomplish two
+goals; (1) analyzing and demonstrating the severity of domain
+bias in personality prediction, (2) developing a method to
+reduce domain bias. Overall, there are three main contributions
+of this paper.
+• Gathered a total of 8 datasets containing combinations of
+text and personality ground truth,
+• Proposed a novel domain bias reduction method that
+works without training and target domain knowledge,
+• Conducted experiments to evaluate the method using both
+individual-level and population-level error metrics.
+
+with International Personality Item Pool (IPIP) and NEO-PIR measures being most popular( [12], [13]). These tests are
+also commonly utilized in developing automated personality
+prediction systems to obtain the personality ground truth of
+an individual. Since frequently hundreds of questions are
+involved in these tests, it is difﬁcult to conduct large-scale
+personality analysis using psychometric tests. Due to their
+scalability, automated personality prediction systems based on
+user-generated data (e.g., Twitter posts) become increasingly
+more popular.
+B. Automated Text-based Personality Prediction
+Language use is proven to be a good estimator of personality
+[2]. The notion that the words people choose are indicative
+of their mental, social, and even physical state has been
+investigated before [14], [9].
+With the advent of social media, the amount of usergenerated textual data has increased greatly which has resulted
+in a great interest in developing automated tools for textbased personality prediction [2], [10]. Consequently, textbased personality prediction methods developed in academia
+[2] is actively utilized commercially. IBM’s Personality Insights [5] is one such commercial system that is released as
+a service on the IBM Bluemix cloud platform. It performs
+linguistic analysis on any textual data authored by a user
+(e.g., email, text messages, tweets, forum posts) and infers
+various personal traits including FFM personality traits, needs
+[15] and values [16]. IBM’s Personality Insights has been
+used in several applications including targeted advertising [17],
+member satisfaction [18] and brand preference prediction [6].
+So far, all of the studies above focus on developing novel
+prediction models that are trained with data from a single
+domain. In contrast, the effects of using such tools in different
+application domains, many of them may be very different from
+the training domain remain unexplored. This study aims to
+address this gap by studying implications of multi-domain use
+of such tools.
+
+II. R ELATED W ORK
+In this section, we summarize the existing work in three
+related ﬁelds: models of personality, automated text-base personality prediction and domain adaptation.
+A. Models of Personality
+
+C. Domain Adaptation
+
+Traditionally, personality is assessed using psychometric
+tests that include questionnaires designed to elicit the personality traits of individuals. Various personality models have been
+proposed throughout the 20th century with the most widely
+accepted one being the big Five Factor Model (FFM), [11].
+FFM examines ﬁve broad dimensions in personality called
+OCEAN: openness to experience (O), reﬂecting the degree of
+intellectual curiosity, creativity and a preference for novelty
+and variety a person has, conscientiousness (C), a tendency
+to be organized and dependable, show self-discipline, act
+dutifully, aim for achievement, and prefer planned rather than
+spontaneous behavior, extroversion (E), a tendency to seek
+stimulation in the company of others, and talkativeness, agreeableness (A), a tendency to be compassionate and cooperative
+rather than suspicious and antagonistic towards others and
+neuroticism (N), a tendency to experience unpleasant emotions
+easily, such as anger, anxiety, depression, and vulnerability.
+Several tests have been proposed to measure the ﬁve factors
+
+Domain adaptation and domain bias reduction try to address
+the same fundamental issue in machine learning: overﬁtting.
+To address overﬁtting, domain adaptation focuses on transferring knowledge learned from a source domain -the domain the
+model is trained on- to a target domain. Main domain adaption
+approaches can be grouped into two categories based on what
+is being transferred: knowledge of instances or knowledge of
+feature representations [19]. Methods focusing on transferring
+knowledge of instances mostly use importance sampling [20].
+Whereas, most methods on transferring knowledge of feature
+representations use unsupervised machine learning [21], [22],
+[23]. Both instance and feature-based transfer learning assume
+that the training domain knowledge is available and capitalizes
+on it to help adapt the systems to new domains. Since we
+do not assume the availability of training domain knowledge,
+which is the typical case for most application developers and
+end users, existing domain adaptation methodologies are not
+
+1061
+1060
+
+applicable. In this research, we propose a novel approach
+which reduces domain bias without training domain knowledge.
+
+conscientiousness (TC ), extroversion (TE ), agreeableness (TA )
+and neuroticism (TN ).
+
+III. DATASETS
+
+Before describing the method in detail, we brieﬂy describe
+two typical scenarios in which our method can be used:
+a single-domain and a multi-domain scenario. First, in the
+single-domain scenario, suppose that a college professor wants
+to use the insights from a personality analysis service to help
+students to form study groups. The inputs to the personality
+analysis system are essays written by the students. Since
+there is a mismatch between the training and the application
+domains, (e.g., the personality analysis tool is trained on
+Twitter posts, applying it to essays would likely to give
+incorrect predictions), it may result in less than ideal study
+groups. Our method can be used to improve the accuracy
+of personality prediction in the essay domain. In the second
+scenario, suppose the marketing team of company AAA has
+access to posts by its consumers on two online platforms (e.g.,
+Twitter and AAA’s web forum). Given this information, the
+team will use the personality prediction tool to simultaneously
+analyze the personality of each user using writing samples
+from two domains. Since for an individual, the analysis results
+from these two domains may be different, the team is forced
+to make their marketing decisions based on contradicting data.
+Our method can be used to resolve conﬂicts in prediction
+results.
+In the following, we present the details of our method. It
+relies on the outcome of a personality prediction tool (e.g.,
+IBM’s Personality Insights) and statistics from a domain independent reference personality ground truth dataset. Although
+the training data employed by a personality prediction tool
+(e.g., IBM’s personality insight) is generally not accessible by
+the public, for anybody with access to the tool, its prediction
+results for any application domain can be easily available
+(e.g., by running the IBM’s Personality Insights on the data).
+Moreover, the statistics of a reference domain-independent
+personality ground truth can be obtained easily from public
+sources (e..g, from this paper). Our method only requires
+access to the basic statistics of the ground truth, not the dataset
+itself.
+Before we present the details of our method, ﬁrst we explain
+how we create the reference domain-independent personality
+ground truth dataset.
+The reference personality ground truth dataset is created to
+provide a domain-independent personality ground truth data
+from which we draw statistics to support domain bias correction. The reference ground truth data should be independent
+of domains. It should also be insensitive to the prediction
+methods used by any automated personality prediction system.
+We also want to ﬁnd a large enough sample to represent the
+general population. For this purpose, in our experiments, we
+used a combination of the ground truth from three datasets:
+QNR, MT, and FB. All of them are created using psychometric
+surveys (e.g., IPIP survey), thus independent of the application
+domains and the text used. The dataset is relatively big and
+
+To investigate the impact of domain difference on automated
+personality analysis, we collected a total of 8 datasets by either
+utilizing existing datasets or crawling the web to create our
+own datasets: essays (ESSY) [1], Facebook status updates (FB)
+[24], Twitter posts (TWR), Quora answers (QRA), Personality questionnaire (QNR), Yelp reviews (YLP), personality
+questionnaire from Mechanical Turkers (MT) and academic
+papers (ACA). Among them, FB and ESSY have both the
+text authored by individuals and their personality ground truth
+obtained from psychometric surveys; QNR and MT have only
+the personality ground truth of individuals, but without the
+text authored by these people; TWR, QRA, YLP, and ACA
+only contain text crawled from the web. We do not have
+the personality ground truth associated with these people.
+Moreover, the TWR and QNR datasets are parallel datasets,
+containing the text authored by the same group of people
+from both Twitter and Quora. The combination of all the
+datasets contained 33,351 authors and 12 million words. The
+IBM Watson’s Personality Insights service was used to predict
+personality based on text as it is the most consumer friendly
+tool on the market. Table I summarizes all the datasets with
+information on their contents.
+Although the personality ground truth in our datasets was
+acquired using the same IPIP personality questionnaire, there
+are some differences. For example, among the four datasets
+with ground truth personality information (QNR, MT, FB, and
+ESSY), QNR was collected with no limitations on participants
+and with total anonymity; therefore, QNR is the dataset with
+the most participants. The MT dataset consists of Mechanical
+Turk users who completed the IPIP survey for a minor
+compensation. The Facebook dataset was collected from active
+Facebook users. For each individual, it has both the text from
+his/her Facebook status updates and personality ground truth.
+Lastly, the ESSY dataset was collected from students pursuing
+psychology degrees by Pennebaker et al. [1]. It contains both
+personality questionnaire results and stream-of-consciousness
+essays written by the students. Unlike the QNR, MT and FB
+datasets whose personality ground truth are numeric scores,
+the personality ground truth of the ESSY dataset has a discrete
+value of either 0 or 1, indicating whether a person is considered
+having a certain trait or not.
+Throughout the paper, each personality dataset will be
+represented as a matrix containing i rows and j columns where
+the rows correspond to users and the columns correspond to
+the Big Five Personality traits. We use uppercase boldface
+letters to represent the datasets such as V . ith row and j th
+column are represented as V i∗ and V ∗j respectively. A list of
+datasets will be represented using uppercase italic and boldface
+letters and superscript is used to indicate the component
+when multiple datasets are being referred to. Lastly, the ﬁve
+personality traits in FFM are represented as: openness (TO ),
+
+IV. P ROPOSED M ETHOD
+
+1062
+1061
+
+TABLE I: Dataset descriptions used for method development and evaluation.
+ID
+
+Domain
+
+# Text Entries # Authors Text Entry Description
+
+Ground Truth
+
+FB
+TWR
+QRA
+QNR
+ESSY
+YLP
+MT
+ACA
+
+Facebook
+Twitter
+Quora
+Questionnaire
+Essays
+Yelp
+Mech. Turk
+Academic
+
+>10,000
+>327,600
+16,380
+0
+2,400
+65,600
+0
+45
+
+Continuous data on 5 factor
+No available ground truth data
+No available ground truth data
+Continuous data on 5 ﬁve factor
+Discrete data on 5 ﬁve factor
+No available ground truth data
+Continuous data on 5 ﬁve factor
+No available ground truth data
+
+254
+1,638
+1,638
+19,719
+2,400
+8,459
+836
+45
+
+Status updates of authors
+Tweets of authors
+Posted answers to posted Quora questions
+No available textual data
+Stream-of-consciousness texts by authors
+Posted reviews to businesses by authors
+No available textual data
+Textual contents of sole author papers
+
+TABLE II: Estimated μ and σ of the Reference GT Dataset
+μG
+TO .211
+TC .087
+TA .193
+TE .002
+TN -0.030
+
+parameters of the trait distributions in the reference ground
+truth dataset.
+In cases where trait analysis results from multiple domains
+are available, we propose to weight the distribution parameters
+acquired in the ﬁrst step based on respective application domain similarities to the reference ground truth. The motivation
+for weighting application domains comes from the intuition
+that as the difference between prediction from an application
+domain and the reference ground truth distribution increases,
+the prediction power of a system on that particular application
+domain decreases. (An example situation would be where
+marketers have access to user entries in both Twitter and
+restaurant reviews). To measure domain similarity between an
+application domain and the reference ground truth, we used the
+Kolmogorov-Smirnov statistic (KS statistic). The KS-statistic
+is particularly useful in cases where the sample size is not the
+same between two sample sets. The KS-statistic between two
+samples is given by
+
+2 D’Augustino Normality Test
+σG
+
+.163
+.172
+.170
+.229
+.118
+
+p<
+p<
+p<
+p<
+p<
+
+0.05
+0.05
+0.05
+0.05
+0.05
+
+contains 20,000+ people in total. Figure 2 shows the reference
+ground truth distributions of the FFM personality traits. As one
+would expect, all of the personality traits have approximately
+normal distributions based on D’Augustino and Pearson’s
+Normality test [25](Table II).
+Our method consists of two key operations: distribution
+parameter estimation and domain weight estimation based
+on domain similarity. Using these two processes, the method
+creates a linear transformation model based on the similarity
+between the application and the reference ground truth distributions.
+In order to adjust the distributions of the application data
+to ﬁt the reference ground truth distributions, we ﬁrst need to
+parametrize the distributions. Parameters of distributions can
+be used to scale and shift one distribution to ﬁt another. Application data distributions are computed from the automatically
+derived trait values from the application domain. The target
+distributions that we aim to ﬁt are the reference ground truth
+distributions.
+Distribution parameters are calculated by ﬁrst using BoxCox Transformation and then applying Maximum Likelihood
+Estimation (MLE). Box-Cox transformation [26] is a process
+that creates a normal distribution for given data using power
+functions. Given any distribution, the Box-Cox transformation
+will ﬁnd an appropriate exponent λ and transform it into a
+normal distribution using the following formula:
+y=
+
+(xλ − 1)
+λ
+log(x)
+
+(f or λ > 0)
+
+(1)
+
+(f or λ = 0)
+
+(2)
+
+Dn,n = sup |F1,n (x) − F2,n (x)|
+x
+
+(3)
+
+where F1 and F2 are the empirical distribution functions of
+the two samples of size n and n , with μ and σ as their mean
+and standard deviation, and sup is the supremum function (or
+the Least Upper Bound). The greater the D value, the more
+difference between the two samples.
+With distribution parameters and associated weight for each
+domain acquired in previous steps, we can create a linear
+transformation function to map a source value to a corrected
+value. The linear transformation function is unique to the
+application datasets at hand. The goal of this transformation is
+to make the distributions of the corrected values more similar
+to the reference ground truth distribution.
+Speciﬁcally, using the estimated reference population parameters and domain weights, we can now design the following linear function to derive the corrected trait values V∗t
+V∗t =
+
+n
+
+
+i
+[((S∗t
+− μS i )/σS i ∗ σG + μG ) ∗ DS i ,S G ]
+
+(4)
+
+i=1
+
+where λ is the value that maximizes the log-likelihood function. Using the resulting stabilized data, we apply Maximum
+Likelihood Estimation to get the parameters.
+The Maximum Likelihood Estimation (MLE) estimation of
+the distribution parameters μ (expectation) and σ 2 (variance)
+are calculated using mean m and standard deviation s of
+the data samples. Table II shows the MLE estimation of the
+
+where S i is one of the n application datasets. The μ and
+σ values are calculated mean and standard deviation of an
+application dataset, and μG and σG are the ground truth
+values from Table II. The DS i ,S G is the domain weight
+calculated using Equation 3 and normalizing them among
+the application datasets. The formula calculates the corrected
+
+1063
+1062
+
+Fig. 2: Reference ground truth distributions by aggregating the ground truth from QN R, M T and F B
+
+(a) P OP TO
+
+(b) P OP TC
+
+(c) P OP TE
+
+values by transforming application datasets and calculating the
+weighted means.
+V. E VALUATION
+
+(d) P OP TA
+
+(e) P OP TN
+
+Fig. 3: Comparisons between Reference Ground Truth and
+the big 5 traits before (left) and after (right) domain bias
+x - FB
+x - corrected F B
+correction. x - GT
+
+We evaluated the performance of our method using
+both individual-level and population-level evaluation metrics.
+Population-level evaluation uses statistical measures that compare distributions of samples before and after corrections. In
+contrast, individual-level evaluation refers to analysis looking
+at the differences of trait values at individual author level.
+For individual-level evaluation, we used Mean Squared Error
+(MSE) which calculates the average of squares of errors, the
+error being the difference between the estimated value and
+the personality ground truth of an individual. For populationlevel evaluation, we used KS-test which is a nonparametric
+test based on Kolmogorov-Smirnov test of equality between
+two distributions. The KS-statistic results in D, given in
+Equation 3, represent the absolute max distance (supremum)
+between the cumulative distribution functions (CDF) of the
+two samples. The cumulative distribution function (CDF) of a
+variable X, evaluated at x, is the probability that X will take
+a value less than or equal to x. The closer this number is to
+0 the more likely that the two samples were drawn from the
+same distribution.
+
+Conscientiousness
+
+Agreeableness
+
+Neuroticism
+
+A. Single domain correction
+For individual-level evaluation of single domain correction,
+we used two datasets: ESSY 1 and FB that contain both
+text and ground truth personality values. This allows us to
+observe the improvement at the individual level. MSE is
+calculated between estimated values and ground truth before
+and after domain bias reduction. The results in Table IV show
+considerable error reduction in both the ESSY and the FB
+datasets. For example, the average relative error reduction for
+FB is 30% while for ESSY, it is 23.8%.
+For population-level evaluation, we ran our model on ﬁve
+datasets: FB, ESSY, TWR, QRA, and YLP. As shown in
+Table III), S is the source distribution; P1 is the ground
+truth distribution; C1 is the corrected distribution based on the
+proposed method using parameters estimated from the ground
+truth. As a comparison, we also implement a baseline system
+where we performed error correction C2 based on P2 , which
+
+Extraversion
+
+Openness
+
+1 Since ESSY uses discrete personality values, when computing MSE, we
+used the number ”1” to represent someone with certain trait (e.g., extroversion)
+and ”0” for the opposite (e.g., introvert).
+
+1064
+1063
+
+TABLE IV: Individual level analysis for Facebook and Essays
+datasets. MSEs were signiﬁcantly decreased in single domain
+error correction
+
+TABLE III: Population level evaluation on ﬁve datasets (YLP,
+TWR, QRA, FB, ESSY) using KS-statistics (d) and T-test (p).
+S source distribution
+P1 ground truth distribution
+P2 standard normal distribution
+C1 corrected distribution based on P1
+C2 corrected distribution based on P2
+
+FB
+
+(a) Correction on Yelp dataset
+C1 - P 1
+
+C2 - P 1
+
+Trait
+
+S - P1
+d
+
+p
+
+d
+
+p
+
+d
+
+p
+
+TO
+TC
+TE
+TA
+TN
+
+.345
+.147
+.089
+.224
+.217
+
+.00
+.00
+.00
+.09
+.00
+
+.051
+.046
+.045
+.102
+.082
+
+1.00
+1.00
+1.00
+1.00
+1.00
+
+.676
+.349
+.267
+.740
+.165
+
+0.00
+0.00
+0.74
+0.00
+0.00
+
+S - P1
+
+C1 - P 1
+
+C2 - P 1
+
+d
+
+p
+
+d
+
+p
+
+d
+
+p
+
+TO
+TC
+TE
+TA
+TN
+
+.536
+.295
+.637
+.945
+.579
+
+.00
+.00
+.00
+.00
+.00
+
+.082
+.076
+.035
+.150
+.066
+
+1.00
+1.00
+1.00
+1.00
+1.00
+
+.728
+.383
+.230
+.640
+.159
+
+0.00
+0.00
+0.81
+0.00
+0.00
+
+C1 - P 1
+
+d
+
+p
+
+d
+
+p
+
+d
+
+p
+
+TO
+TC
+TE
+TA
+TN
+
+.446
+.218
+.596
+.687
+.538
+
+.00
+.00
+.00
+.00
+.00
+
+.076
+.051
+.034
+.094
+.057
+
+1.00
+1.00
+1.00
+1.00
+1.00
+
+.727
+.353
+.230
+.641
+.181
+
+0.00
+0.00
+0.86
+0.00
+0.00
+
+S - P1
+
+C1 - P 1
+
+p
+
+d
+
+p
+
+d
+
+p
+
+TO
+TC
+TE
+TA
+TN
+
+.348
+.287
+.255
+.425
+.400
+
+.00
+.00
+.00
+.00
+.00
+
+.060
+.093
+.062
+.070
+.094
+
+1.00
+1.00
+1.00
+1.00
+1.00
+
+.671
+.362
+.242
+.666
+.184
+
+0.00
+0.00
+0.95
+0.00
+0.00
+
+S - P1
+
+C1 - P 1
+
+C2 - P 1
+
+d
+
+p
+
+d
+
+p
+
+d
+
+p
+
+TO
+TC
+TE
+TA
+TN
+
+.895
+.861
+.331
+.182
+.967
+
+.00
+.00
+.00
+.33
+.00
+
+.055
+.116
+.041
+.087
+.426
+
+1.00
+1.00
+1.00
+1.00
+1.00
+
+.662
+.346
+.249
+.700
+.426
+
+0.00
+0.00
+0.83
+0.00
+0.00
+
+.2343
+.2312
+.3036
+.2259
+.2142
+
+.7071
+.7080
+.7042
+.6663
+.7074
+
+.5549
+.5212
+.5392
+.5438
+.5014
+
+.345532 0.24184
+30.0%
+
+.698605 .532100
+23.8%
+
+Before
+
+After
+
+QRA T W R
+
+ΔQRA+T W R ΔQRA ΔT W R
+
+.442958
+.221226
+.593628
+.684236
+.538763
+
+.484571
+.194239
+.624538
+.942759
+.504953
+
+.088069
+.079642
+.094396
+.098180
+.077428
+
+.112599
+.272562
+.174116
+.644182
+.070409
+
+.107393
+.284850
+.119476
+.422290
+.094165
+
+For evaluation of multi-domain correction, especially to test
+the effect of our domain weighting strategy, we conducted one
+additional experiment using the parallel datasets: TWR and
+QRA. The set of users in these datasets is the same.
+We performed multi-domain population-level evaluation using KS-statistics. Multi-domain correction is tested against two
+single domain correction baselines, on the parallel datasets.
+For multi-domain correction, as expected, the data transformation was based on parameters and weights from two datasets
+(ΔQRA+T W R ). For single domain correction, the parameters
+used in data transformation were derived only based on a
+single domain, resulting in two correction baselines ΔQRA and
+ΔT W R . We want to show the beneﬁt of using all the available
+data sources in domain bias correction. In the end, all three
+transformations were applied to the parallel dataset and results
+are shown in Table V, which show that after domain bias
+reduction, the D-values of the multi-domain correction results
+are much smaller, indicating a signiﬁcant increase of similarity
+to the ground truth distributions (p < 0.05). To establish the
+signiﬁcance, we calculated two-sample t-test of the squared
+errors.
+
+(e) Correction on Essays dataset
+
+Trait
+
+.3619
+.3200
+.3726
+.3438
+.3293
+
+B. Multiple Domain Correction
+
+C2 - P 1
+
+d
+
+After
+
+TO
+TC
+TE
+TA
+TN
+
+is a random normal distribution. We employed KS-statistic for
+population level analysis as mentioned above to measure the
+change in the difference between the reference ground-truth
+and the inferred trait values. Since all the D-values for all
+the C1 − P1 were reduced signiﬁcantly from S − P1 for all
+the personality traits in all the test domains, this indicates that
+the corrected trait distributions are much more similar to the
+ground truth distributions than those before bias reduction.
+Figure 3 shows before and after distribution plots for all ﬁve
+personality traits. However, C2 − P1 did not show similar
+improvement.
+
+(d) Correction on Facebook dataset
+
+Trait
+
+Before
+
+TO
+TC
+TE
+TA
+TN
+
+C2 - P 1
+
+Trait
+
+After
+
+TABLE V: Multi-domain bias reduction results using the
+parallel datasets QRA and T W R
+
+(c) Correction on Quora dataset
+S - P1
+
+Before
+
+Average
+Relative ER
+
+(b) Correction on Twitter dataset
+
+Trait
+
+ESSY
+
+Trait
+
+1065
+1064
+
+Fig. 4: Comparisons between GT , and the parallel datasets QRA and T W R for all traits before (above) and after (below)
+x - QRA and T W R
+x - corrected trait values
+domain bias correction. x - GT
+Conscientiousness
+
+(a) GT vs QRA
+
+(b) GT vs T W R
+
+(c) GT vs correction with (d) GT vs correction with (e) GT vs correction with
+ΔQRA+T W R transforma- ΔQRA transformation
+ΔT W R transformation
+tion
+
+Agreeableness
+
+(f) GT vs QRA
+
+(g) GT vs T W R
+
+(h) GT vs correction with (i) GT vs correction with (j) GT vs correction with
+ΔQRA+T W R transforma- ΔQRA transformation
+ΔT W R transformation
+tion
+
+Extraversion
+
+(k) GT vs QRA
+
+(l) GT vs T W R
+
+(m) GT vs correction with (n) GT vs correction with (o) GT vs correction with
+ΔQRA+T W R transforma- ΔQRA transformation
+ΔT W R transformation
+tion
+
+Neuroticism
+
+(p) GT vs QRA
+
+(q) GT vs T W R
+
+(r) GT vs correction with (s) GT vs correction with (t) GT vs correction with
+ΔQRA+T W R transforma- ΔQRA transformation
+ΔT W R transformation
+tion
+
+Openness
+
+(u) GT vs QRA
+
+(v) GT vs T W R
+
+(w) GT vs correction with (x) GT vs correction with (y) GT vs correction with
+ΔQRA+T W R transforma- ΔQRA transformation
+ΔT W R transformation
+tion
+
+1066
+1065
+
+VI. D ISCUSSION
+Based on the evaluations conducted, it seems the proposed
+method works the best when the distribution of the initial trait
+values generated by an automated tool was greatly skewed.
+The method can signiﬁcantly improve both the population
+level and individual level prediction accuracy for traits whose
+source domain distributions are very different from the ground
+truth. To illustrate this point, we can look at the results from
+single domain correction for Extraversion among different
+datasets. The differences between ground truth and source
+domain distributions range from .085 (Y LP ) to .596 (QRA).
+Since the D-value for Y LP is much smaller than that for
+QRA, this indicates that the source distribution of Y LP
+is more similar to the ground truth than that of QRA.
+After domain bias reduction using the proposed method, the
+correction for Y LP is more subtle (i.e. from .089 to .045 as
+seen in Table IIIa) than that for QRA (i.e. from .596 to .034
+as seen in Table IIIc)
+Although we introduce the proposed method to correct
+domain bias in personality prediction, the proposed method
+is very general since we treated the personality analysis tool
+as a black box. Thus it can be adapted to other domain-bias
+problems where no information about the training examples
+and the prediction method used in a tool is available.
+Collecting ground truth personalities is challenging since
+tracking people in our multi-domain QRA-TWR dataset and
+requesting them to complete a standardized personality test is
+not particularly feasible. Therefore, individual level analysis
+measures such as R-squared and MSE are an ongoing effort.
+As a part of our future work, we plan to conduct more studies
+to collect more ground truth data for evaluation.
+VII. C ONCLUSION
+Most text-based personality prediction systems are built
+using supervised machine learning algorithms. One fundamental ﬂaw of these algorithms is overﬁtting where the learned
+model is overly tuned to the characteristics of the training
+dataset, therefore does not perform well on datasets from
+other domains. As text-based personality prediction tools are
+becoming more publicly available, domain overﬁtting poses
+signiﬁcant challenges for their usability.
+This study presented an analysis of the effects of domain bias on personality prediction results and proposed a
+method to correct the bias that requires no knowledge about
+the training data. The algorithm uses parameter estimations,
+domain weighting, and linear transformations to correct the
+domain bias. Both individual-level and population-level evaluation measures were used to examine the effectiveness of
+the proposed method. The results show a signiﬁcant error
+reduction at the individual level and a signiﬁcant increase of
+distribution similarity at the population level for all the traits
+on all the test domains.
+R EFERENCES
+
+[2] T. Yarkoni, “Personality in 100,000 words: A large-scale analysis of
+personality and word use among bloggers,” Journal of research in
+personality, vol. 44, no. 3, pp. 363–373, 2010.
+[3] J. Shen, O. Brdiczka, and J. Liu, “Understanding email writers: Personality prediction from email messages,” in User Modeling, Adaptation,
+and Personalization. Springer, 2013, pp. 318–330.
+[4] C. Sumner, A. Byers, R. Boochever, and G. J. Park, “Predicting dark
+triad personality traits from twitter usage and a linguistic analysis of
+tweets,” in Machine Learning and Applications (ICMLA), 2012 11th
+International Conference on, vol. 2. IEEE, 2012, pp. 386–393.
+[5] IBM. (2015) Personality insights, ibm watson developer cloud. [Online]. Available: http://www.ibm.com/smarterplanet/us/en/ibmwatson/
+developercloud/personality-insights.html
+[6] C. Yang, S. Pan, J. Mahmud, H. Yang, and P. Srinivasan, “Using personal
+traits for brand preference prediction.”
+[7] J. B. Hirsh, S. K. Kang, and G. V. Bodenhausen, “Personalized persuasion: Tailoring persuasive appeals to recipients personality traits,”
+Psychological Science, vol. 23, no. 6, pp. 578–581, 2012.
+[8] L. M. Smith and D. D. Lu, “Targeted marketing system and method,”
+Feb. 26 2008, uS Patent 7,337,127.
+[9] J. W. Pennebaker, M. R. Mehl, and K. G. Niederhoffer, “Psychological
+aspects of natural language use: Our words, our selves,” Annual review
+of psychology, vol. 54, no. 1, pp. 547–577, 2003.
+[10] M. X. Zhou, F. Wang, T. Zimmerman, H. Yang, E. Haber, and L. Gou,
+“Computational discovery of personal traits from social multimedia,” in
+Multimedia and Expo Workshops (ICMEW), 2013 IEEE International
+Conference on. IEEE, 2013, pp. 1–6.
+[11] L. R. Goldberg, “The structure of phenotypic personality traits.” American psychologist, vol. 48, no. 1, p. 26, 1993.
+[12] ——, “The development of markers for the big-ﬁve factor structure.”
+Psychological assessment, vol. 4, no. 1, p. 26, 1992.
+[13] P. T. Costa and R. R. McCrae, Neo Personality Inventory-Revised (NEO
+PI-R). Psychological Assessment Resources, 1992.
+[14] S. Freud and J. Strachey, The psychopathology of everyday life. New
+York: Basic Books, 1901.
+[15] H. Yang and Y. Li, “Identifying user needs from social media,” IBM
+Tech Report. goo. gl/2XB7NY, Tech. Rep., 2013.
+[16] J. Chen, G. Hsieh, J. U. Mahmud, and J. Nichols, “Understanding
+individuals’ personal values from social media word use,” in Proceedings
+of the 17th ACM conference on Computer supported cooperative work
+& social computing. ACM, 2014, pp. 405–414.
+[17] J. Chen, E. Haber, R. Kang, G. Hsieh, and J. Mahmud, “Making use
+of derived personality: The case of social media ad targeting,” in Ninth
+International AAAI Conference on Web and Social Media, 2015.
+[18] T. Matthews, J. U. Mahmud, J. Chen, M. Muller, E. Haber, and
+H. Badenes, “They said what?: Exploring the relationship between
+language use and member satisfaction in communities,” in Proceedings
+of the 18th ACM Conference on Computer Supported Cooperative Work
+& Social Computing. ACM, 2015, pp. 819–825.
+[19] S. J. Pan and Q. Yang, “A survey on transfer learning,” Knowledge and
+Data Engineering, IEEE Transactions on, vol. 22, no. 10, pp. 1345–
+1359, 2010.
+[20] B. Zadrozny, “Learning and evaluating classiﬁers under sample selection
+bias,” in Proceedings of the twenty-ﬁrst international conference on
+Machine learning. ACM, 2004, p. 114.
+[21] J. Blitzer, R. McDonald, and F. Pereira, “Domain adaptation with structural correspondence learning,” in Proceedings of the 2006 conference
+on empirical methods in natural language processing. Association for
+Computational Linguistics, 2006, pp. 120–128.
+[22] H. Daumé III, “Frustratingly easy domain adaptation,” arXiv preprint
+arXiv:0907.1815, 2009.
+[23] S. J. Pan, J. T. Kwok, and Q. Yang, “Transfer learning via dimensionality
+reduction.” in AAAI, vol. 8, 2008, pp. 677–682.
+[24] F. Celli, F. Pianesi, D. Stillwell, and M. Kosinski, “Workshop on
+computational personality recognition (shared task),” in Proceedings of
+the Workshop on Computational Personality Recognition, 2013.
+[25] R. DAugustino and E. Pearson, “Testing for departures from normality,”
+Biometrika, vol. 60, pp. 613–622, 1973.
+[26] G. E. Box and D. R. Cox, “An analysis of transformations,” Journal of
+the Royal Statistical Society. Series B (Methodological), pp. 211–252,
+1964.
+
+[1] J. W. Pennebaker and L. A. King, “Linguistic styles: language use as
+an individual difference.” Journal of personality and social psychology,
+vol. 77, no. 6, p. 1296, 1999.
+
+1067
+1066
+
+

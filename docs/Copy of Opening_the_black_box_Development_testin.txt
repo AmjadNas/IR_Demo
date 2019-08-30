@@ -1,0 +1,1333 @@
+Ecological Modelling 221 (2010) 245–255
+
+Contents lists available at ScienceDirect
+
+Ecological Modelling
+journal homepage: www.elsevier.com/locate/ecolmodel
+
+Opening the black box—Development, testing and documentation of a
+mechanistically rich agent-based model
+Chris J. Topping a,b,∗ , Toke T. Høye a,b , Carsten Riis Olesen a
+a
+b
+
+Department of Wildlife Ecology and Biodiversity, National Environmental Research Institute, Aarhus University, Grenåvej 14, DK-8410 Rønde, Denmark
+Centre for Integrated Population Ecology, Roskilde University, PO Box 260, 4000 Roskilde, Denmark
+
+a r t i c l e
+
+i n f o
+
+Article history:
+Received 6 April 2009
+Received in revised form
+18 September 2009
+Accepted 24 September 2009
+Available online 30 October 2009
+Keywords:
+European brown hare
+Lepus europaeus
+Modelling protocol
+Pattern-oriented modelling
+Simulation model
+ODdox
+In silico approaches
+
+a b s t r a c t
+Although increasingly widely used in biology, complex adaptive simulation models such as agent-based
+models have been criticised for being difﬁcult to communicate and test. This study demonstrates the
+application of pattern-oriented model testing, and a novel documentation procedure to present a detailed
+agent-based model of the European brown hare, a species in widespread decline in Europe.
+The model was built based on available literature data, using multiple ﬁeld data patterns from an
+island hare population study to guide model development. A general and widely applicable approach
+to the pattern-oriented protocol for testing and developing ecological models of this kind was deﬁned
+together with the development of the ODdox documentation protocol, a combination of the current ODD
+protocol for describing agent-based models and source-code documentation. The result is a detailed
+and yet accessible description of the processes included in the model. Application of the model to a
+comprehensive historical data set supported the hypothesis that interference competition is the primary
+population regulating factor in the absence of mammal predators in the brown hare, and that the effect
+works through reduced fecundity.
+With a clearly deﬁned testing protocol and documentation, this in silico modelling approach has clear
+advantages for applications requiring integration of many factors, especially when spatio-temporal variability is important. Providing multi-facetted output which can be compared to real-world data allows
+the formulation and testing of varied hypotheses in ways not tractable to experimentation. In the case
+of the brown hare the results provide a new insight into population regulation and the causes of the
+declines.
+© 2009 Elsevier B.V. All rights reserved.
+
+1. Background
+Agent-based models (ABMs) are gaining popularity in most scientiﬁc ﬁelds due to their ability to describe complex systems from
+ﬁrst principles. Yet, they are also criticised for being ‘black boxes’
+and impossible to fully understand. This is mainly due to the difﬁculty of testing, documenting and communicating the wealth
+of mechanisms built into such models. However, testing these
+complex adaptive models has been aided by recent advances in
+pattern-oriented modelling (POM Grimm et al., 2005b), which is
+becoming a widely used framework (Grimm et al., 1996; Wiegand
+et al., 2003, 2004; Grimm and Railsback, 2005a). POM evaluates
+model behaviour and reduces parameter uncertainty by comparing
+model responses to real-world data at multiple hierarchical levels.
+
+∗ Corresponding author at: Department of Wildlife Ecology and Biodiversity,
+National Environmental Research Institute, Aarhus University, Grenåvej 14, DK8410, Rønde, Denmark. Tel.: +45 89201700.
+E-mail address: cjt@dmu.dk (C.J. Topping).
+0304-3800/$ – see front matter © 2009 Elsevier B.V. All rights reserved.
+doi:10.1016/j.ecolmodel.2009.09.014
+
+The greater the number of real world patterns the model can predict
+simultaneously the greater the conﬁdence in the model.
+There have also been advances in the documentation of ABMs.
+The Overview, Design and Detail protocol (ODD) (Grimm et al.,
+2006) attempts to divide the model description into overview and
+detailed sections. The latter section should provide enough information for reconstruction of the model by a third party. However,
+for large simulation models the ODD approach is impractical for
+documentation to the level that would allow replication of the
+model due simply to the volume of information required. On the
+other hand, simulation models are based on programming code,
+which provides the complete description of the model, but in a
+form only accessible to the experienced programmer. Hence, ideally ODD and code should be combined to form a comprehensive
+but approachable documentation.
+Here, we implement a rigorous application of POM and combine the ODD protocol for documentation with a software industry
+standard tool for documenting object-oriented computer program
+code (van Heesch, 1997) to provide a highly structured and easily accessible model documentation. We exemplify this procedure
+
+246
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+by presenting the testing, documentation and communication of
+a mechanistically rich agent-based model (sensu DeAngelis and
+Mooij, 2003) of the European brown hare (Lepus europaeus) built
+upon energetic and behavioural processes. We then apply the
+model as a theoretical framework to the investigation of population
+regulating mechanisms in brown hare populations.
+The decline in population of the brown hare since the 1960s
+throughout Europe is well documented (Strandgaard and Asferg,
+1980; Tapper and Parsons, 1984; Hutchings and Harris, 1996;
+Marboutin et al., 2003). Although generally still widespread, local
+populations are considered endangered (Vaughan et al., 2003) and
+in Switzerland it is included in the national red list (Pﬁster et al.,
+2002). There is also considerable interest in reversing these population trends due to the economics of hunting. Numerous factors have
+been implicated in the declines including changes in landscape
+structure, management, climate, predation, and disease, altering
+food supply, reproduction and/or survival (Smith et al., 2005). Habitat changes caused by agricultural intensiﬁcation seem to play a
+major role although it has been difﬁcult to relate this back to demographic changes in hare populations (Smith et al., 2005). This is
+likely to be due to interactions among multiple causal drivers and
+because there is considerable spatial and temporal variability in
+ﬁeld estimates of demographic variables. For example, the number
+of leverets per female produced per year varies between 1.4 and
+15.0 (Abilgård et al., 1972; Marboutin et al., 2003), and age structure and survival rates appear to show similar variation between
+populations (Smith et al., 2005).
+Integrating the range of factors that are implicated in brown hare
+declines requires a ﬂexible framework that includes physiological
+processes at the individual level, hare behaviour and the dynamics
+of a rapidly changing landscape including agricultural management. This system is therefore an ideal candidate for a complex
+ABM approach.
+This paper presents methods used to generate a well tested and
+documented brown hare model as a basis for hypothesis generation
+and testing. The model was tested using a simple POM protocol and
+sensitivity analysis resulting in the evaluation of a range of potential
+population control mechanisms. The documentation is presented
+using a protocol we refer to as ODdox, which together with the POM
+protocol aims to improve the transparency of detailed agent-based
+models, previously criticized for being black boxes.
+2. Methods
+The modelling approach used here implements what is termed
+‘the modelling cycle’ for a complex system of interacting agents
+(Grimm and Railsback, 2005a). The modelling cycle is an iterative
+process whereby model formulations are tested against carefully
+selected performance criteria (see below) in order to develop a
+model to answer a question, itself potentially changing as part of
+the cycle. To provide a structure to this process we present the
+structure of the modelling cycle in stages:
+A.
+B.
+C.
+D.
+
+Deﬁnition of the question.
+Model construction.
+Identiﬁcation of performance criteria.
+Iterative testing and reformulation of the model, altering ‘A, B &
+C’ as necessary (POM approach).
+E. Sensitivity analysis of the resulting ﬁnal model.
+F. Model documentation.
+G. Application of the model to the question deﬁned in ‘A’.
+In order to emphasise the importance of documentation we
+have added step ‘F’ to the modelling cycle. The brown hare species
+model presented here was built as part of the ALMaSS model frame-
+
+work (Topping et al., 2003b) and attempts to integrate a wide
+range of factors related to spatio-temporal patterns of habitat and
+food availability and interactions between these, agriculture, and
+the brown hare’s biology. ALMaSS is a highly detailed ABM system designed to simulate impacts of human management on key
+species of Danish wildlife. It utilizes a dynamic landscape providing vegetation growth and management on daily time-steps
+with a resolution of 1 m2 and a typical extent of 10 km × 10 km.
+Management of crops is handled using crop management plans
+and handled at the farm scale, affecting crop growth and providing spatio-temporally located managements, e.g. harvest. Speciﬁc
+details of ALMaSS affecting the hare model are described under
+model testing below together with a model overview, however full
+documentation of the hare model is provided in Appendix I.
+2.1. Deﬁnition of the model question
+The model was designed to evaluate the importance of population control mechanisms on the hare population of island of Illumø,
+Denmark. Illumø was chosen since it provided a long-term, data
+rich study of a brown hare population in the absence of confounding
+factors such as dispersal and mammalian predators. This required
+the simulation of Illumø under 1960s conditions at a spatial and
+temporal scale commensurate with the details necessary to include
+population control mechanisms. It also required an approach that
+allowed easy experimentation with multiple factors. The ultimate
+model aim was to create predictions which could be used to test
+and reﬁne the models applicability to other hare populations.
+2.2. Model construction
+To answer the model question it was necessary to model all
+life-stages of the brown hare, which we identiﬁed as male, female,
+juvenile (36–265 days), mobile young (12–35 days), and infant
+(1–11 days). The deﬁnition of the three juvenile stages was related
+to total dependency on the mother, partial dependency and independency as the hare ages. Knowledge about hares and their
+decision processes is far from complete; hence a basic mechanistic
+approach was selected based on fundamental principles of energetics. Energy is therefore the ‘currency’ of the brown hare model
+and the primary basis upon which hare decisions are implemented.
+This approach has been used previously with success in integrative
+simulation models of this kind (Stillman et al., 2001; Topping and
+Odderskaer, 2004), and the energetic approach has also been used
+to model behaviour in individual hares to obtain realistic behaviour
+(Rizzotto and Focardi, 1997). The details of the hare energetics used
+to construct the model are presented in Appendix II.
+2.3. Identiﬁcation of performance criteria
+2.3.1. Initial debugging and plausibility tests
+The structural integrity of the initial model as well and the general responses were evaluated. This involved testing of individual
+code segments and processes to ensure that responses were as
+intended. For example in the case where model hares were given
+excess food to ensure that no starvation occurs, body weights are
+at maximum. Visual debugging (sensu Grimm, 2002) and standard
+plausibility tests were also used to evaluate hare spatial behaviour
+and the set of rules used to construct the model.
+2.3.2. Illumø Island population patterns
+The hare study carried out on Illumø island off the island of
+Fynen, Denmark 1957–1970 (Abilgård et al., 1972) provided a
+unique opportunity to test various aspects of model performance.
+The island is approximately 1 km2 in area and has a very elongated form (Fig. 1A). The original study documents many aspects of
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+247
+
+Table 1
+Crop area proportions for Illumø island simulations in ALMaSS.
+Crop
+
+Proportion
+
+Spring barley
+Grass
+Root crops (fodder beet)
+Oats
+Potatoes
+Winter wheat
+Winter rye
+Pulses
+
+0.34
+0.30
+0.14
+0.06
+0.06
+0.04
+0.04
+0.01
+
+two years occurred consecutively. This 56-year set was appended
+to a copy of years 1–4 to give a total of 60 weather years used for
+all simulations. In addition to 1960s crops and weather, pesticides
+were removed from the management plans and all crops designated as being ‘patchy’. This patchy designation simulated the open
+structure of the crop with wide gaps between rows characteristic
+of crops of that time and clearly visible in the photographs from the
+time (see Abilgård et al., 1972).
+2.3.2.1. Realised hare weights with age and variance. The Illumø
+study provided a data set of 1275 age-indexed hare weights over a
+period of 14-years to compare to model outputs. Since hare weights
+is an emergent property resulting from the individuals life-time
+physiological status, and therefore energetic balance, the mean
+weights with age should provide a sensitive measure of model realism. Variance around model weights of the same scale as that found
+in the Illumø study was considered to be a secondary target which
+would indicate that model hares and real world hares varied in
+weights within the same range in a similar manner (Patterns 1 & 7,
+Tables 2 and 3).
+
+Fig. 1. Map data and ﬁeld patterns used in simulations. (A) The digital map of Illumø
+Island used as the basis for the major part of simulations. This island was the location
+of an extensive ﬁeld study on brown hares between 1957 and 1970 (Abilgård et al.,
+1972), resulting in a number of well supported ﬁeld data patterns such as changes
+in population number (B). (C) Landscape heterogeneity analyses used four 8 × 8 km
+landscapes (L1–L4) to test the effect of increasing heterogeneity on the model hare
+population responses. Colours indicate ﬁelds managed identically. The areas of all
+ﬁelds and other habitats, management and vegetation growth were identical in all
+four landscapes, only the degree of fragmentation of the patches was been altered
+using a geometrical fragmentation process.
+
+the hare population over this period with extensive mark-releaserecapture experiments. Thus it provides many potential patterns
+for comparisons with model outputs. Both ﬁrst order patterns
+(means) and second order patterns (variances) were considered as
+potentially useful ways of screening models.
+The simulation of the hare population of Illumø was based on a
+digitised map from 1957 and current aerial photographs. Abilgård
+et al. (1972) give details of the type and proportion of crops grown
+during the study period, and these were used together with national
+agricultural statistics from Denmark for that period to construct a
+crop rotation for ALMaSS that resulted in a crop by area coverage
+matching the Illumø situation (Table 1). Daily weather data was
+not available for Illumø, but a complete time series of air temperature, wind and precipitation was obtained for the years 1957–1970
+from the Tranbjerg weather station (55◦ 50 N 10◦ 37 E), 80 km from
+Illumø (Cappelen et al., 2008). To prevent artiﬁcial 14-year cycles,
+a set of 60 representative weather years was constructed by randomly ordering a set of four copies of the 14-year series such that no
+
+2.3.2.2. Population size. Mean and variance around population size
+over the study period was considered to be a very reliable estimate
+(Patterns 2 & 8, Tables 2 and 3). The Illumø population size ﬂuctuated in what seems like a stable limit cycle (Fig. 1B), hence some
+form of oscillation was desirable in the model generated population dynamic trends. Combined with pattern 7, these ﬂuctuations
+were used to screen model conﬁgurations, but were not used in
+subsequent parameter ﬁtting due to the lack of precision.
+2.3.2.3. Adult and juvenile survival rates. Abilgård et al. (1972) measured annual survival rates of 0.438 and 0.552 for juveniles and
+adult females, respectively. These data were based on 1275 hares
+using capture, mark and recapture methods with up to 10 recaptures per individual. Mean survival rates were used with their
+variances (Patterns 3, 4, 9, 10, Tables 2 and 3).
+2.3.2.4. Population age structure. The relative proportion of juvenile and adults was well documented in the original study. The
+measure used here was the proportion of young females (i.e.
+females < 1 year old/total females) (Patterns 5 & 11, Tables 2 and 3).
+2.3.2.5. Sex ratio. The sex ratio on Illumø was rather consistently
+biased towards males, even though the inﬂux of new animals
+recorded at the time was slightly biased in the opposite direction.
+In only 3 years out of 14 were the as many males as females, and
+in one of these years this was achieved by experimental manipulation. The mean annual proportion of females in adults over 1
+year old prior to experimental manipulation was 0.429 (n = 8, variance = 0.004). This ﬁgure and its variance were adopted as a target
+pattern (Pattern 6 & 12, Tables 2 and 3).
+
+248
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+Table 2
+Slopes of ﬁtted regressions using ﬁrst order response patterns as the dependent variable. Slopes of less than 0.1 or with p > 0.05 are not shown. Bold indicates p < 0.001.
+Parameters are described in Table 4.
+Parameter
+
+Female hare
+weights (P1)
+
+1 ExtEff
+–
+2 YLoss
+–
+3 JLoss
+0.14
+4 ALoss
+0.38
+5 DDconst
+–
+6 BreedWt
+–
+7 RepEnd
+–
+8 Rep Start
+–
+9 SwitchJA
+–
+10 ADispThr
+–
+11 FoetalGrProp −0.56
+12 GrAttain
+0.11
+13 RainF
+–
+14 JStarve
+–
+
+Female density
+(P2)
+3.11
+−0.49
+−1.19
+−2.84
+−1.15
+−0.23
+–
+0.87
+−0.33
+−0.14
+4.83
+−0.53
+−0.17
+–
+
+Female adult
+surviv (P3)
+
+Juv surviv (P4)
+−0.16
+0.12
+−0.40
+−3.86
+–
+0.24
+–
+0.98
+−0.62
+–
+−2.57
+–
+–
+–
+
+–
+–
+–
+−6.68
+–
+–
+–
+–
+–
+–
+–
+–
+–
+–
+
+2.3.3. General hare patterns
+2.3.3.1. Breeding patterns. The number of litters is an emergent
+property because it is based upon the physiological condition of
+the model hares limiting breeding to periods when fat reserves
+are sufﬁcient. The number of litters (Pattern 14, Table 2) can be
+compared to the range of 2.3–5.2 found by Pielowski (1975, 1976),
+Raczynski (1964), Hansen (1992) and Marboutin et al. (2003). The
+mean number of leverets per litter is also variable (range 2.2–2.8)
+from the same studies (Pattern 13, Table 2). In both these cases,
+precise values are not possible to obtain, however likely values are
+at the lower end of these ranges since on Illumø the mean number
+of juveniles per adult was 3 (range 1.4–5.0) (Abilgård et al., 1972).
+Targets selected were therefore a mean litter size of 2.2–2.5 and an
+annual number of litters 2.3–3.0.
+
+2.3.3.2. Positive effect of increasing habitat heterogeneity. A review
+of hare research found that increased habitat heterogeneity had
+a positive impact on overall hare numbers (Smith et al., 2005).
+This pattern was tested by isolating heterogeneity as a factor. This
+was achieved by creating a set of four artiﬁcial landscapes based
+on an actual 1 × 1 km area and running the simulations using the
+Illumø simulation settings. All four landscapes were 8 × 8 km, the
+ﬁrst being a scaled up version of 1 km2 area, the second formed of
+four 4 × 4 km areas scaled in the same way, the third made from
+16 2 × 2 km scaled areas, and the last of 64 copies of the original 1 km2 (Fig. 1C). This method of manipulating the landscapes
+ensured that the only factor that varied was the location of individual units of particular habitat patches, which become more and
+more fragmented as the grain of the landscape was increased. In this
+
+Juv::ads (P5)
+0.10
+–
+0.13
+4.91
+–
+−0.12
+–
+−0.50
+0.29
+–
+2.29
+–
+–
+–
+
+Sex ratio (P6)
+–
+–
+0.23
+0.59
+–
+0.12
+–
+0.51
+−0.36
+–
+−0.78
+0.11
+–
+–
+
+Litter no. (P13)
+
+Litter size (P14)
+
+0.38
+–
+0.28
+−2.16
+–
+–
+–
+−0.85
+−0.22
+−0.10
+3.06
+0.64
+–
+–
+
+0.35
+0.12
+0.33
+0.98
+–
+0.25
+–
+–
+–
+−0.75
+28.78
+0.32
+–
+–
+
+experimental manipulation, management carried out in one ﬁeld
+in the homogenous landscape is carried out simultaneously in four
+ﬁelds of one quarter the size in the next landscape, and likewise 16
+and 64 ﬁelds in the following landscapes. Means of 10 replicates
+of 60 year runs were used to assess model population responses to
+increasing habitat heterogeneity (Pattern 15).
+
+2.4. Iterative testing and reformulation of the model
+Iterative testing was carried out in two stages: (i) Initially the
+aim was to simulate the Illumø population by matching patterns
+1–8 as closely as possible; (ii) thereafter checking if the other patterns were adequately matched and if not continuing the iterative
+cycle by modifying the model and testing the patterns again.
+The range of parameter space was enormous and hence a
+Monte Carlo approach was not possible, rather the parameters were
+adjusted manually to obtain responses; using the responses as a
+guide, further manipulations were made to ﬁnd the optimal ﬁt. To
+speed up initial identiﬁcation of the area of optimal ﬁt an ad hoc
+iterative sub-procedure was adopted for ‘i’ which was to minimise
+a weighted least squares estimate of the difference between a mean
+of replicated scenario runs with a speciﬁc model conﬁguration and
+parameter-set values. Weights used were 4 to pattern 3 (density)
+which was considered to be the most secure real-world data, 0.1
+to patterns 2 and 4, which were considered to be of lower strength
+patterns since they are second order descriptors and highly variable, and 1.0 to all other patterns. The purpose of the weighting
+was to quickly direct the parameter selection to the optimal area,
+in particular to avoid too great a reliance on variable and numer-
+
+Table 3
+Slopes of ﬁtted regressions using second order response patterns (variances) as the dependent variable. Slopes of less than 0.1 or with p > 0.05 are not shown. Bold indicates
+p < 0.001.
+Parameter
+1 ExtEff
+2 YLoss
+3 JLoss
+4 ALoss
+5 DDconst
+6 BreedWt
+7 RepEnd
+8 Rep Start
+9 SwitchJA
+10 ADispThr
+11 FoetalGrProp
+12 GrAttain
+13 RainF
+14 JStarve
+
+Var female hare
+weights (P7)
+−0.77
+–
+−0.83
+−1.92
+0.16
+−0.19
+–
+–
+–
+–
+2.89
+−0.14
+–
+−0.77
+
+Var female
+density (P8)
+−0.83
+–
+2.12
+10.63
+−2.64
+0.57
+–
+−1.32
+–
+0.16
+−10.66
+−0.89
+–
+−0.83
+
+Var female adult
+surviv (P9)
+−2.77
+–
+2.76
+7.15
+1.14
+0.96
+−0.14
+−4.01
+0.99
+–
+−14.10
+0.88
+0.31
+−2.77
+
+Var juv surviv (P10)
+−1.24
+0.63
+0.77
+−2.18
+0.33
+0.57
+–
+–
+0.38
+–
+−6.07
+0.32
+0.17
+−1.24
+
+Var juv::ads (P11)
+–
+–
+–
+–
+–
+–
+–
+–
+–
+–
+–
+–
+–
+–
+
+Var sex ratio (P12)
+−1.13
+–
+1.06
+6.85
+0.43
+0.26
+–
+−1.11
+0.48
+–
+−3.14
+0.41
+0.14
+−1.13
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+249
+
+Table 4
+Parameters used in the sensitivity analysis. See OODox documentation in Appendix III for detailed information.
+Parameter
+
+Short description
+
+1 ExtEff
+2 YLoss
+3 JLoss
+4 ALoss
+5 DDconst
+6 BreedWt
+7 RepEnd
+8 Rep Start
+9 SwitchJA
+10 ADispThr
+11 FoetalGrProp
+12 GrAttain
+13 RainF
+14 JStarve
+
+The rate of energy intake, assuming no reduction due to impedance or palatability.
+The daily rate of loss of young and infant stages not accounted for by other factors (primarily predation).
+The daily rate of loss of juveniles not accounted for by other factors (primarily predation).
+The daily rate of loss of adults not accounted for by other factors (predation, disease).
+A negative exponent used to decrease the proportion of time available for feeding with increase local density.
+A minimum weight below which a female hare cannot breed.
+The last day of the reproductive season after which oestrous is not possible.
+The date of onset of oestrous at the start of a new season.
+The length of the period between becoming adult and switching to zero probability of starvation with negative energy deﬁcit.
+The threshold energy depot level at which the adult will attempt to disperse.
+The proportion of energy surplus used for production of foetal mass.
+The proportion of age-indexed maximum possible growth which must be achieved to avoid death due to under-development.
+The scaling factor applied to the increase in RMR with rainfall.
+A probability of starving to death if in negative energy deﬁcit.
+
+ically large second order patterns. The weights have little bearing
+on the ﬁnal parameter values selected assuming that the ﬁnal ﬁt is
+good but do affect the speed of identiﬁcation of these values. Once
+a close enough ﬁt was achieved, loosely deﬁned as all responding patterns being within 10% of their targets, a structured set of
+scenarios was created by varying all parameters under testing by
+ﬁxed proportions either side of the current chosen value. If parameters were not already in the optimum range this was identiﬁed
+by a lower least squares value for a non-centre parameter value.
+In this case the parameter value was altered and the structured set
+of scenarios re-run. The scenarios were replicated a minimum of
+10 times. Initial criteria for a ﬁt were that all ﬁrst order patterns
+should be within ±5% of the Illumø population targets, and that
+within this the least squares statistic should be minimised. Model
+conﬁgurations that did not achieve this were abandoned; those that
+did were tested against patterns 9–12. The best model conﬁguration and parameter-set values found were ﬁxed and the sensitivity
+analysis was started.
+Since we used sex ratio and female density as target patterns,
+male patterns were superﬂuous and were not used in the analysis,
+although males were modelled in as great detail as females.
+Model versions used for testing were based on combinations
+of conﬁguration options (see Appendix III), and were designed to
+evaluate the potential for different population controlling factors
+to produce the patterns observed on Illumø. Four primary mechanisms were tested:
+
+C1—Disease: implemented as a delayed density-dependent probability of a female being unable to produce young. The density effect
+was related to the mean density experienced during the previous
+year.
+C2—Density-dependent mortality: implemented as an exponentially increasing likelihood of predation of an individual with
+increasing experienced density. This effect was applied to leveret,
+young and juvenile stages only since predators capable of killing
+adults were not present on Illumø.
+C3—Stochastic variation on mortality and food quality: implemented as an annual modiﬁer applied independently to food
+quality (±max 10%) and all mortality probabilities (±10%).
+Density-dependent mortality was also utilised above a threshold
+value of 80 hares km−2 to prevent population explosions, as C2.
+C4 – Interference competition – implemented as an exponentially
+increasing proportion of time spent ‘communicating’ with nearby
+hares as local hare density increased. Local density was deﬁned as
+being within a ﬁxed radius. Time spent in this way was unavailable
+for foraging and therefore resulted in a lowered energy intake and
+ultimately affected the physiological condition of the hares.
+
+Within each of these basic model conﬁgurations a range of options
+were also tested, e.g. with and without threshold density dependence.
+2.5. Sensitivity analysis of the resulting ﬁnal model
+The parameter values achieving the best ﬁt from 3D above were
+used as a pivot point, and the parameters identiﬁed as important in
+the iterative development process (Table 4) were adjusted independently to ±5, 10, 20 and 40% of their pivot point values. A minimum
+of 40 replicates were obtained for each scenario. The deviation from
+target patterns 1–14 was used as the dependent variable and linear
+regressions were ﬁtted to each target/parameter combination.
+All statistical analyses were performed using SAS ver 9.13
+(SAS, 2002), simulation lengths were 60 years with the ﬁrst
+20 years ignored to allow model stabilization. Due to the high
+annual variability approximately 4.5% of simulation runs resulted in
+population extinction. Although these runs contained useful information, the disproportionate impact on the ﬁt to patterns made us
+exclude them from the analyses.
+2.6. Model documentation (ODdox)
+Model documentation was created by combining a modiﬁed
+version of the ODD protocol with documented code using doxygen
+(van Heesch, 1997) to create what we term ODdox documentation. The ODD (Overview, Design, Detail) protocol divides the
+model documentation into deﬁned sections covering aspects of
+model structure and functioning, and ﬁnally model details. The
+new ODdox protocol (Overview, Design, doxygen) broadly follows
+ODD protocol, but is completed and augmented by extracting comments from the source code. The details of the model are therefore
+described via descriptions of classes, methods, and variables using
+hyperlinks to the relevant sections in the source code. In contrast
+to the ODD, this means that by far the major part of the documentation is placed outside the traditional ODD sections, but linked to
+them via hyperlinks. The ODdox was speciﬁcally designed to facilitate documentation of large object-oriented models with many
+interacting components, and to provide a ﬂexible way of building
+documentation as the software is developed. It is therefore structured following logical divisions of the model entities, primarily
+base class types. At each subdivision there is a class or set of linked
+classes in focus, and six of the seven ODD sections are written for
+these classes. The “Submodels” section of ODD becomes superﬂuous since any links to sub-models are covered by class descriptions
+for the classes in focus, and submodels per se should not exist.
+However, there may be important connections between the focus
+classes and other ODdox sections (e.g. other species, environment).
+
+250
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+Fig. 2. Pattern-oriented testing using comparisons of ﬁeld data and model output. Conﬁguration C1—delayed density dependence such as disease; C2—direct densitydependent mortality; C3—stochastic processes with a high density-dependent mortality threshold; C4—interference competition leading to reduced time available for
+foraging. The ﬁt of all four conﬁgurations was compared to ﬁeld data from Illumø with the aim of reducing all deviances using a single set of parameters for each conﬁguration.
+(A) Best ﬁt to ﬁrst order target patterns (means) for C1–C4, (B), the same parameter sets’ ﬁt to second order target patterns (variances). Fit statistic is a weighted mean deviance
+of all patterns. (C) Shows the use of the ﬁt statistic to ﬁne tune the parameter values to minimise all deviances between model output and ﬁeld patterns for a single parameter
+(food extraction efﬁciency, ExtEff). Response variables with very weak or no response have been removed for clarity. (D) After parameter ﬁtting was completed the optimal
+set of parameter values obtained was used to predict female hare weights providing a close ﬁt to the Illumø data.
+
+A new section, “Interconnections”, is used to describe these and
+provide html links to them. This approach permits the documentation of large models to be built as an expandable library, and rather
+than rewriting documentation for additions only requires judicious
+updating of the interconnection section, doxygen performs the rest
+of the tasks based on software comments in the new code. Our
+aim in developing ODdox was therefore to provide an easier, more
+complete, and more ﬂexible method of documenting large models
+together with a more user friendly interface, beneﬁtting developers
+and readers alike.
+The resulting html documentation presented here provides an
+overview of the brown hare model as well as a fully hyperlinked
+class hierarchy showing the relationships between classes, their
+methods and variables in the program together with descriptions of their function. At the lowest level, source code is
+provided for the methods. This allows the reader to obtain an
+overview as well as to verify the implementation of model
+details.
+3. Results
+An important result from initial testing was the identiﬁcation
+of incoherencies in the published ﬁeld data. Model ﬁtting suggested that no model could simultaneously satisfy the requirement
+for matching survival rates and population sizes of females and
+juveniles to the Illumø data set. It was therefore necessary to test
+the validity of the ﬁeld-data patterns. A two-stage matrix model
+
+using transition rates based on adult and juvenile survival was constructed to obtain a stable solution matching either the observed
+age structure or the observed survival rates. The solution demonstrated that it was not possible to obtain the observed age structure
+using the mean survival rates given by Abilgård et al. (1972), and
+that to match this age structure would require a population with
+an annual growth rate of 15%. The population on Illumø showed no
+indications of such an increase. Since the mark-capture-recapture
+methodology used in the original study was a potential source
+of error, an assessment of the likelihood of generating bias of
+this kind was made by simulating hare capture data in ALMaSS
+and deliberately introducing bias in re-capture. In all cases these
+simulations indicated that any feasible introduced bias would exacerbate the observed incoherencies. This left only the possibility that
+the observed discrepancy between age structure and survival rates
+was the result of stochasticity and that the 14-year time series was
+not long enough to elucidate stable mean patterns. Since it was
+impossible to determine which of the three measures (age structure, female survival or juvenile survival) were at fault the approach
+taken was to project the juvenile/female ratio from the survival
+rates and iteratively modify survival rates inside their 95% conﬁdence limits to minimise the least squares deviation from all three
+target patterns. The original and resulting target patterns were:
+0.438, 0.552, 0.575 cf. 0.425, 0.519, 0.531 for juvenile survival, adult
+female survival and age structure (juveniles/(juveniles + females)),
+respectively. These new values were then used in subsequent iterative testing.
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+251
+
+Fig. 3. Model time series outputs and changes in response variables with changing landscape heterogeneity. (A) Typical population size time-series from main conﬁgurations
+tested (C1–C4) from simulation year 21 to 60. Y-axis range is 0–150 female hares km−2 . Three out of the four conﬁgurations produced ostensibly similar dynamics to those
+found on Illumø (Fig. 1B). (B) Changes in number of female hares with time from the best parameter ﬁt for model conﬁgurations C1–C4 from simulation year 21 to 60 on the
+most homogenous and most heterogeneous landscapes (L1 grey & L4 black). Y-axis range is 0–150 females km−2 . (C) Using the best ﬁt parameter set with conﬁguration C4 it
+is clear that density changes with landscape heterogeneity, but that variance in density decreases and variance in female weights increases. These patterns form secondary
+predictions that could be tested against further ﬁeld data if available.
+
+3.1. Iterative testing and reformulation of the model
+The scope of the problem when testing a model of this type is
+large since there are an unknown number of potential model conﬁgurations to test and an unknown level of difﬁculty in optimally
+ﬁtting the parameters. Running a fully replicated set of all parameter values by all conﬁgurations would take many years, so a guided
+parameter value selection process was used, even so in excess of
+250,000 scenario runs were executed using 47 model conﬁgurations before a satisfactory ﬁt was achieved. A single run of 60 years
+in daily time-steps took a mean of 25 minutes, resulting in a total
+CPU time of approximately 12 years on standard 2.3 GHz PCs, or
+nine months in real time with our PC cluster. The primary constraint
+to testing was therefore available CPU time.
+Fitting C1, C3 and C4 conﬁgurations resulted in less than 5%
+deviation from the ﬁrst order target patterns of mean density,
+adult and juvenile survival and variance in juvenile:adult ratio
+(Fig. 2A). Density-dependent mortality (C2) failed to simultaneously ﬁt sex-ratio, survival and age-structure patterns. Fits to
+juvenile survivorship could only be obtained by targeting densitydependent mortality on the leveret and young hare life-stages (not
+shown). Only C4 permitted simultaneous ﬁts of all six ﬁrst order target patterns. None of the conﬁgurations ﬁtted variance in juvenile
+survivorship nor variance in sex ratio, with model results consistently having too low variance, but C4 clearly provided the overall
+best ﬁt to the second order target patterns (Fig. 2B). Some form of
+oscillatory dynamics was evident in all four conﬁgurations (Fig. 3A),
+but variance around density suggests that C1 & C3 were too extreme
+and C2 too stable relative to the Illumø situation.
+3.2. Breeding patterns
+Litter sizes of all conﬁgurations tested fell in realistic ranges,
+although the actual values varied (1.9, 2.3, 2.1, and 2.3 C1–C4,
+
+respectively). Similar variation around acceptable values of litter
+numbers also emerged (2.9, 2.7, 2.5 and 2.6, C1–C4, respectively).
+3.3. Positive effect of increasing habitat heterogeneity/negative
+effect of homogenous crop areas (Pattern 15)
+All four conﬁgurations produced the expected increased density with increasing heterogeneity but with differing slopes (Fig. 3B
+and C, Table 5), and all conﬁgurations produced litter sizes and
+mean numbers of litters within acceptable ranges. Interestingly,
+the models make a strong secondary prediction that variance in
+hare weights should increase with homogeneity of the landscape
+together with a slight increase in mean weight. In all cases where
+signiﬁcant effects were found the model conﬁgurations agreed in
+terms of the direction if not the magnitude of the effects.
+
+Table 5
+Slopes of ﬁtted regressions using ﬁrst order response patterns as the dependent
+variable against four structurally different landscapes only differing in their heterogeneity for four model conﬁgurations. Bold indicates p < 0.05.
+
+Weights (P1)
+Female density (P2)
+Adult survival (P3)
+Juv survival (P4)
+Juv::Ad (P5)
+Sex ratio (P6)
+Var weights (P7)
+Var F. density (P8)
+Var Ad survival (P9)
+Var J survival (P10)
+Var J:A (P11)
+Var sex ratio (P12)
+Litter size (P13)
+No litters (P14)
+
+C1
+
+C2
+
+C3
+
+C4
+
+0.08
+0.17
+0.00
+0.02
+−0.01
+0.02
+−1.71
+34.49
+−0.03
+−0.01
+0.00
+−0.01
+0.17
+−0.07
+
+0.07
+0.10
+0.00
+−0.08
+0.04
+0.00
+−1.98
+16.48
+0.00
+0.00
+0.00
+0.00
+−0.01
+0.16
+
+0.05
+0.30
+0.00
+0.00
+−0.01
+0.00
+−1.43
+554.59
+−0.02
+0.00
+0.00
+−0.01
+0.13
+−0.02
+
+0.03
+0.19
+0.00
+0.00
+0.00
+−0.04
+−0.45
+615.07
+0.00
+0.06
+0.00
+0.04
+0.00
+−0.05
+
+252
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+Although not one of the target patterns, cyclic dynamics were
+not easy to obtain on the larger landscapes. It was also evident that
+the same controlling mechanism was capable of generating very
+different time series patterns even though the only factor varied
+was the spatial arrangement of landscape features, with homogenous landscapes producing much less variable dynamics (Fig. 3B).
+3.4. Sensitivity analysis of the resulting ﬁnal model
+Model conﬁguration C4 performed better in the iterative tests
+than any other conﬁguration and was used for detailed sensitivity testing. The most impressive ﬁt of C4 to the Illumø patterns
+is perhaps to hare weights. The weight of each hare is emergent,
+determined by the energetic relationships described above and the
+local conditions affecting resource availability. Model hares experimentally fed ad libitum in the model all reached maximum weight
+of 5.2 kg. The fact that the model not only generates the mean
+Illumø weights accurately at 4.2 kg, but also ﬁts the sensitive pattern of variance of weight, promotes conﬁdence in model behaviour
+(Fig. 2D). Fig. 2C shows an example response of the model to varying
+single parameter values in the range ±40%. This example also shows
+one of the most pronounced curvilinear responses observed, that
+of Pattern 9, variance of adult survival. Signiﬁcant linear responses
+were found in 76% of all parameter/target pattern combinations
+tested together with a range of strengths of responses as indicated
+by the slopes (Tables 2 and 3). The potential of a strong curvilinear
+ﬁt to cause a false negative was not considered a serious problem
+since a strong curvilinear response will also produce a linear ﬁt as
+evidenced by Pattern 9. The model outputs for this pattern were
+strongly curved; nevertheless it was not excluded as an important
+response variable because of the steep slope.
+Slopes can be compared directly between patterns but not
+between parameters since units and potential ranges of values
+differ greatly. We scaled the slopes by the corresponding ﬁtted
+parameter value, which permits direct comparison of slopes by
+assuming equivalency of coefﬁcients of variation.
+All parameters that had large impacts affected mean female
+density, with ExtEff, ALoss and FoetalGrProp (see explanations of
+abbreviations in Table 4) producing the strongest responses. This
+indicates the sensitivity of the model to food supply, adult survivorship and reproductive capacity.
+Sensitivity of the oscillatory pattern was investigated by altering details of the C4 model conﬁguration in order to determine
+the driving factor behind this pattern, since this was not immediately obvious. These manipulations indicated that oscillations
+would disappear, even though population control would still be
+achieved above the target level, if there was no energy deﬁcit for
+adult hares moving from negative to positive energy balance. The
+model is therefore sensitive to the assumption that the hares cannot replenish a long negative energy deﬁcit immediately but are
+limited by their daily intake capacity.
+
+the production of foetal mass. After birth the female must increase
+her energy intake in order to provide enough energy for lactation. Energy comes from foraging from green shoot material and
+the amount of energy obtained depends on the age of the shoot
+and the overall structure of the vegetation. Dense vegetation may
+therefore have a high food value in terms of biomass but a poor
+digestibility and high impedance. A female that cannot support lactation because her combined energy intake and reserves fall too low
+will abandon her young. Reproduction will not be attempted again
+until energy reserves are replenished. Growth of model hares is also
+dependent on energy balance and hares which do not achieve 45%
+of their potential weight at any age will die. Adults rarely die of
+energy shortage and are assumed to be able to “carry” a negative
+energy balance. Since they will remain in the population contributing to social stress, which is the primary density-dependent
+regulation factor in the hare model. Hunting occurs in Autumn but
+other non-energetic related losses are based on life-stage speciﬁc
+constant daily probabilities or on events driven by human management activities.
+3.6. Application to model question
+Naturally, none of the model conﬁgurations tested gave perfect ﬁts, but the ﬁnal model chosen could match 13 out of 15 real
+world patterns, leaving only variation in juvenile survivorship and
+sex ratio unaccounted for. The result erects the testable hypothesis
+that controlling factors on Illumø were primarily related to densitydependence working via body condition, and not generated by the
+mechanisms simulated in C1–C3.
+In addition, the slopes of the parameter responses and interactions from the ﬁtted model provide a direct means to evaluate
+the impact of changing a factor on the population dynamics. Several of the parameters investigated had no direct analogues to
+real-world drivers. Two examples are changing food extraction
+efﬁciency (ExtEff) and the proportion of energy that the female
+is assumed to give to producing young, both of which are important parameters resulting in strong responses. In some cases where
+parameters have real world analogues, the slopes can be used
+directly (loss rates and rainfall), whereas the response to landscape
+structural changes required the application of scenarios and further
+analysis. Overall it is clear that factors affecting the survival of the
+adult female hares have a marked impact on total population numbers, juvenile and young loss also having a major impact. Rainfall
+is likely to be important too, but does not seem to have as strong
+an impact. The strong response to increasing habitat heterogeneity also indicates the importance of habitat quality and provides a
+direct indication of one practical approach to improving conditions
+for hares also suggested in UK hare conservation (Vaughan et al.,
+2003; Smith et al., 2004).
+4. Discussion
+
+3.5. Model documentation
+The ODdox for the brown hare model is provided in the supplementary materials (Appendix 1) and should be referred to for full
+documentation. A summary of the ﬁnal model is presented here:
+The hare model runs inside a dynamic landscape simulation
+incorporating detailed topography, weather, and human activities
+in the form of agricultural management and infrastructure. The
+hares are simulated in ﬁve life-stages: infants up to 11 days during
+which they are totally dependent on the lactating doe; young 12–35
+days old after which they are fully weaned, juveniles 35–365 days
+old, adult males and females. The model hare is quite mobile and
+able to ﬁnd suitable forage over a wide area when not encumbered
+with young. Breeding starts in Spring if body condition allows for
+
+The pattern-oriented approach to testing models is becoming
+widely used both in ecology and other branches of biology, as
+well as other sciences. Examples vary from testing shorebird models (Goss-Custard et al., 2006) to consumer behaviour (Zhang and
+Zhang, 2007) and wound healing (Mi et al., 2007). The range of
+applications makes generalisations difﬁcult, but the reﬁnement of
+existing protocols for testing and communicating model structure
+may facilitate progress. We propose the adoption of ‘the modelling cycle’ for a complex system of interacting agents (Grimm and
+Railsback, 2005a), together with a documentation process based
+on using OOD for smaller models, and ODdox for larger simulations systems. However, during development of the hare model
+it was clear that a primary cause for concern was the incomplete
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+Fig. 4. Diagramatic representation of the modelling cycle protocol. After initialising
+the cycle by deﬁning a model question it is necessary to traverse the complete POM
+(Pattern Oriented Modelling) process at least once, thereafter should the model performance meet the performance criteria the cycle will be interrupted and sensitivity
+analysis and documentation performed.
+
+understanding of the ﬁeld data patterns used for testing. Limitations of these data sets only became apparent after considerable
+model testing, requiring re-formulation and the use of simple models for screening, suggesting that inconsistencies in published data
+are not always easy to identify. It would therefore be useful to add
+a further stage to the modelling protocol designed to explore ﬁeld
+data patterns and check for inconsistencies as part of the iterative
+model cycle (Fig. 4).
+The subsequent parameter ﬁtting of the chosen model conﬁguration should lead into a sensitivity analysis. In the case of the
+brown hare model long run times required efﬁcient sensitivity
+analysis procedures. There are a number of methods of sensitivity
+analysis suitable for ABMs such as the hare simulation, but complex approaches like Extended Fourier Amplitude Sensitivity Test
+(Saltelli et al., 1999) or Bayesian MCMC approaches do not provide information with a clear physical meaning (Ravalico et al.,
+2005). Ravalico et al. (2005) compared sensitivity analysis methods for complex models in environmental management, concluding
+that none of the current methods met all criteria of efﬁciency and
+applicability. With multiple response variables, the number of runs
+required to carry out in this study would have been too great so we
+adopted a simple scaled regression approach, providing a physical
+reference for the results. This easily accessible approach provided
+the basic information that was required for understanding the system responses.
+In contrast to other hare species, cycling has not been described
+for the brown hare, it being considered a non-cyclic species (Keith,
+
+253
+
+1983). Although there are no reports of clear cyclicity, support for
+the fact that this might occur does exist. There is evidence to suggests there may be phases of 8 years in some British game-bag data
+(Tapper, 1992), and there has been some indication of phases of
+population change related to fecundity (Marboutin et al., 2003).
+The lack of observed cycling may be due to the spatial and temporal heterogeneity in brown hare habitats, and also to the fact that
+cycles might disappear or be hard to ﬁnd in declining populations,
+or in larger landscapes as we showed in this study (Fig. 2, C4). In
+contrast to factors causing decline, the lack of clear cyclicity means
+that population regulation in the brown hare has not been well
+studied. However, there is strong evidence that adult survival is
+generally constant and high (Smith et al., 2005), whereas fecundity
+is highly variable both in terms of reproductive output and survival of young hares (Marboutin and Peroux, 1995; Marboutin and
+Hansen, 1998), both factors matching with the conditions required
+to produce oscillations in C4.
+The POM testing produced a new hypothesis for brown hare
+population regulation that does not appear to have been discussed
+previously. Testing of model conﬁgurations clearly suggested that
+the conﬁguration based upon interference competition (C4) produced the best ﬁt to observed patterns. This is in contrast to
+mountain hare Lepus timidus populations which are thought to
+cycle due to host–parasite interactions (Newey et al., 2007).
+Abilgård et al. (1972) indicated that there was no epidemic disease on Illumø, but that hares were found dead from both disease
+and parasitic causes, so the role played by parasites and disease
+cannot be entirely ignored. However, the role of interference as a
+regulating factor is indicated in other studies. High natal dispersal
+and inverse density dependent dispersal rates have been shown
+in the brown hare (Bray et al., 2007). These were considered to
+arise from two possible hypotheses: the social fence hypothesis
+(Hestbeck, 1988) whereby movement is limited by avoidance of
+social stress in high density areas; and an alternative whereby social
+stress causes only small-scale movements high density areas to
+accommodate re-distribution of resources. In both cases they make
+the explicit assumption of social stress or interference competition.
+The C4 conﬁguration invokes dispersal by the hare in response to
+food stress, primarily in females (evidenced by the skewed sex ratio
+in C4 model hares). This dispersal to obtain resources for females
+conforms to expectations based upon Greenwood’s resource competition hypothesis (Greenwood, 1980) and general expectations
+for polygynous-promiscuous mammals (Perrin and Mazalov, 2000).
+Further support for this hypothesis comes from Monaghan and
+Metcalfe (1985) who describe increasing aggressive behaviour and
+time spent running as hare density around a food source increased.
+If we accept that interference competition was the main population regulating factor on Illumø, this does not necessarily mean
+that it is a powerful effect. Indeed, we found that cyclic population dynamics was very much reduced in a larger landscape and
+low heterogeneity, which suggests that the phenomenon would be
+easily disrupted should further environmental variability be introduced. Experimentation with the model demonstrated that the
+effect was primarily linked to reproductive output via temporary
+deterioration of female physiological status due to lowered energy
+intake. Cyclicity was a result of carrying an energy deﬁcit and
+acted as a synchronising factor causing low fecundity in the period
+following low food and high density. The longevity of the hares
+exacerbates this effect whereby a high density of adults will have a
+long-term effect on the growth rates and fecundity of subsequent
+young. This situation is analogous to snowshoe hare population
+dynamics where cyclicity has been attributed to a tri-trophic effect
+whereby food stress is caused by avoidance of predation (Krebs
+et al., 1995), and may be a more widespread phenomenon (Creel
+and Christianson, 2008). There is also evidence from the snowshoe
+hare that different morphs alternate through different phases of the
+
+254
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+
+cycle and that this could work synergistically with extrinsic causes
+(Sinclair et al., 2003). This situation is very close to the interference
+competition with a minimum breeding weight conﬁguration (C4)
+which was selected as the best ﬁt to the Illumø conditions.
+In terms of identifying the primary regulating factor on Illumø
+we would clearly choose interference competition. However, success should not only be judged by the models explanatory or
+forecasting ability (Conroy et al., 1995), but also on its contribution
+to understanding the system. In the real world we would expect
+multiple mechanisms to contribute to the dynamics, but in varying
+degrees. This argues for the inclusion of mechanisms that we know
+exist but cannot justify in terms of the information used to ﬁt the
+model. One approach to this problem would be to build in all mechanisms subsequent to ﬁtting the primary mechanism and to adjust
+the ﬁt from this point; providing the most optimal framework for
+testing population control hypotheses. This argues for a systems
+approach to modelling for ecologically complex questions. Thus
+complex ABM systems models such as ALMaSS could be used as
+a framework for understanding the biological system when linked
+to ﬁeld studies to create a cycle of improvement of understanding.
+This would eventually lead to realistic models that would be mechanistically rich enabling better predictive potential, since they are
+mechanistic and more complete, than using reductionist modelling
+approaches. Completeness also infers the added advantage of ﬂexibility, for example if dispersal and mating behaviour are realistic in
+a population model, then it could easily be augmented for tackling
+population genetic questions (e.g. Topping et al., 2003a). Similar
+approaches have been advocated in landscape ecology, as generative landscape science (Brown et al., 2006), and in immunology and
+cell biology as a complementary approach to wet-laboratory study
+(Kleppe et al., 2006) where they have clear advantages in terms of
+pedagogy, testing and study of emergent phenomena and quantitative predictions (Bersini, 2006). When using models of this type
+experimentation and hypothesis testing is easier, it is easier to isolate and test single mechanisms, and data can be integrated from
+several different experiments into a single in silico experimental
+system (Forrest and Beauchemin, 2007).
+Better communication of the models, perhaps using the ODdox
+method, may open up the ‘black-box’ sufﬁciently to provide access
+to the scientiﬁc community. It may then be possible to develop
+these larger and complex models as longer term collaborations,
+such as seen in development of open source programming projects.
+In this case, discussion and data to challenge the mechanisms
+implemented ought to be forthcoming as a community function.
+5. Conclusions
+An agent-based model of the European brown hare was evaluated by pattern-oriented modelling resulting in new insights into
+the species’ ecology and population regulation. Most of the known
+behavioural biology and mechanistic details of the species was
+incorporated into the model. This holistic modelling approach provided the ﬂexibility to evaluate contrasting population regulation
+hypotheses by integrating multiple factors in space and time to
+produce systems level responses. The approach therefore lends
+itself to studying multifactor whole organism systems. The common criticism of lack of model transparency was addressed by
+deﬁning simple but effective protocols for the application of model
+development and documentation; potentially paving the way for a
+community-based collaborative study of complex systems.
+Acknowledgements
+Our thanks to Peter Odderskær and Jacob Nabe-Nielsen for their
+comments on the manuscript. CJT and CRO were funded by the
+
+Danish Forest and Nature Agency via the programme Game and
+Landscape. TTH was funded by the Danish Natural Science Council, Centre for Integrated Population Ecology (CIPE). Contributions:
+CJT designed, implemented and tested the model and drafted the
+manuscript and was responsible for the ODdox documentation
+concept and implementation. TTH carried out statistical analysis,
+participated in model evaluation and drafting of the manuscript.
+CRO supplied hare ecological and energetic information and provided the biological basis for the model design. All authors read and
+approved the ﬁnal manuscript.
+Appendix A. Supplementary data
+Supplementary data associated with this article can be found, in
+the online version, at doi:10.1016/j.ecolmodel.2009.09.014.
+References
+Abilgård, F., Andersen, J., Barndorff-Nielsen, O., 1972. The hare population (Lepus
+europaeus Pallas) of Illumø Island, Denmark. A report on the analysis of the data
+from 1957-1970. Danish Review of Game Biology 6, 1–32.
+Bersini, H., 2006. Immune system modeling: the OO way. In: Artiﬁcial Immune
+Systems, Proceedings, Lecture Notes in Computer Science, pp. 150–163.
+Bray, Y., Devillard, S., Marboutin, E., Mauvy, B., Peroux, R., 2007. Natal dispersal of
+european hare in France. Journal of Zoology 273, 426–434.
+Brown, D.G., Aspinall, R., Bennett, D.A., 2006. Landscape models and explanation
+in landscape ecology—a space for generative landscape science? Professional
+Geographer 58, 369–382.
+Cappelen, J., Laursen, E.V., Kern-Hansen, C. (Eds.), 2008. DMI Daily Climate Data
+Collection 1873-2007, Denmark, The Faroe Islands and Greenland. Technical
+Report 08-05. Danish Meteorological Institute, 41 pp.
+Conroy, M.J., Cohen, Y., James, F.C., Matsinos, Y.G., Maurer, B.A., 1995. Parameterestimation, reliability, and model improvement for spatially explicit models of
+animal populations. Ecological Applications 5, 17–19.
+Creel, S., Christianson, D., 2008. Relationships between direct predation and risk
+effects. Trends in Ecology & Evolution 23, 194–201.
+DeAngelis, D.L., Mooij, W.M., 2003. In praise of mechanistically-rich models. In:
+Canham, C.D., Cole, J.J., Lauenroth, W.K. (Eds.), Models in Ecosystem Science.
+Princeton University Press, Princeton New Jersey, pp. 62–83.
+Forrest, S., Beauchemin, C., 2007. Computer immunology. Immunological Reviews
+216, 176–197.
+Goss-Custard, J.D., Burton, N.H.K., Clark, N.A., Ferns, P.N., McGrorty, S., Reading, C.J.,
+Rehﬁsch, M.M., Stillman, R.A., Townend, I., West, A.D., Worrall, D.H., 2006. Test
+of a behavior-based individual-based model: response of shorebird mortality to
+habitat loss. Ecological Applications 16, 2215–2222.
+Greenwood, P.J., 1980. Mating systems, philopatry and dispersal in birds and mammals. Animal Behaviour 28, 1140–1162.
+Grimm, V., 2002. Visual debugging: a way of analyzing, understanding and communicating bottom-up simulation models in ecology. Natural Resource Modeling
+15, 23–38.
+Grimm, V., Railsback, S.F., 2005a. Individual-Based Modeling and Ecology. Princeton Series in Theoretical and Computational Biology. Princeton University Press,
+Princeton and Oxford.
+Grimm, V., Frank, K., Jeltsch, F., Brandl, R., Uchmanski, J., Wissel, C., 1996. Patternoriented modelling in population ecology. Science of the Total Environment 183,
+151–166.
+Grimm, V., Revilla, E., Berger, U., Jeltsch, F., Mooij, W.M., Railsback, S.F., Thulke, H.H.,
+Weiner, J., Wiegand, T., DeAngelis, D.L., 2005b. Pattern-oriented modeling of
+agent-based complex systems: lessons from ecology. Science 310, 987–991.
+Grimm, V., Berger, U., Bastiansen, F., Eliassen, S., Ginot, V., Giske, J., Goss-Custard, J.,
+Grand, T., Heinz, S.K., Huse, G., Huth, A., Jepsen, J.U., Jorgensen, C., Mooij, W.M.,
+Muller, B., Pe’er, G., Piou, C., Railsback, S.F., Robbins, A.M., Robbins, M.M., Rossmanith, E., Ruger, N., Strand, E., Souissi, S., Stillman, R.A., Vabo, R., Visser, U.,
+DeAngelis, D.L., 2006. A standard protocol for describing individual-based and
+agent-based models. Ecological Modelling 198, 115–126.
+Hansen, K., 1992. Reproduction in European hare in Danish farmland. Acta Theriologica 37, 27–40.
+Hestbeck, J.B., 1988. Population regulation of cyclic mammals—a model of the social
+fence hypothesis. Oikos 52, 156–168.
+Hutchings, M., Harris, S., 1996. The current status of the brown hare (Lepus europaeus)
+in Britain.
+Keith, L.B., 1983. Role of food in hare population cycles. Oikos 40, 385–395.
+Kleppe, R., Kjarland, E., Selheim, F., 2006. Proteomic and computational methods in
+systems modeling of cellular signaling. Current Pharmaceutical Biotechnology
+7, 135–145.
+Krebs, C.J., Boutin, S., Boonstra, R., Sinclair, A.R.E., Smith, J.N.M., Dale, M.R.T., Martin,
+K., Turkington, R., 1995. Impact of food and predation on the snowshoe hare
+cycle. Science 269, 1112–1115.
+Marboutin, E., Peroux, R., 1995. Survival pattern of European hare in a decreasing
+population. Journal of Applied Ecology 32, 809–816.
+
+C.J. Topping et al. / Ecological Modelling 221 (2010) 245–255
+Marboutin, E., Hansen, K., 1998. Survival rates in a nonharvested brown hare population. Journal of Wildlife Management 62, 772–779.
+Marboutin, E., Bray, Y., Peroux, R., Mauvy, B., Lartiges, A., 2003. Population dynamics
+in European hare: breeding parameters and sustainable harvest rates. Journal of
+Applied Ecology 40, 580–591.
+Mi, Q., Riviere, B., Clermont, G., Steed, D.L., Vodovotz, Y., 2007. Agent-based model
+of inﬂammation and wound healing: insights into diabetic foot ulcer pathology
+and the role of transforming growth factor-beta 1. Wound Repair Regeneration
+15, 671–682.
+Monaghan, P., Metcalfe, N.B., 1985. Group foraging in wild brown hares—effects of
+resource distribution and social-status. Animal Behaviour 33, 993–999.
+Newey, S., Dahl, F., Willebrand, T., Thirgood, S., 2007. Unstable dynamics and population limitation in mountain hares. Biological Review 82, 527–549.
+Perrin, N., Mazalov, V., 2000. Local competition, inbreeding, and the evolution of
+sex-biased dispersal. American Naturalist 155, 116–127.
+Pﬁster, H.P., Kohli, L., Kästli, P., Birrer, S., 2002. Feldhase. Schlussbericht 1999-2000,
+Bern.
+Pielowski, Z., 1975. Charakterystyka ekologiczna populacji zajaca Lepus europaeus
+Pallas, 1778. Roczniki Akademii Rolniczej W Poznaniu, 65, 1–33.
+Pielowski, Z., 1976. Number of young born and dynamics of the European hare population. In: Pielowski, Z., Pucek, Z. (Eds.), Ecology and Management of European
+Hare Populations. Polish Hunting Association, Warsaw, pp. 75–78.
+Raczynski, J., 1964. Studies on the European hare. V. Reproduction. Acta Theriologica
+9, 305–352.
+Ravalico, J.K., Mair, H.R., Dandy, G.C., Norton, J.P., Croke, B.F., 2005. A comparison of
+sensitivity analysis technques for complex models for environmental management. In: Zerger, A., Argent, R.M. (Eds.), MODSIM 2005 International Congress
+on Modelling and Simulation. Modelling and Simulation Society of Australia and
+New Zealand, pp. 2533–2539.
+Rizzotto, M., Focardi, S., 1997. A physiologically-based model of a self-motivated
+hare in relation to its ecology. Ecological Modelling 95, 191–209.
+Saltelli, A., Tarantola, S., Chan, K.P.S., 1999. A quantitative model-independent
+method for global sensitivity analysis of model output. Technometrics 41, 39–56.
+SAS, 2002. SAS.
+Sinclair, A.R.E., Chitty, D., Stefan, C.I., Krebs, C.J., 2003. Mammal population cycles:
+evidence for intrinsic differences during snowshoe hare cycles. Canadian Journal
+of Zoology-Revue Canadienne De Zoologie 81, 216–220.
+
+255
+
+Smith, R.K., Jennings, N.V., Harris, S., 2005. A quantitative analysis of the abundance
+and demography of European hares Lepus europaeus in relation to habitat type,
+intensity of agriculture and climate. Mammal Review 35, 1–24.
+Smith, R.K., Jennings, N.V., Robinson, A., Harris, S., 2004. Conservation of European
+hares Lepus europaeus in Britain: is increasing habitat heterogeneity in farmland
+the answer? Journal of Applied Ecology 41, 1092–1102.
+Stillman, R.A., Goss-Custard, J.D., West, A.D., Durell, S., McGrorty, S., Caldow, R.W.G.,
+Norris, K.J., Johnstone, I.G., Ens, B.J., Van der Meer, J., Triplet, P., 2001. Predicting
+shorebird mortality and population size under different regimes of shellﬁshery
+management. Journal of Applied Ecology 38, 857–868.
+Strandgaard, H., Asferg, T., 1980. The Danish Bag Record II. Fluctuations and trends
+in Game bag record in years 1941-1976 and geograprical distribution of bag in
+1976. Danish Review of Game Biology 11, 32–33.
+Tapper, S.C., 1992. Game Heritage. An Ecological Review from Shooting and Gamekeeping Records. Game Conservancey Ltd., Hampshire, UK.
+Tapper, S.C., Parsons, N., 1984. The changing status of the Brown Hare (Lepus capensis L.) in Britain. Mammal Review 14, 57–70.
+Topping, C., Ostergaard, S., Pertoldi, C., Bach, L.A., 2003a. Modelling the loss of genetic
+diversity in vole populations in a spatially and temporally varying environment.
+Annales Zoologici Fennici 40, 255–267.
+Topping, C.J., Odderskaer, P., 2004. Modeling the inﬂuence of temporal and spatial
+factors on the assessment of impacts of pesticides on skylarks. Environmental
+Toxicology and Chemistry 23, 509–520.
+Topping, C.J., Hansen, T.S., Jensen, T.S., Jepsen, J.U., Nikolajsen, F., Odderskaer, P.,
+2003b. ALMaSS, an agent-based model for animals in temperate European landscapes. Ecological Modelling 167, 65–82.
+van Heesch, D., 1997. Doxygen. www.doxygen.org.
+Vaughan, N., Lucas, E.A., Harris, S., White, P.C.L., 2003. Habitat associations of European hares Lepus europaeus in England and Wales: implications for farmland
+management. Journal of Applied Ecology 40, 163–175.
+Wiegand, T., Revilla, E., Knauer, F., 2004. Dealing with uncertainty in spatially explicit
+population models. Biodiversity and Conservation 13, 53–78.
+Wiegand, T., Jeltsch, F., Hanski, I., Grimm, V., 2003. Using pattern-oriented modeling
+for revealing hidden information: a key for reconciling ecological theory and
+application. Oikos 100, 209–222.
+Zhang, T., Zhang, D., 2007. Agent-based simulation of consumer purchase decisionmaking and the decoy effect. Journal of Business Research 60, 912–922.
+
+

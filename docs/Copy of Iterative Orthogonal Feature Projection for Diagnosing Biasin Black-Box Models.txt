@@ -1,0 +1,328 @@
+Iterative Orthogonal Feature Projection for Diagnosing Bias in Black-Box
+Models
+
+arXiv:1611.04967v1 [cs.LG] 15 Nov 2016
+
+Julius Adebayo
+Lalana Kagal
+CSAIL, MIT, 32 Vassar Street Cambridge, MA 02139 USA.
+
+Abstract
+Predictive models are increasingly deployed for
+the purpose of determining access to services
+such as credit, insurance, and employment. Despite potential gains in productivity and efficiency, several potential problems have yet to
+be addressed, particularly the potential for unintentional discrimination. We present an iterative procedure, based on orthogonal projection
+of input attributes, for enabling interpretability
+of black-box predictive models. Through our iterative procedure, one can quantify the relative
+dependence of a black-box model on its input
+attributes.The relative significance of the inputs
+to a predictive model can then be used to assess
+the fairness (or discriminatory extent) of such a
+model.
+
+1. Introduction
+Access to large-scale data has led to an increase in the use
+of predictive modeling to drive decision making, particularly in industries like banking, insurance, and employment
+services (Bryant et al., 2008) and (Mayer-Schönberger &
+Cukier, 2013). The increased use of predictive models
+has led to greater efficiency and productivity. However,
+improper deployment of these models can lead to several unwanted consequences. One key concern is unintentional discrimination (Crawford & Schultz, 2014; Barocas
+& Selbst, 2014). It is important that decisions made in determining who has access to services are, in some sense,
+fair. A predictive model can be susceptible to discrimination if it was trained on inputs that exhibit discriminatory
+patterns. In such a case, the predictive model can learn
+patterns of discrimination from data leading to high dependence on protected attributes like race, gender, religion, and
+nd
+
+Proceedings of the 32
+International Conference on Machine
+Learning, Lille, France, 2015. JMLR: W&CP volume 37. Copyright 2015 by the author(s).
+
+JULIUSAD @ MIT. EDU
+LKAGAL @ CSAIL . MIT. EDU
+
+sexual orientation. A predictive model that significantly
+weights these protected attributes would tend to exhibit disparate outcomes for these groups of individuals. Hence,
+the focus of this paper is on auditing predictive models to
+determine the relative significance of a models inputs in
+determining outcomes. Given the relative significance of
+a model to its inputs, judgement can be more easily made
+about the model’s fairness.
+The potential increased efficiency and societal gains from
+leveraging predictive modeling seem limitless, and have
+rightly necessitated the widespread adoption of these models. In particular, use of predictive modeling for decision
+making in determining access to services is starting to become the defacto standard in industries such as banking,
+insurance, housing, and employment. As the need for more
+accurate forecasts or predictions has heightened, there has
+been an increase in the use of complicated, often uninterpretable predictive models in making forecasts from data.
+Increasingly, these predictive models tend to have millions
+of parameters and are typically considered black-boxes by
+practitioners. This is because the models often generate
+highly accurate results, but an in-depth understanding of
+the underlying reasons behind these accurate results is generally lacking. Hence, practitioners resort to feeding in input to these black-box models, then generate results without truly understanding why their models are performing
+well. In fields such as computer vision or speech recognition where the task is often to identify or recognize a signal
+structure, a true understanding of the internal workings of
+the underlying model generating the predictions can be excused. However, in industries such as banking, insurance,
+and employment where access to these services is essential for livelihood, it is of paramount importance that the
+practitioner applying a predictive model in this setting truly
+understands the internal workings of her model.
+
+2. Related Work
+As automated decision-making systems began to gain
+widespread use in rendering decisions, researchers have be-
+
+Iterative Orthogonal Feature Projection for Diagnosing Bias in Black-Box Predictive Systems
+
+gun to look at the issue of fairness and discrimination in
+data mining. Increasingly, the emerging subfield around
+the topic is known as discrimination aware data mining,
+or fairness aware data mining (Pedreshi et al., 2008). The
+literature on fairness is broad including works from social
+choice theory, game theory, economics, and law (Romei &
+Ruggieri, 2014). In the computer science literature, work
+on identifying and studying bias in predictive models has
+only begun to emerge in the past few years.
+More recently, studies have started to emerge that seek to
+identify and correct potential bias in predictive modeling.
+In general, these works can be broadly classified into 3
+broad categories: data transformation, algorithm manipulation, and outcome manipulation methodologies (Zemel
+et al., 2013; Adler et al., 2016). For data transformation techniques, the input data to a data mining system is
+perturbed as a means of quantifying bias in the data. In
+(Calders & Verwer, 2010) Kamiran & Calders present a
+method to transform data labels in order to remove discrimination. With their proposed method, a Naive-Bayes
+classifier is trained on positive labels, then a set of highly
+ranked negatively labeled items from the protected set are
+changed to achieve statistical parity of outcomes. The modified data generated is then used to learn a fairer classifier.
+In (Friedler et al., 2014) Friedler et. al. also present a data
+repair methodology for transforming biased data into one
+that predictive models can hopefully learn fair models on.
+In general, data transformation methodologies are typically
+seeking to learn fair representations of a dataset upon which
+less biased predictive models can be developed.
+As another class of methodologies, algorithm manipulation
+methods seek to augment the underlying algorithm in order to reduce discrimination. Algorithm augmentation is
+usually done via a penalty that adds a cost of discrimination to a models cost function. These algorithms typically add regularizers that quantify the degree of bias. A
+seminal work in this area is the study by Kamishima et.
+al. in (Kamishima et al., 2011) where they quantify prejudice by adding a mutual information based regularizer to
+the cost function of a logistic regression model. Since the
+Kamishima et. al. work, more approaches that seek to
+change underlying cost functions with regularizers for statistical parity have emerged for other kinds of algorithms
+like decision trees and support vector machines. Techniques presented in this area typically only work for one
+particular method like logistic regression or Naive Bayes,
+so the overall impact can be limited. Algorithm manipulation methods also assume that underlying predictive models are known, completely specified with well-behaved cost
+functions. Usually, this is not the case, as a variety of models are typically combined in a number of ways where it
+becomes difficult to untangle the cost function for the combined model.
+
+In the third approach, other studies have presented work
+that manipulates the outcomes of predictive models towards achieving statistical parity across groups. In these
+cases, algorithms presented typically change the labels of
+data mining algorithms seeking to balance the outcomes
+across multiple groups. In (Pedreshi et al., 2008), Pedreschi
+et. al. alter the confidence of classification rules inferred.
+
+3. Feature Ranking Methodology
+3.1. Problem Overview
+For this paper, the main goal of our work is to present a
+methodology for determining a black-box algorithm’s dependence on its inputs. More specifically, given the input
+and output to a black-box model, we seek to produce an input ranking that corresponds to the black-box’s predictive
+dependence on each input. We take predictive dependence
+as the change in performance of the black-box algorithm
+(defined as Mean Squared Error (regression) or Classification accuracy (Classification)).
+3.2. Orthogonal Feature Projection
+Traditionally, to make causal claims about the dependence
+between an input variable and a target, an experiment is
+needed to remove the effect of confounding variables. For
+example, let’s assume Harvard University were running a
+classifier to determine its admissions decisions. If Harvard University is then accused of discriminating on the
+basis of gender in its admissions decisions, how would one
+show definitive proof of this accusation? Hypothetically,
+we would find two groups of applicants that are similar
+in all characteristics except gender, send in those applications to the university’s classifier and then look at the difference in outcomes for these two groups. If the difference
+in outcomes between the two groups is significant, then one
+might conclude that the university is discriminating on the
+basis of gender in its admissions decisions.
+The intuition underlying the experimental process motivates our use of the orthogonal transformation for auditing
+a black-box model. In the above example, the experimental
+process is able to show the dependence of the university’s
+classifier on race. Furthering this approach, we propose
+using orthogonal transformation as a tool of creating multiple copies of input data that can then be used to query a
+black-box model in order to determine the model’s dependence on its input. Now we proceed to our overview of the
+iterative orthogonal transformation process.
+3.2.1. O RTHOGONAL F EATURE P ROJECTION
+Orthogonal projection is a particular type of a larger class
+of linear transformations. Intuitively, given two vectors
+whose inner product is zero, one can conclude that no linear
+
+Iterative Orthogonal Feature Projection for Diagnosing Bias in Black-Box Predictive Systems
+
+transformation of one vector can produce the other.
+
+Algorithm 1 Linear Feature Transformation Algorithm
+INPUT: An n x k data matrix Xpre where x~1 , x~2 , . . . , x~k
+represent attribute vectors for n samples.
+Current feature is x~1
+OUTPUT: An n × k − 1 transformed matrix Xnew
+that can be decomposed into x~∗2 , x~∗3 , . . . , x~∗k where each
+vector x∗i ∈ Xnew is orthogonal to current feature
+x~1 .
+Remove current attribute vector x~1 from Xpre returning
+Xdel
+Initialize an n × k − 1 vector Xnew
+for each feature x~i in Xdel do
+obtain x∗i , the component of x~i that is orthogonal to
+current attribute vector x~1
+where x∗i = x~i − ( xx~~11··xx~~1i )x~1
+join x∗i column wise to Xnew
+end for
+Return Xnew
+
+Algorithm 2 General Ranking Framework
+INPUT: An n x k data matrix X that can be decomposed
+into x~1 , x~2 , . . . , x~k attribute vectors
+Output of the black-box algorithm is y
+Initial baseline predictive performance b of the black-box
+algorithm.
+OUTPUT: Vector R ∈ Rk of predictive dependence of the
+black-box on each input feature
+for each attribute x~i in X do
+Combine non-linear transformations (log, polynomial, exponential etc) of each attribute x~i with vector
+X as Xpoly
+obtain Xnew from the Feature Transformation Algorithm given Xpoly
+obtain black-box’s predictive performance (MSE or
+classification accuracy) given Xnew as bnew
+predictive dependence on x~i =| b − bnew |
+store x~i =| b − bnew | in R
+end for
+Return R
+
+4. Variable Case Studies
+Our iterative process involves transforming each input feature iteratively in a given dataset to obtain several different copies of the dataset where each feature has been ‘removed.’ By removed, we mean that all the other attributes
+in a given input have been made orthogonal to an attribute
+of interest. Now, given each new transformed dataset, the
+change in performance of the black-box can then be detected given each transformed data and used as a ranking for each feature. Below we detail the more general
+algorithm. Given that the above orthogonal transformation is a linear one, and most black-boxes would tend be
+non-linear, for each feature we augment the input matrix
+with additional transformations for of each feature that are
+non-linear in order to capture non-linear dependencies that
+might be present in the black-box learning algorithms.
+Note that for the General Ranking Framework presented
+above, we assume that we can query the black-box iteratively in order to obtain a change in predictive performance
+given each transformation of the input feature vector. This
+requirement is not always fulfilled. There are cases where
+only a single output from the black-box is available and
+the actual algorithm cannot be queried iteratively. In these
+cases, we learn our own equivalent representations of the
+black-box in form of classifiers or regressors. As we show
+in the evaluation sections, learning our own classifiers is
+subject to model misrepresentation problems as traditionally expected because there is no guarantee that our new
+set of classifiers are good representations of the black-box
+model.
+
+In this section, we demonstrate our ranking methodologies
+on real world data set in order to demonstrate how we expect our proposed approach to be used. We are leverage
+information from a major bank in Europe that developed
+an internal algorithm for calculating customer credit limit.
+The credit limit model is critical to the bank’s revenue and
+also determine how the bank treats its customers. Suppose
+regulators in the Bank’s region get complaints that the bank
+is discriminating on the basis of gender, we show our one
+might leverage the algorithms proposed to audit the bank’s
+algorithm.
+Our dataset set in this case is demographic information for
+400 thousand customers for the bank, as well as output values indicating each individual’s credit limit as calculated by
+the bank’s model. Leveraging our algorithms, we are able
+to rank the inputs to the bank’s model in order to quantify
+the dependence of the bank’s credit limit model on its various inputs.
+As we see in each of the rankings produced, the predictive
+dependence of the bank’s credit limit algorithm on gender
+is consistently low across the board for all the three different ranking algorithms indicating that the bank’s algorithm
+is not overly dependent on gender in making credit limit
+determinations. With simple bar plots like those shown in
+figure 4, we hope analysts can easily interpret the results
+from FairML in order to make determinations about how
+to investigate a particular system and what to focus on. We
+also ran these ranking analysis on the bank’s algorithm for
+calculating probability of default. Due to space concerns,
+
+Iterative Orthogonal Feature Projection for Diagnosing Bias in Black-Box Predictive Systems
+
+Attribute Ranking using the Orthogonal Methodology
+Income
+Asset
+Customer_age
+College
+Master
+High School
+Married
+Single
+PHD
+Male
+Female
+Non-Employed
+Divorced
+0
+
+20
+
+40
+
+60
+
+Normalized Attribute Ranking
+
+80
+
+100
+
+Figure 1. Figure shows the ranking derived from our iterative orthogonal projection algorithm. The rankings have been normalized so
+that the most significant variable is scaled to 100 and the others relative to the most significant one.
+
+we have included this plot in the appendix of this document.
+
+5. Conclusion and Future Work
+In this paper, we have presented an overview, and a case
+study demonstrating an approach for ranking the inputs to
+black-box algorithms. This work is being developed as part
+of a larger project, FairML, which is a toolbox to automatically enable interpretability of black-box models. In
+this paper, we have presented our orthogonal transformation methodology for determining a black-box algorithms
+dependence on its inputs. Ultimately, we hope to contribute
+to the large body of work regarding how to develop methods to audit black-box machine learning systems.
+
+Bryant, Randal, Katz, Randy H, and Lazowska, Edward D. Big-data computing: Creating revolutionary
+breakthroughs in commerce, science and society, 2008.
+Calders, Toon and Verwer, Sicco. Three naive bayes approaches for discrimination-free classification. Data
+Mining and Knowledge Discovery, 21(2):277–292,
+2010.
+Crawford, Kate and Schultz, Jason. Big data and due process: Toward a framework to redress predictive privacy
+harms. BCL Rev., 55:93, 2014.
+Friedler, Sorelle, Scheidegger, Carlos, and Venkatasubramanian, Suresh. Certifying and removing disparate impact. arXiv preprint arXiv:1412.3756, 2014.
+
+6. Citations and References
+References
+Adler, Philip, Falk, Casey, Friedler, Sorelle A, Rybeck, Gabriel, Scheidegger, Carlos, Smith, Brandon,
+and Venkatasubramanian, Suresh.
+Auditing blackbox models by obscuring features. arXiv preprint
+arXiv:1602.07043, 2016.
+Barocas, Solon and Selbst, Andrew D. Big data’s disparate
+impact. Available at SSRN 2477899, 2014.
+
+Kamishima, Toshihiro, Akaho, Shotaro, and Sakuma,
+Jun. Fairness-aware learning through regularization approach. In Data Mining Workshops (ICDMW), 2011
+IEEE 11th International Conference on, pp. 643–650.
+IEEE, 2011.
+Langley, P. Crafting papers on machine learning. In Langley, Pat (ed.), Proceedings of the 17th International Conference on Machine Learning (ICML 2000), pp. 1207–
+1216, Stanford, CA, 2000. Morgan Kaufmann.
+
+Iterative Orthogonal Feature Projection for Diagnosing Bias in Black-Box Predictive Systems
+
+Mayer-Schönberger, Viktor and Cukier, Kenneth. Big data:
+A revolution that will transform how we live, work, and
+think. Houghton Mifflin Harcourt, 2013.
+Pedreshi, Dino, Ruggieri, Salvatore, and Turini, Franco.
+Discrimination-aware data mining. In Proceedings of the
+14th ACM SIGKDD international conference on Knowledge discovery and data mining, pp. 560–568. ACM,
+2008.
+Romei, Andrea and Ruggieri, Salvatore. A multidisciplinary survey on discrimination analysis. The Knowledge Engineering Review, 29(05):582–638, 2014.
+Zemel, Rich, Wu, Yu, Swersky, Kevin, Pitassi, Toni, and
+Dwork, Cynthia. Learning fair representations. In Proceedings of the 30th International Conference on Machine Learning (ICML-13), pp. 325–333, 2013.
+
+

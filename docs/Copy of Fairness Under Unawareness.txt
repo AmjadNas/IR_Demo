@@ -1,0 +1,1828 @@
+Fairness Under Unawareness:
+Assessing Disparity When Protected Class Is Unobserved
+Jiahao Chen
+
+Nathan Kallus
+
+Xiaojie Mao∗
+
+cjiahao@gmail.com
+
+Cornell Tech
+New York, New York, USA
+kallus@cornell.edu
+
+Cornell Tech
+New York, New York, USA
+xm77@cornell.edu
+
+Geoffry Svacha
+
+Madeleine Udell
+
+svacha@gmail.com
+
+Cornell University
+Ithaca, New York, USA
+udell@cornell.edu
+
+ABSTRACT
+
+ACM Reference Format:
+Jiahao Chen, Nathan Kallus, Xiaojie Mao, Geoffry Svacha, and Madeleine
+Udell. 2019. Fairness Under Unawareness: Assessing Disparity When Protected Class Is Unobserved. In FAT* ’19: Conference on Fairness, Accountability, and Transparency (FAT* ’19), January 29–31, 2019, Atlanta, GA, USA.
+ACM, New York, NY, USA, 13 pages. https://doi.org/10.1145/3287560.3287594
+
+Assessing the fairness of a decision making system with respect
+to a protected class, such as gender or race, is challenging when
+class membership labels are unavailable. Probabilistic models for
+predicting the protected class based on observable proxies, such as
+surname and geolocation for race, are sometimes used to impute
+these missing labels for compliance assessments. Empirically, these
+methods are observed to exaggerate disparities, but the reason why
+is unknown. In this paper, we decompose the biases in estimating
+outcome disparity via threshold-based imputation into multiple
+interpretable bias sources, allowing us to explain when over- or
+underestimation occurs. We also propose an alternative weighted
+estimator that uses soft classification, and show that its bias arises
+simply from the conditional covariance of the outcome with the
+true class membership. Finally, we illustrate our results with numerical simulations and a public dataset of mortgage applications,
+using geolocation as a proxy for race. We confirm that the bias of
+threshold-based imputation is generally upward, but its magnitude
+varies strongly with the threshold chosen. Our new weighted estimator tends to have a negative bias that is much simpler to analyze
+and reason about.
+
+1
+
+INTRODUCTION
+
+Models for high stakes decision making have ethical and legal needs
+to demonstrate a lack of discrimination with respect to protected
+classes [2, 26]. Examples of such decisions include employment and
+compensation [14, 20], university admissions [4], and sentence and
+bail setting [3, 7, 16]. Another example relevant to the financial
+services industry is credit decisioning [6], which is a classification
+problem where these ethical concerns are enshrined in concrete regulatory compliance requirements. Credit decisions must be shown
+to comply with a myriad of federal and state fair lending laws,
+some of which are summarized in [6]1 . Some of these laws define
+protected classes, such as race and gender, where discrimination
+on the basis of a customer’s membership in these classes is prohibited. Table 1 summarizes the protected classes defined by the Fair
+Housing Act (FHA) [28] and Equal Credit Opportunity Act (ECOA)
+[29].
+
+CCS CONCEPTS
+• Social and professional topics → Race and ethnicity; Geographic characteristics; • Applied computing → IT governance;
+Law;
+
+Table 1: Protected classes defined under fair lending laws.
+Law
+
+KEYWORDS
+
+age
+color
+disability
+exercised rights under CCPA
+familial status (household composition)
+gender identity
+marital status (single or married)
+national origin
+race
+recipient of public assistance
+religion
+sex
+
+fair lending, disparate impact, protected class, racial discrimination, race imputation, probablistic proxy model, Bayesian Improved
+Surname Geocoding
+∗ Corresponding
+
+author
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a
+fee. Request permissions from permissions@acm.org.
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+© 2019 Association for Computing Machinery.
+ACM ISBN 978-1-4503-6125-5/19/01. . . $15.00
+https://doi.org/10.1145/3287560.3287594
+
+1 In
+
+FHA[28] ECOA[29]
+X
+X
+
+X
+X
+X
+
+X
+X
+X
+X
+X
+X
+
+X
+X
+X
+X
+X
+X
+
+this paper, we restrict our discussion and citation of applicable laws to those of the
+United States of America.
+
+339
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+
+1.1
+
+J. Chen, N. Kallus, X. Mao, G. Svacha, M. Udell
+
+Assessing fairness with unknown protected
+class membership
+
+to impute a protected class. We present the first theoretical results
+describing when the use of proxy models can lead to biased estimates of outcome disparity, which explains the overestimates
+observed in the past, and also offers insights on the practical use of
+proxy models. More specifically, our key contributions are:
+(1) We derive the (statistical) bias for the commonly used thresholded estimator, where a label is assigned only if the
+proxy model predicts a label with probability exceeding a
+predefined threshold [1, 12, 31] (Definition 2.4, Theorem 3.3).
+We decompose its bias into multiple sources, which gives a
+set of interpretable conditions under which the thresholded
+estimator can over- or underestimate the outcome disparity.
+(2) We present a new weighted estimator for demographic disparity (Definition 2.5) that uses soft classification based on
+proxy model outputs as opposed to hard imputation. We
+derive its bias (Theorem 3.1) and find that the weighted estimator has only one bias source.
+(3) We validate our results on a public mortgage data set, using geolocation as the sole variable in a proxy model for
+race. We identify the specific source of bias that can account
+for the overestimation of the thresholded estimator, which
+can explain the overestimation bias of using proxy methods
+observed in previous literature.
+(4) We discover that the estimation bias is sensitive to the threshold used in class imputation based on the proxy model. This
+shows the intrinsic limitation of the thresholded estimator.
+
+When demonstrating that credit decisions comply with these fair
+lending laws, we sometimes run into situations where fairness and
+bias assessments must be done on populations without knowing
+their memberships in protected classes, because it is illegal or operationally difficult to do so. For example, credit card and auto loan
+companies must demonstrate that the way they extend credit is not
+racially discriminatory, yet are not allowed to ask applicants what
+race they are when they apply for credit.2 Similarly, health plans
+can only solicit race and ethnicity information for new members
+but cannot obtain the same information for existing members [18].
+Given the lack of secure protocols that permit disparity evaluation
+with encrypted protected classes [23], disparate impact assessments
+for these situations have to impute the mostly (or entirely) missing
+labels corresponding to the protected class, usually by relying on
+observed proxy variables that can predict class memberships. The
+imputed protected classes are then used by regulators in assessing
+disparate impact (but they are not allowed to be used in decision
+making). Generally, any model that imputes the missing protected
+attribute value based on other, observed variables is known as a
+proxy model, and such a model that is based on predicting conditional class membership probabilities is known as a probabilistic
+proxy model.
+For example, for assessing adverse action with regard to race in
+credit decisions, regulators like the Bureau of Consumer Financial
+Protection (BCFP)3 have been known in the past to use a probabilistic proxy model to impute the customers’ unknown race labels
+[12]. They used a naïve Bayes classifier, the Bayesian Improved
+Surname Geocoding (BISG) method, to predict the probability of
+race membership given the customer’s surname and address of
+residence [19]. Specifically, assuming that surname and location
+are statistically independent given race, BISG uses Bayes’s rule
+to compute race membership probabilities from the conditional
+distributions of surname given race and of location given race as
+inferred by census data. This methodology [12] notably supported
+a $98 million fine against a major auto loan lender [11]. This case
+generated some controversy [8–10, 13, 24], in part due to empirical
+findings that the amount of disparate impact estimated by BISG
+appears to overestimate true disparities [1, 31]. However, the cause
+for this overestimation phenomenon is unknown, as is whether
+overestimation is to be expected always, or whether or not underestimation of disparate impact is also possible. This observation forms
+the motivation for our current work, which is broadly applicable to
+any fairness assessment where an unobserved protected class must
+be imputed using a proxy model. The aim is not to criticize the use
+of proxy models in general, but rather to provide a more informed
+analysis of the statistical biases inherent in any assessment where
+membership in protected classes must be imputed.
+
+2
+
+EVALUATING THE FAIRNESS OF A BINARY
+DECISION
+
+We have three main variables of interest:
+Binary decision Y with Y = 1 representing a favorable outcome,
+such as the approval of loan application or college admission
+offer, and Y = 0 representing an unfavorable outcome.
+Protected class A such as gender or race; often, we will write A =
+a for the advantaged group and A = b for the disadvantaged
+group.
+Proxy variable Z a set of covariates taking values z ∈ Z used to
+predict A in a probabilistic proxy model.
+We present only the binary case A ∈ {a, b} for simplicity. Unless
+otherwise stated, for multiclass A, our results generalize straightforwardly to the pairwise outcome disparity between any advantaged
+group and any disadvantaged group. (Additional details are given
+in Appendices B and C.)
+Definition 2.1. The mean group outcome for the group A = u is
+µ(u) = E(Y | A = u),
+where u ∈ {a, b} and E is the usual expectation with respect to
+population distribution.
+Definition 2.2. The demographic disparity, or Calders-Verwer gap
+[5, 22], δ , is the difference in mean group outcomes between the
+advantaged and disadvantaged groups:
+
+Main results. This paper investigates the bias in estimating demographic disparity (Definition 2.2) when a proxy model is employed
+2 Lenders
+
+δ = µ(a) − µ(b)
+
+may ask applicants to self-identify in a voluntary basis, with the understanding that the answer will not affect the outcome of the application and that the
+information is collected for compliance assessment only [15, 12 CFR §1002.5(b)].
+3 Formerly the Consumer Financial Protection Bureau (CFPB). Citations and references
+reflect the name at time of publication.
+
+(1)
+
+A positive demographic disparity δ means that a higher proportion of the advantaged group A = a receive a favorable outcome
+
+340
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+<latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+<latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit>
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit><latexit
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit><latexit
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit><latexit
+
+<latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+<latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+<latexit
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit>
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit><latexit
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit><latexit
+
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit><latexit
+
+correctly
+classified
+A = Â
+<latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+<latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+<latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+<latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+<latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit><latexit
+
+latexit
+
+1
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+unclassified
+<
+
+q
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="EgnL4Hw7KziOwd5T+U8x+4ojSeQ=">AAAB8nicdVDLSgNBEJyNrxhfUY9eBoPgadlNQhIPQoKXHCOYB2yWMDuZJENmZ5eZXiEs+QwvHhTx6td482+cPAQVLWgoqrrp7gpiwTU4zoeV2djc2t7J7ub29g8Oj/LHJx0dJYqyNo1EpHoB0UxwydrAQbBerBgJA8G6wfRm4XfvmdI8kncwi5kfkrHkI04JGMlr4GvcnxBIG/NBvuDY5dJV0a1gx65Ua+WSa0hxRVzbWaKA1mgN8u/9YUSTkEmggmjtuU4MfkoUcCrYPNdPNIsJnZIx8wyVJGTaT5cnz/GFUYZ4FClTEvBS/T6RklDrWRiYzpDARP/2FuJfnpfAqOanXMYJMElXi0aJwBDhxf94yBWjIGaGEKq4uRXTCVGEgkkpZ0L4+hT/TzpF23Vs97ZcqDfXcWTRGTpHl8hFVVRHTdRCbURRhB7QE3q2wHq0XqzXVWvGWs+coh+w3j4Bi0GQzQ==</latexit>
+
+sha1_base64="EgnL4Hw7KziOwd5T+U8x+4ojSeQ=">AAAB8nicdVDLSgNBEJyNrxhfUY9eBoPgadlNQhIPQoKXHCOYB2yWMDuZJENmZ5eZXiEs+QwvHhTx6td482+cPAQVLWgoqrrp7gpiwTU4zoeV2djc2t7J7ub29g8Oj/LHJx0dJYqyNo1EpHoB0UxwydrAQbBerBgJA8G6wfRm4XfvmdI8kncwi5kfkrHkI04JGMlr4GvcnxBIG/NBvuDY5dJV0a1gx65Ua+WSa0hxRVzbWaKA1mgN8u/9YUSTkEmggmjtuU4MfkoUcCrYPNdPNIsJnZIx8wyVJGTaT5cnz/GFUYZ4FClTEvBS/T6RklDrWRiYzpDARP/2FuJfnpfAqOanXMYJMElXi0aJwBDhxf94yBWjIGaGEKq4uRXTCVGEgkkpZ0L4+hT/TzpF23Vs97ZcqDfXcWTRGTpHl8hFVVRHTdRCbURRhB7QE3q2wHq0XqzXVWvGWs+coh+w3j4Bi0GQzQ==</latexit><latexit
+
+sha1_base64="EgnL4Hw7KziOwd5T+U8x+4ojSeQ=">AAAB8nicdVDLSgNBEJyNrxhfUY9eBoPgadlNQhIPQoKXHCOYB2yWMDuZJENmZ5eZXiEs+QwvHhTx6td482+cPAQVLWgoqrrp7gpiwTU4zoeV2djc2t7J7ub29g8Oj/LHJx0dJYqyNo1EpHoB0UxwydrAQbBerBgJA8G6wfRm4XfvmdI8kncwi5kfkrHkI04JGMlr4GvcnxBIG/NBvuDY5dJV0a1gx65Ua+WSa0hxRVzbWaKA1mgN8u/9YUSTkEmggmjtuU4MfkoUcCrYPNdPNIsJnZIx8wyVJGTaT5cnz/GFUYZ4FClTEvBS/T6RklDrWRiYzpDARP/2FuJfnpfAqOanXMYJMElXi0aJwBDhxf94yBWjIGaGEKq4uRXTCVGEgkkpZ0L4+hT/TzpF23Vs97ZcqDfXcWTRGTpHl8hFVVRHTdRCbURRhB7QE3q2wHq0XqzXVWvGWs+coh+w3j4Bi0GQzQ==</latexit><latexit
+
+sha1_base64="EgnL4Hw7KziOwd5T+U8x+4ojSeQ=">AAAB8nicdVDLSgNBEJyNrxhfUY9eBoPgadlNQhIPQoKXHCOYB2yWMDuZJENmZ5eZXiEs+QwvHhTx6td482+cPAQVLWgoqrrp7gpiwTU4zoeV2djc2t7J7ub29g8Oj/LHJx0dJYqyNo1EpHoB0UxwydrAQbBerBgJA8G6wfRm4XfvmdI8kncwi5kfkrHkI04JGMlr4GvcnxBIG/NBvuDY5dJV0a1gx65Ua+WSa0hxRVzbWaKA1mgN8u/9YUSTkEmggmjtuU4MfkoUcCrYPNdPNIsJnZIx8wyVJGTaT5cnz/GFUYZ4FClTEvBS/T6RklDrWRiYzpDARP/2FuJfnpfAqOanXMYJMElXi0aJwBDhxf94yBWjIGaGEKq4uRXTCVGEgkkpZ0L4+hT/TzpF23Vs97ZcqDfXcWTRGTpHl8hFVVRHTdRCbURRhB7QE3q2wHq0XqzXVWvGWs+coh+w3j4Bi0GQzQ==</latexit><latexit
+
+<latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit><latexit
+
+q
+<latexit
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit>
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit><latexit
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit><latexit
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit><latexit
+
+<latexit
+
+P (A = a|Z)
+
+<latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bs
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+<latexit
+
+sha1_base64="uK+PHzsuxd3IDMYuYqJ5Li0HjxE=">AAAB+nicbVBNS8NAEN34WetXqkcvi0Wol5KIoMeCHnqsYD+gCWGznbRLN5uwu1FK7E/x4kERr/4Sb/4bt20O2vpg4PHeDDPzwpQzpR3n21pb39jc2i7tlHf39g8O7cpRRyWZpNCmCU9kLyQKOBPQ1kxz6KUSSBxy6Ibjm5nffQCpWCLu9SQFPyZDwSJGiTZSYFe8W+CaBG6NnGNvCNgJ7KpTd+bAq8QtSBUVaAX2lzdIaBaD0JQTpfquk2o/J1IzymFa9jIFKaFjMoS+oYLEoPx8fvoUnxllgKNEmhIaz9XfEzmJlZrEoemMiR6pZW8m/uf1Mx1d+zkTaaZB0MWiKONYJ3iWAx4wCVTziSGESmZuxXREJKHapFU2IbjLL6+SzkXdderu3WW10SziKKETdIpqyEVXqIGaqIXaiKJH9Ixe0Zv1ZL1Y79bHonXNKmaO0R9Ynz/rNJJ7</latexit>
+
+sha1_base64="uK+PHzsuxd3IDMYuYqJ5Li0HjxE=">AAAB+nicbVBNS8NAEN34WetXqkcvi0Wol5KIoMeCHnqsYD+gCWGznbRLN5uwu1FK7E/x4kERr/4Sb/4bt20O2vpg4PHeDDPzwpQzpR3n21pb39jc2i7tlHf39g8O7cpRRyWZpNCmCU9kLyQKOBPQ1kxz6KUSSBxy6Ibjm5nffQCpWCLu9SQFPyZDwSJGiTZSYFe8W+CaBG6NnGNvCNgJ7KpTd+bAq8QtSBUVaAX2lzdIaBaD0JQTpfquk2o/J1IzymFa9jIFKaFjMoS+oYLEoPx8fvoUnxllgKNEmhIaz9XfEzmJlZrEoemMiR6pZW8m/uf1Mx1d+zkTaaZB0MWiKONYJ3iWAx4wCVTziSGESmZuxXREJKHapFU2IbjLL6+SzkXdderu3WW10SziKKETdIpqyEVXqIGaqIXaiKJH9Ixe0Zv1ZL1Y79bHonXNKmaO0R9Ynz/rNJJ7</latexit><latexit
+
+incorrectly
+classified
+A 6= Â
+sha1_base64="uK+PHzsuxd3IDMYuYqJ5Li0HjxE=">AAAB+nicbVBNS8NAEN34WetXqkcvi0Wol5KIoMeCHnqsYD+gCWGznbRLN5uwu1FK7E/x4kERr/4Sb/4bt20O2vpg4PHeDDPzwpQzpR3n21pb39jc2i7tlHf39g8O7cpRRyWZpNCmCU9kLyQKOBPQ1kxz6KUSSBxy6Ibjm5nffQCpWCLu9SQFPyZDwSJGiTZSYFe8W+CaBG6NnGNvCNgJ7KpTd+bAq8QtSBUVaAX2lzdIaBaD0JQTpfquk2o/J1IzymFa9jIFKaFjMoS+oYLEoPx8fvoUnxllgKNEmhIaz9XfEzmJlZrEoemMiR6pZW8m/uf1Mx1d+zkTaaZB0MWiKONYJ3iWAx4wCVTziSGESmZuxXREJKHapFU2IbjLL6+SzkXdderu3WW10SziKKETdIpqyEVXqIGaqIXaiKJH9Ixe0Zv1ZL1Y79bHonXNKmaO0R9Ynz/rNJJ7</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit><latexit
+
+<latexit
+
+1
+
+sha1_base64="uK+PHzsuxd3IDMYuYqJ5Li0HjxE=">AAAB+nicbVBNS8NAEN34WetXqkcvi0Wol5KIoMeCHnqsYD+gCWGznbRLN5uwu1FK7E/x4kERr/4Sb/4bt20O2vpg4PHeDDPzwpQzpR3n21pb39jc2i7tlHf39g8O7cpRRyWZpNCmCU9kLyQKOBPQ1kxz6KUSSBxy6Ibjm5nffQCpWCLu9SQFPyZDwSJGiTZSYFe8W+CaBG6NnGNvCNgJ7KpTd+bAq8QtSBUVaAX2lzdIaBaD0JQTpfquk2o/J1IzymFa9jIFKaFjMoS+oYLEoPx8fvoUnxllgKNEmhIaz9XfEzmJlZrEoemMiR6pZW8m/uf1Mx1d+zkTaaZB0MWiKONYJ3iWAx4wCVTziSGESmZuxXREJKHapFU2IbjLL6+SzkXdderu3WW10SziKKETdIpqyEVXqIGaqIXaiKJH9Ixe0Zv1ZL1Y79bHonXNKmaO0R9Ynz/rNJJ7</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+latexit
+
+<
+
+0
+
+<latexit
+
+sha1_base64="m0Rx0nTVdPjY2H2kSuRsSlbKn0A=">AAAB9HicdVDLSsNAFJ3UV62vqks3g0VwFZIY2rprcdNlBfuAJpTJdNIOnUzizKRQQr/DjQtF3Pox7vwbJ20FFT1w4XDOvdx7T5AwKpVlfRiFjc2t7Z3ibmlv/+DwqHx80pVxKjDp4JjFoh8gSRjlpKOoYqSfCIKigJFeML3J/d6MCEljfqfmCfEjNOY0pBgpLflN6HECvQlSWXMxLFcs87peddwqtEzLqtmOnROn5l650NZKjgpYoz0sv3ujGKcR4QozJOXAthLlZ0goihlZlLxUkgThKRqTgaYcRUT62fLoBbzQygiGsdDFFVyq3ycyFEk5jwLdGSE1kb+9XPzLG6QqrPsZ5UmqCMerRWHKoIphngAcUUGwYnNNEBZU3wrxBAmElc6ppEP4+hT+T7qOaVumfetWGq11HEVwBs7BJbBBDTRAC7RBB2BwDx7AE3g2Zsaj8WK8rloLxnrmFPyA8fYJOyqRxg==</latexit>
+
+sha1_base64="m0Rx0nTVdPjY2H2kSuRsSlbKn0A=">AAAB9HicdVDLSsNAFJ3UV62vqks3g0VwFZIY2rprcdNlBfuAJpTJdNIOnUzizKRQQr/DjQtF3Pox7vwbJ20FFT1w4XDOvdx7T5AwKpVlfRiFjc2t7Z3ibmlv/+DwqHx80pVxKjDp4JjFoh8gSRjlpKOoYqSfCIKigJFeML3J/d6MCEljfqfmCfEjNOY0pBgpLflN6HECvQlSWXMxLFcs87peddwqtEzLqtmOnROn5l650NZKjgpYoz0sv3ujGKcR4QozJOXAthLlZ0goihlZlLxUkgThKRqTgaYcRUT62fLoBbzQygiGsdDFFVyq3ycyFEk5jwLdGSE1kb+9XPzLG6QqrPsZ5UmqCMerRWHKoIphngAcUUGwYnNNEBZU3wrxBAmElc6ppEP4+hT+T7qOaVumfetWGq11HEVwBs7BJbBBDTRAC7RBB2BwDx7AE3g2Zsaj8WK8rloLxnrmFPyA8fYJOyqRxg==</latexit><latexit
+
+sha1_base64="m0Rx0nTVdPjY2H2kSuRsSlbKn0A=">AAAB9HicdVDLSsNAFJ3UV62vqks3g0VwFZIY2rprcdNlBfuAJpTJdNIOnUzizKRQQr/DjQtF3Pox7vwbJ20FFT1w4XDOvdx7T5AwKpVlfRiFjc2t7Z3ibmlv/+DwqHx80pVxKjDp4JjFoh8gSRjlpKOoYqSfCIKigJFeML3J/d6MCEljfqfmCfEjNOY0pBgpLflN6HECvQlSWXMxLFcs87peddwqtEzLqtmOnROn5l650NZKjgpYoz0sv3ujGKcR4QozJOXAthLlZ0goihlZlLxUkgThKRqTgaYcRUT62fLoBbzQygiGsdDFFVyq3ycyFEk5jwLdGSE1kb+9XPzLG6QqrPsZ5UmqCMerRWHKoIphngAcUUGwYnNNEBZU3wrxBAmElc6ppEP4+hT+T7qOaVumfetWGq11HEVwBs7BJbBBDTRAC7RBB2BwDx7AE3g2Zsaj8WK8rloLxnrmFPyA8fYJOyqRxg==</latexit><latexit
+
+sha1_base64="m0Rx0nTVdPjY2H2kSuRsSlbKn0A=">AAAB9HicdVDLSsNAFJ3UV62vqks3g0VwFZIY2rprcdNlBfuAJpTJdNIOnUzizKRQQr/DjQtF3Pox7vwbJ20FFT1w4XDOvdx7T5AwKpVlfRiFjc2t7Z3ibmlv/+DwqHx80pVxKjDp4JjFoh8gSRjlpKOoYqSfCIKigJFeML3J/d6MCEljfqfmCfEjNOY0pBgpLflN6HECvQlSWXMxLFcs87peddwqtEzLqtmOnROn5l650NZKjgpYoz0sv3ujGKcR4QozJOXAthLlZ0goihlZlLxUkgThKRqTgaYcRUT62fLoBbzQygiGsdDFFVyq3ycyFEk5jwLdGSE1kb+9XPzLG6QqrPsZ5UmqCMerRWHKoIphngAcUUGwYnNNEBZU3wrxBAmElc6ppEP4+hT+T7qOaVumfetWGq11HEVwBs7BJbBBDTRAC7RBB2BwDx7AE3g2Zsaj8WK8rloLxnrmFPyA8fYJOyqRxg==</latexit><latexit
+
+<latexit
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit>
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit><latexit
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit><latexit
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit><latexit
+
+<latexit
+
+
+a, P(Ai = a | Z i ) > q,
+
+
+
+
+b,
+P(Ai = b | Z i ) > q,
+Âi =
+
+
+ NA, otherwise,
+
+
+A=a
+
+23
+
+Defin on 2 4 Le Y Z N=1 be N d samp es {Â } N=1 be he
+es ma ed abe s accord ng o he hresho d ng ru e n Defin on
+2 3 and S be he nd ca or unc on or some se S Then he
+hresho ded es ma ors or mean group ou comes and demograph c
+
+341
+
+Toy examples
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit>
+
+Definition 2.3. Let q ∈ [ 12 , 1). Then the thresholded estimated
+membership Âi for the ith unit is
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit><latexit
+
+22
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit><latexit
+
+In order to introduce the estimators for demographic disparity,
+assume that we have N independent and identically distributed
+N . The true membership A of the ith sample
+(iid) samples (Yi , Z i )i=1
+i
+is unknown, but we have access to the probabilistic proxy estimates
+{P(Ai = u | Z i ) : u ∈ {a, b}, i ∈ {1, . . . , N }} by simply applying
+our proxy model to the observed proxy variable Z i .
+The ordinary approach is to predict a single value for class membership, Âi [1, 31]:
+
+sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit><latexit
+
+than the disadvantaged group b, i.e. the disadvantaged group experiences an outcome disparity. Demographic disparity is simple to
+understand and is widely used [25, 30, 32], despite its flaws [17, 21].
+When the labels for the protected class A are known, the demographic disparity can be simply and reliably estimated by the
+difference of within-group sample means. Otherwise, a probabilistic
+proxy model may be used to estimate the probabilities P(A = a | Z )
+and P(A = b | Z ) of membership to the different groups within A.
+BISG [19] is an example of a probabilistic proxy model where Z is
+taken to be surname and geolocation and conditional probabilities
+are estimated using the naïve Bayes methodology. The goal of this
+paper is to quantify the bias in estimating demographic disparity
+using a proxy model. We neglect the estimation bias intrinsic to estimating the proxy model itself, so that {P(A = u | Z ) : u ∈ {a, b}}
+describes the true population distribution of A conditioned on Z
+and hence the intrinsic uncertainty of predicting A from Z .
+
+<latexit
+
+2.1
+
+<latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit><latexit
+
+<latexit
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit>
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit><latexit
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit><latexit
+
+sha1_base64="IEt9c5PTrtOcsQiZQREmS9Bvo/o=">AAAB9XicbVDLSgNBEJz1GeMr6tHLYBDiJeyKoBch4iXHCOaByRp6J7PJkNkHM71KWPMfXjwo4tV/8ebfOEn2oIkFDUVVN91dXiyFRtv+tpaWV1bX1nMb+c2t7Z3dwt5+Q0eJYrzOIhmplgeaSxHyOgqUvBUrDoEnedMbXk/85gNXWkThLY5i7gbQD4UvGKCR7mulzgAwvRpfwtPdSbdQtMv2FHSROBkpkgy1buGr04tYEvAQmQSt244do5uCQsEkH+c7ieYxsCH0edvQEAKu3XR69ZgeG6VH/UiZCpFO1d8TKQRajwLPdAaAAz3vTcT/vHaC/oWbijBOkIdstshPJMWITiKgPaE4QzkyBJgS5lbKBqCAoQkqb0Jw5l9eJI3TsmOXnZuzYqWaxZEjh+SIlIhDzkmFVEmN1AkjijyTV/JmPVov1rv1MWtdsrKZA/IH1ucPoLSR8w==</latexit><latexit
+
+where dashed boxes represen correc Â = A green and ncorrec
+c ass fica ons Â , A red and he m dd e s unc ass fied
+We can use hese pred c ed abe s o es ma e he mean group
+ou comes and demograph c d spar y by m m ck ng he s mp e
+es ma or or group samp e means d fference bu mpu ng Â or
+he unknown A Th s eads o he o ow ng es ma or
+
+<latexit
+
+Fairness Under Unawareness
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+
+Tab e 2 Lend ng po cy of Examp e 2 6 wh ch a ways accepts h gh ncome app cants and never ow ncome app cants Each number n the tab e ce s represents the number
+of app cants who tru y be ong to race a or b The percentages n parentheses represent the average oan approva rate
+n that quadrant
+
+Thresholded estimator
+
+where NA stand for an unclassified observation that is excluded
+from the subsequent outcome disparity evaluation.
+
+Considering a unit with A = a, this estimation rule can be summarized pictorially as follows
+Ne ghborhood
+a
+True race
+b
+
+h gh ncome
+ow ncome
+70 100%
+30 0%
+30 100%
+70 0%
+
+M sc ass fied as race a n h gh- ncome ne ghborhood
+M sc ass fied as race b n ow- ncome ne ghborhood
+
+d spar y are
+ÍN
+
+µ̂q u = Í=1
+N
+=1
+
+µ̂W u = Í=1
+N
+ÍN
+
+=1 P
+
+Â = u Y
+Â = u
+
+A =a Z
+
+δˆW = µ̂W a − µ̂W b
+
+u ∈ {a b}
+
+δˆq = µ̂q a − µ̂q b
+
+PA =a Z Y
+
+2
+
+The orm o he hresho ded es ma ors above shows c ear y he use
+o a hard c ass fica on ru e Under a probab s c proxy mode h s
+hard c ass fica on ru e nev ab y m sc ass fies some nd v dua s
+g ven he n r ns c uncer a n y n c ass y ng he pro ec ed c ass
+Moreover he hresho d ru e resu s n a group o unc ass fied nd
+v dua s who are removed rom he ou come d spar y eva ua on
+To avo d hese prob ems we propose a new es ma or ha accoun s
+or he so c ass fica on genera ed by he proxy
+
+Weighted estimator
+
+Defin on 2 5 Le Y Z N=1 be defined as above Then he we
+gh ed es ma ors or mean group ou comes and demograph c d spar y are
+
+u ∈ {a b}
+3
+
+n h s par we use wo hypo he ca oy examp es o demons ra e
+he n u on regard ng when he hresho ded es ma or 2 can over
+es ma e he demograph c d spar y n bo h examp es we cons der
+eva ua ng he d spar y o oan approva w h respec o wo races
+A = a and A = b However he rue race A s unknown so he
+geo oca on Z s used o es ma e race Suppose ha here are on y
+wo ne ghborhoods where a peop e ve n one ne ghborhood have
+h gh ncome and a peop e ve n he o her ne ghborhood have ow
+ncome We ur her assume ha he h gh- ncome ne ghborhood s
+pr mar y occup ed by he advan aged group a and he ow ncome
+ne ghborhood s pr mar y occup ed by he d sadvan aged group b
+There ore he hresho d ng ru e w h q = 0 5 c ass fies a peop e
+v ng n he h gh- ncome ne ghborhood as he advan aged group
+e Â = a and a peop e v ng n he ow- ncome ne ghborhood
+as he d sadvan aged group e Â = b
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+
+J. Chen, N. Kallus, X. Mao, G. Svacha, M. Udell
+
+Table 3: Lending policy of Example 2.7, with affirmative action that favors the disadvantaged group over the advantaged group at any given income level.
+
+that overestimates the demographic disparity. The reason for the
+overestimation is that the the disadvantaged group have higher
+approval rate than their neighbors from the advantaged group. As
+a result, misclassifying part of the disadvantaged group as the advantaged group raises the average approval rate for the advantaged
+group. Similarly, misclassifying part of the advantaged group as
+the disadvantaged group lowers down the average approval rate
+for the disadvantaged group. Consequently, the misclassification
+of the protected attribute is also dependent with the outcome and
+ultimately leads to overestimation of demographic disparity. In
+contrast to Example 2.6, the dependence between the misclassification and the outcome results from the intra-geolocation outcome
+variation: people from different protected groups living in the same
+locations have different chance of getting the favorable outcome.
+
+True race
+
+i
+ii
+
+Neighborhood
+
+a
+
+b
+
+high income
+low income
+
+70 (70%)
+30 (20%)ii
+
+30 (80%)i
+70 (30%)
+
+Misclassified as race a in high-income neighborhood.
+Misclassified as race b in low-income neighborhood.
+
+Example 2.6. Consider an extreme lending policy: all people
+with high income get their loans approved, while all people with
+low income are rejected, no matter what their races are. See Table 2 for the illustration. Simple calculations show that the true
+demographic disparity δ = 40% 4 while the thresholded estimator
+δˆ0.5 = 100% 5 . Thus the thresholded estimator overestimates the
+demographic disparity. The reason for the overestimation is that the
+race proxy is correlated with the loan approval outcome because
+of the dependence between geolocation and socioeconomic status:
+people who live in the neighborhood primarily occupied by the
+advantaged group are also more likely to get loan approval because
+they have relatively high socioeconomic status, e.g. high income
+in this example. These people are classified as advantaged group
+because their neighborhoods are associated with high probability
+of belonging to the advantaged group. As a result, the thresholding
+rule misclassifies people who are from the disadvantaged group but
+get loan approval as the advantaged group. In this way, the thresholding rule leads to underestimates of the loan acceptance rate of
+the disadvantaged group. Analogously, the thresholding rule leads
+to overestimates of the loan acceptance rate of the advantaged group because it misclassifies people from the advantaged group but
+not likely to get loan approval as the disadvantaged group. Consequently, the misclassification of the protected attribute is dependent
+with the outcome, which ultimately leads to the overestimation of
+demographic disparity. The dependence between the misclassification and the outcome results from the inter-geolocation outcome
+variation: the socioeconomic status, race proxy probabilities (i.e.,
+race ratios), and loan acceptance rates vary across different neighborhoods such that the favorable outcome is positively correlated
+with the probability of belonging to the advantaged group.
+
+In both examples, the protected attribute misclassification made
+by the thresholding rule is not uniformly at random. Instead, the
+misclassification shows systematic pattern with respect to the outcome either due to the inter-geolocation outcome variation (Example 2.6) or intra-geolocation outcome variation (Example 2.7). In
+Section 3, we will formalize the main intuition in these two examples and show that the interplay of the two bias sources captured
+by these two examples determines the overestimation or underestimation of the thresholded estimator. In Section 4, we will further
+identify the specific bias source that accounts for the estimation
+bias of the thresholded estimator in a mortgage data set.
+
+3
+
+In this section, we derive the asymptotic biases for the thresholded estimator (2) and weighted estimator (3) for demographic
+disparity. We also provide some interpretable sufficient conditions
+under which these two estimators overestimate or underestimate
+the demographic disparity.
+
+3.1
+
+=
+
+5 δ̂
+
+0.5
+
+1
+1
+100 (70 × 1 + 30 × 0) − 100 (30 × 1 + 70 × 0) = 0.4.
+1
+1
+100 (70 × 1 + 30 × 1) − 100 (30 × 0 + 70 × 0) = 1.
+6 δ = 1 (70 × 0.7 + 30 × 0.2) − 1 (30 × 0.8 + 70 × 0.3) =
+100
+100
+1
+1
+7 δ̂
+0.5 = 100 (70 × 0.7 + 30 × 0.8) − 100 (30 × 0.2 + 70 × 0.3)
+
+Weighted estimator
+
+Theorem 3.1. Let A be a binary protected class with values a
+and b. The bias of the weighted estimator δˆW in Definition 2.5 for
+demographic disparity δ in (1) is
+δˆW − δ = [µ̂W (a) − µ(a)] − [µ̂W (b) − µ(b)],
+where as N → ∞, the biases in the weighted estimators for the mean
+group outcomes µ̂W (u), for u ∈ {a, b}, converge almost surely to
+a.s.
+
+µ̂W (u) − µ(u) −−→ −
+
+Example 2.7. Now consider a hypothetical lending policy with affirmative action that approves the disadvantaged group with higher
+rate than the advantaged group with the same income level. But
+overall people with high income are still more likely to be accepted.
+See Table 3 for a concrete example. Simple calculations show that
+the true demographic disparity δ = 10% 6 , which means that the
+disadvantaged group overall has lower chance to get loan approval
+due to their population concentration in the low-income neighborhood. However, the thresholded estimator gives δˆ0.5 = 46% 7
+4δ
+
+BIAS IN THRESHOLDED AND WEIGHTED
+ESTIMATORS
+
+E[Cov(I(A = u), Y | Z )]
+.
+P(A = u)
+
+(4)
+
+We omit the a.s. (almost sure) notation later for brevity.
+Corollary 3.2. If Y is independent of A conditionally on Z , then
+the weighted estimator for demographic disparity, δˆW , is asymptotically unbiased.
+If Y is independent of A conditionally on Z , then the advantaged
+group and disadvantaged group with the same Z values are equally
+treated in terms of the average outcome. Nevertheless, this does not
+contradict the existence of overall disparity against the disadvantaged group in terms of the unconditioned average outcome, as an
+example of Simpson’s paradox [27]. The conditional independence
+
+=
+
+0.1.
+= 0.46.
+
+342
+
+Fairness Under Unawareness
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+and as N → ∞, for u ∈ {a, b} and u c ∈ {a, b} as the class opposite
+to u,
+
+assumption required by Corollary 3.2 is trivially satisfied if Y is the
+output of some function f (X ), and Z includes the input features
+X , since Y is now determined entirely by Z . Such a situation arises
+naturally when Y is the output of machine learning algorithms. In
+the Appendix C.4, we show a semi-synthetic example based on the
+mortgage dataset where the weighted estimator is asymptotically
+unbiased when the proxy model is well constructed so that the
+conditional independence assumption is satisfied.
+However, this conditional independence assumption may not
+hold in practice and the weighted estimator may be biased. Consider
+the example of loan application with race proxy based on geolocation. If within most locations, the affirmative action described in
+Example 2.7 is present, i.e., the disadvantaged group is more likely
+to get a loan than their neighbors from the advantaged group, then
+Y covaries negatively with I(A = a) and positively with I(A = b)
+conditionally on Z = z, for most values of z ∈ Z, which implies
+that the weighted estimator overestimates the demographic disparity. On the contrary, if within most locations, the advantaged
+group is more likely to get loan than their neighbors belonging
+to the disadvantaged group, then Y covaries in the exact opposite
+way, implying that the weighted estimator underestimates the demographic disparity. Overall, the estimation bias of the weighted
+estimator depends on the intra-geolocation variation of the loan
+application outcome.
+
+3.2
+
+µ̂q (u) − µ(u) → ∆1 (u)C 1 (u) − ∆2 (u)C 2 (u)
++ (∆1 (u) − ∆2 (u))C 3 (u),
+where
+C 1 (u) = P(Â = u | A = u)P(A = u c | Â = u),
+C 2 (u) = P(A = u | Â = u)P(Â , u | A = u), and
+C 3 (u) = P(Â , u | A = u)P(A = u c | Â = u).
+Here Â , u means that Â = u c or Â = NA.
+The generalization to multiclass A is straightforward and in Appendix C.1 we show that the bias formula in Theorem 3.3 for binary
+protected class capture the main effects of the bias for multiclass A.
+Theorem 3.3 shows that the occurrence of overestimation or underestimation depends on complex interplay of the ∆ terms. In the
+following corollary, we provide the simplest set of sufficient conditions for the overestimation and underestimation to demonstrate
+the main intuition.
+Corollary 3.4. Suppose
+
+Thresholded estimator
+
+∆1 (a) ≥ 0,
+
+(5i)
+
+−∆1 (b) ≥ 0,
+
+(5ii)
+
+−∆2 (a) ≥ 0, and
+
+(5iii)
+
+∆2 (b) ≥ 0,
+
+Before stating the asymptotic bias for the estimator (2), we define
+the following terms for u ∈ {a, b}:
+
+(5iv)
+
+and at least one inequality holds strictly. Then in the limit N → ∞,
+µ̂q (a) > µ(a), µ̂q (b) < µ(b), and δˆq > δ , i.e. the thresholded estimator
+overestimates the demographic disparity.
+Conversely, let (i ′ ) ∆1 (a) ≤ 0, (ii ′ ) −∆1 (b) ≤ 0, (iii ′ ) −∆2 (a) ≤ 0,
+and (iv ′ ) ∆2 (b) ≤ 0, and at least one inequality holds strictly. Then in
+the limit N → ∞, µ̂q (a) < µ(a), µ̂q (b) > µ(b), and δˆq < δ , i.e. the
+thresholded estimator underestimates the demographic disparity.
+
+∆1 (u) = E[Y | P(A = u | Z ) > q, A = u c ]
+− E[Y | P(A = u | Z ) > q, A = u],
+∆2 (u) = E[Y | P(A = u | Z ) ≤ q, A = u]
+− E[Y | P(A = u | Z ) > q, A = u],
+where q is the threshold used for estimating race, and u c is the
+class opposite to u, i.e., u c = b if u = a and u c = a if u = b. ∆1 (u)
+measures the outcome mean discrepancy for two different protected groups within the same proxy probability range, and ∆2 (u)
+measures the outcome mean discrepancy across different proxy
+probability ranges for the same protected group. Consider the example of loan application with race proxy based on geolocation. In
+this example, ∆1 (u) measures the loan approval disparity between
+two race groups who live in locations that are primarily occupied
+by one of these two races (in terms of the threshold q). In contrast
+∆2 (u) measures the loan approval rate disparity between people
+belonging to a race who live in locations that are primarily occupied
+by this race group and people belonging to this race who live in locations that are less occupied by this race. Therefore, ∆1 (u) roughly
+characterizes the intra-geolocation variation of loan outcome and
+∆2 (u) roughly characterizes the inter-geolocation variation of loan
+outcome.
+
+The conditions (5i)—(5iv) are demonstrated in Figure 1.
+Conditions (5i)—(5ii) exactly formalize the intuition captured by
+Example 2.7. In our loan application example, using a geolocationbased race proxy, these two conditions capture the intra-geolocation
+outcome variation: on average higher proportion of disadvantaged
+group b receive the favorable outcome than the advantaged group
+a among all the geolocations that are primarily occupied by one
+race (in terms of the threshold q).
+The conditions (5iii)—(5iv) exactly formalize the intuition captured by Example 2.6. They characterize the dependence between
+the decision outcome and the proxy probability conditionally on
+the protected attribute. Specifically, condition (5iii) holds when the
+decision outcome is positively correlated with the probability of belonging to the advantaged group, while condition (5iv) holds when
+the decision outcome is negatively correlated with the probability
+of belonging to the disadvantaged group conditionally on the true
+protected attribute. In the example of loan application with race
+proxy based on geolocation, geolocation is correlated with both race
+ratio and socioeconomic status (e.g., income, FICO score, etc.): locations that are primarily occupied by the advantaged racial groups
+tend to be associated with relatively higher socioeconomic status
+while locations that are primarily occupied by the disadvantaged
+
+Theorem 3.3. Let A be a binary protected class with values a and
+b. The bias for the thresholded estimator δˆq in Definition 2.4 is:
+δˆq − δ = [µ̂q (a) − µ(a)] − [µ̂q (b) − µ(b)],
+
+343
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+advantaged
+group
+
+favored
+mean outcome
+
+disfavored
+mean outcome
+
+J. Chen, N. Kallus, X. Mao, G. Svacha, M. Udell
+
+A=a
+
+A=a
+
+<latexit sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit>
+
+0
+<latexit sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+<latexit
+
+1
+<latexit sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+incorrectly
+classified
+A 6= Â
+
+q
+
+q
+
+<latexit sha1_base64="uK+PHzsuxd3IDMYuYqJ5Li0HjxE=">AAAB+nicbVBNS8NAEN34WetXqkcvi0Wol5KIoMeCHnqsYD+gCWGznbRLN5uwu1FK7E/x4kERr/4Sb/4bt20O2vpg4PHeDDPzwpQzpR3n21pb39jc2i7tlHf39g8O7cpRRyWZpNCmCU9kLyQKOBPQ1kxz6KUSSBxy6Ibjm5nffQCpWCLu9SQFPyZDwSJGiTZSYFe8W+CaBG6NnGNvCNgJ7KpTd+bAq8QtSBUVaAX2lzdIaBaD0JQTpfquk2o/J1IzymFa9jIFKaFjMoS+oYLEoPx8fvoUnxllgKNEmhIaz9XfEzmJlZrEoemMiR6pZW8m/uf1Mx1d+zkTaaZB0MWiKONYJ3iWAx4wCVTziSGESmZuxXREJKHapFU2IbjLL6+SzkXdderu3WW10SziKKETdIpqyEVXqIGaqIXaiKJH9Ixe0Zv1ZL1Y79bHonXNKmaO0R9Ynz/rNJJ7</latexit>
+
+1 (a)
+
+1
+
+0
+
+<latexit sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+<latexit
+
+<latexit sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+<latexit
+
+<latexit sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+0
+
+q
+
+q
+
+1
+<latexit sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+<latexit
+
+<latexit sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+A=b
+
+correctly
+classified
+A = Â
+
+unclassified
+
+<latexit sha1_base64="m0Rx0nTVdPjY2H2kSuRsSlbKn0A=">AAAB9HicdVDLSsNAFJ3UV62vqks3g0VwFZIY2rprcdNlBfuAJpTJdNIOnUzizKRQQr/DjQtF3Pox7vwbJ20FFT1w4XDOvdx7T5AwKpVlfRiFjc2t7Z3ibmlv/+DwqHx80pVxKjDp4JjFoh8gSRjlpKOoYqSfCIKigJFeML3J/d6MCEljfqfmCfEjNOY0pBgpLflN6HECvQlSWXMxLFcs87peddwqtEzLqtmOnROn5l650NZKjgpYoz0sv3ujGKcR4QozJOXAthLlZ0goihlZlLxUkgThKRqTgaYcRUT62fLoBbzQygiGsdDFFVyq3ycyFEk5jwLdGSE1kb+9XPzLG6QqrPsZ5UmqCMerRWHKoIphngAcUUGwYnNNEBZU3wrxBAmElc6ppEP4+hT+T7qOaVumfetWGq11HEVwBs7BJbBBDTRAC7RBB2BwDx7AE3g2Zsaj8WK8rloLxnrmFPyA8fYJOyqRxg==</latexit>
+
+<latexit sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit>
+
+1
+
+<latexit sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+<latexit sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit>
+
+a
+
+<latexit sha1_base64="EgnL4Hw7KziOwd5T+U8x+4ojSeQ=">AAAB8nicdVDLSgNBEJyNrxhfUY9eBoPgadlNQhIPQoKXHCOYB2yWMDuZJENmZ5eZXiEs+QwvHhTx6td482+cPAQVLWgoqrrp7gpiwTU4zoeV2djc2t7J7ub29g8Oj/LHJx0dJYqyNo1EpHoB0UxwydrAQbBerBgJA8G6wfRm4XfvmdI8kncwi5kfkrHkI04JGMlr4GvcnxBIG/NBvuDY5dJV0a1gx65Ua+WSa0hxRVzbWaKA1mgN8u/9YUSTkEmggmjtuU4MfkoUcCrYPNdPNIsJnZIx8wyVJGTaT5cnz/GFUYZ4FClTEvBS/T6RklDrWRiYzpDARP/2FuJfnpfAqOanXMYJMElXi0aJwBDhxf94yBWjIGaGEKq4uRXTCVGEgkkpZ0L4+hT/TzpF23Vs97ZcqDfXcWTRGTpHl8hFVVRHTdRCbURRhB7QE3q2wHq0XqzXVWvGWs+coh+w3j4Bi0GQzQ==</latexit>
+
+disadvantaged
+group
+
+A=a
+<latexit sha1_base64="VUJzM9FjMBbP9ufmWivujjXQPPw=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSiT7aZdutmE3Y1QQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFySCa+O6305hbX1jc6u4XdrZ3ds/KB8etXScKsqaNBax6gSomeCSNQ03gnUSxTAKBGsH47uZ335iSvNYPppJwvwIh5KHnKKx0sPtDfbLFbfqzkFWiZeTCuRo9MtfvUFM04hJQwVq3fXcxPgZKsOpYNNSL9UsQTrGIetaKjFi2s/mp07JmVUGJIyVLWnIXP09kWGk9SQKbGeEZqSXvZn4n9dNTXjtZ1wmqWGSLhaFqSAmJrO/yYArRo2YWIJUcXsroSNUSI1Np2RD8JZfXiWti6rnVr37y0qtnsdRhBM4hXPw4ApqUIcGNIHCEJ7hFd4c4bw4787HorXg5DPH8AfO5w/Ou419</latexit>
+
+0
+<latexit sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+<latexit
+
+1
+<latexit sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+q
+
+A=b
+<latexit sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit>
+
+0
+<latexit sha1_base64="it63o8t4swEMFy51Oa1DodMpyYE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyx2WK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz9654y6</latexit>
+<latexit
+
+1
+<latexit sha1_base64="/gaSOqEPzOTFZQAGciOXPmZWsAk=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBiyURQY8FLz1WtB/QhrLZTtqlm03c3Qgl9Cd48aCIV3+RN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RTW1jc2t4rbpZ3dvf2D8uFRS8epYthksYhVJ6AaBZfYNNwI7CQKaRQIbAfj25nffkKleSwfzCRBP6JDyUPOqLHSvXfx2C9X3Ko7B1klXk4qkKPRL3/1BjFLI5SGCap113MT42dUGc4ETku9VGNC2ZgOsWuppBFqP5ufOiVnVhmQMFa2pCFz9fdERiOtJ1FgOyNqRnrZm4n/ed3UhDd+xmWSGpRssShMBTExmf1NBlwhM2JiCWWK21sJG1FFmbHplGwI3vLLq6R1WfXcqnd3VanV8ziKcAKncA4eXEMN6tCAJjAYwjO8wpsjnBfn3flYtBacfOYY/sD5/AG2S41t</latexit>
+
+q
+
+q
+<latexit sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+so he rac on o observa ons c ass fied n o one pro ec ed c ass s
+usua y ower han he rac on o observa ons ac ua y be ong ng
+o ha pro ec ed c ass There ore when a h gh hresho d q s used
+usua y cond ons 5 — 5 v con r bu e more o he overes maon b as han 5 — 5 As a resu even 5 — 5 are v o a ed
+as ong as 5 — 5 v ho d he hresho ded es ma or s s very
+ke y o overes ma e demograph c d spar y n con ras when a
+ow hresho d s used he d fference be ween P A = u > P Â = u
+s usua y sma er and hus C 2 u − C 1 u s a so sma er n h s
+case 5 — 5 and 5 — 5 v may have comparab e con r bu on
+o he es ma on b as n Sec on 4 2 we w ver y hese ac s by
+us ng d fferen hresho ds on he mor gage da ase
+
+q
+<latexit sha1_base64="xqsJ4POp17v18eLPK8cSdlnE5fw=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0GPBS48t2A9oQ9lsJ+3azSbuboQS+gu8eFDEqz/Jm//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJb3ZpqgH9GR5CFn1Fip+TgoV9yquwBZJ15OKpCjMSh/9YcxSyOUhgmqdc9zE+NnVBnOBM5K/VRjQtmEjrBnqaQRaj9bHDojF1YZkjBWtqQhC/X3REYjradRYDsjasZ61ZuL/3m91IS3fsZlkhqUbLkoTAUxMZl/TYZcITNiagllittbCRtTRZmx2ZRsCN7qy+ukfVX13KrXvK7U6nkcRTiDc7gED26gBnVoQAsYIDzDK7w5D86L8+58LFsLTj5zCn/gfP4A3WuM+w==</latexit>
+
+1
+<latexit sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+<latexit
+
+A=b
+<latexit sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1
+sha1_base64="D73o3t0Gvm6og3Pmlqj2YpvSI2o=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lE0ItQ8dJjRfsBbSib7aZdutmE3YlQQn+CFw+KePUXefPfuG1z0NYHA4/3ZpiZFyRSGHTdb6ewtr6xuVXcLu3s7u0flA+PWiZONeNNFstYdwJquBSKN1Gg5J1EcxoFkreD8d3Mbz9xbUSsHnGScD+iQyVCwSha6eH2JuiXK27VnYOsEi8nFcjR6Je/eoOYpRFXyCQ1puu5CfoZ1SiY5NNSLzU8oWxMh7xrqaIRN342P3VKzqwyIGGsbSkkc/X3REYjYyZRYDsjiiOz7M3E/7xuiuG1nwmVpMgVWywKU0kwJrO/yUBozlBOLKFMC3srYSOqKUObTsmG4C2/vEpaF1XPrXr3l5VaPY+jCCdwCufgwRXUoA4NaAKDITzDK7w50nlx3p2PRWvByWeO4Q+czx/QP41+</latexit>
+
+1
+<latexit sha1_base64="fE7B8cJHFqiw/M8zdTOAl/vNwpE=">AAAB6HicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqMeClx5bsB/QhrLZTtq1m03Y3Qgl9Bd48aCIV3+SN/+N2zYHbX0w8Hhvhpl5QSK4Nq777RS2tnd294r7pYPDo+OT8ulZR8epYthmsYhVL6AaBZfYNtwI7CUKaRQI7AbT+4XffUKleSwfzCxBP6JjyUPOqLFSyxuWK27VXYJsEi8nFcjRHJa/BqOYpRFKwwTVuu+5ifEzqgxnAuelQaoxoWxKx9i3VNIItZ8tD52TK6uMSBgrW9KQpfp7IqOR1rMosJ0RNRO97i3E/7x+asI7P+MySQ1KtloUpoKYmCy+JiOukBkxs4Qyxe2thE2ooszYbEo2BG/95U3Sual6btVr3VbqjTyOIlzAJVyDBzWoQwOa0AYGCM/wCm/Oo/PivDsfq9aCk8+cwx84nz98a4y7</latexit>
+<latexit
+
+4 NUMERICAL RESULTS
+4 1 Analysis of bias terms in synthetic data
+
+F gure 1 I ustrat on of cond t ons 5 — 5 v n Coro ary 3 4
+ustrat ng the comp ex nterp ay between membersh p n
+a protected c ass A and outcome Y that g ve r se to overest mated demograph c d spar ty us ng the thresho ded est mator of Defin t on 2 4 The hor zonta axes show P A = a Z
+the probab ty that a probab st c proxy mode pred cts
+membersh p n the advantaged group a Dashed boxes represent correct Â = A green and ncorrect c ass ficat ons
+Â , A red from the thresho ded est mated membersh p
+ru e of Defin t on 2 3 w th the nterva 1 − q q a ways unc ass fied So d bars represent favored purp e and d sfavored mean outcomes ye ow
+
+n h s par we s mu a e an examp e where geo oca on s used
+o cons ruc proxy or race We use h s examp e o demons ra e
+d fferen sources o overes ma on and underes ma on b as o he
+we gh ed es ma or and he hresho ded es ma or
+Exper men a se up We cons der race as he unknown pro ec ed
+a r bu e A w h A = a be ng he advan aged rac a group and A = b
+be ng he d sadvan aged rac a group Suppose here are hree d ffer
+en ne ghborhoods Z = z 1 z 2 z 3 where he propor ons o peop e
+be ong ng o he advan aged group are 0 2 0 5 0 8 respec ve y
+These propor ons are n urn he race proxy probab es For examp e a peop e who ve n he ne ghborhood z 1 are ass gned w h
+P A = a Z = z 1 = 0 2 P A = b Z = z 1 = 0 8 as he r race
+proxy we app y he hresho ded es ma on ru e w h q = 0 75
+he es ma ed races or peop e v ng n ne ghborhoods rac s are
+
+rac a groups end o be assoc a ed w h re a ve y ower soc oeconom c s a us As a resu peop e who ve n oca ons dom nan by
+he advan aged rac a group are ass gned w h h gh probab y o
+be ong ng o he advan aged group and hey are more ke y o ge
+approved n oan app ca on because o re a ve y h gher soc oeco
+nom c s a us Converse y he oan approva s nega ve y corre a ed
+w h he probab y o be ong ng o d sadvan aged groups Th s
+examp e demons ra es ha 5 — 5 v are ke y o ho d when he
+pred c ors Z are a so s rong y corre a ed w h he dec s on ou come
+e g he geo oca on s corre a ed w h he oan approva because o
+he soc oeconom c s a us d spar es across d fferen geo oca ons
+The o ow ng coro ary shows ha 5 — 5 v have effec s w h
+d fferen magn udes on he overes ma on b as
+
+Â
+
+C2 u > C1 u
+
+6
+
+and on y
+P A = u > P Â = u
+
+Z = z2
+
+Z = z3
+
+b
+
+NA
+
+a
+
+We assume ha geo oca on s s rong y corre a ed w h peop e s
+ncome X E X Z = z 1 < E X Z = z 2 = 2 < E X Z = z 3
+There ore z 1 can be cons dered as he ow ncome rac where he
+propor on o peop e be ong ng o he d sadvan aged group s h gh
+P A = b Z = z 3 = 0 8 z 2 can be cons dered as m dd e- ncome
+rac where he propor ons o peop e be ong ng o he advan aged
+group and he d sadvan aged group are equa P A = a Z = z 2 =
+P A = b Z = z 2 = 0 5 and z 3 can be cons dered as h gh- ncome
+rac where he propor on o peop e be ong ng o he advan aged
+group s a so h gh P A = a Z = z 1 = 0 8 The dec s on ou come
+Y s oan approva wh ch we assume so e y depends on he ncome
+X we s mu a e Y accord ng o P Y = 1 X = 1/ 1+exp −λ X −2
+w h λ > 0 Thus peop e w h h gher ncome are more ke y o
+ge approved Y = 1 Here λ con ro s he ex en o wh ch oan
+approva Y depends on ncome X S nce ncome X so e y depends on
+geo oca on Z λ nd rec y con ro s he dependence o he ou come
+Y on geo oca on Z and hus on he correspond ng race proxy
+probab es P A = a Z P A = b Z
+n each exper men we se he o a popu a on s ze o ne ghborhoods z 1 z 2 z 3 o be 3000 4000 and 5000 respec ve y Each
+exper men s repea ed 30 mes and he average es ma ed demograph c d spar y rom he hresho ded es ma or he we gh ed
+es ma or and us ng he rue race s shown n F gure 2
+
+Corollary 3 5 Le A be a b nary pro ec ed c ass w h va ues a
+and b For u ∈ {a b} and u c as he c ass oppos e o u he quan es
+C 1 u C 2 u C 3 u n Theorem 3 3 are re a ed n he o ow ng way
+C 2 u > C 3 u and on y
+P A = u Â = u > P A = u c Â = u
+
+Z = z1
+
+7
+
+Thus he cond ons 6 and 7 bo h ho d hen C 2 u > C 1 u and
+C2 u > C3 u
+Cond on 6 ho ds as ong as he proxy mode s reasonab y
+pred c ve o he rue pro ec ed c ass Cond on 7 usua y ho ds or
+he hresho ded es ma ed membersh p Defin on 2 3 when a h gh
+hresho d q s used a a r y h gh rac on o observa ons are unc as
+s fied under he hresho ded es ma on ru e w h h gh hresho d q
+
+344
+
+Fairness Under Unawareness
+Experiment 4.1.1: λ = 1
+
+Demographic disparity
+
+(a)
+
+thresholded
+estimator
+(q = 0.75)
+
+0.4
+
+true
+weighted
+estimator
+
+0.2
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+Experiment 4.1.2: d = 0
+
+(c)
+0.6
+0.4
+0.2
+
+0.0
+−0.50 −0.25
+
+0.00
+
+0.25
+
+0.50
+
+d
+
+0.0
+
+(b)0.3
+
+(d) 0.5
+
+0.2
+
+0.4
+
+0.1
+
+0.3
+
+0.0
+
+0.2
+
+−0.1
+
+0.1
+
+Term value
+
+approved in loan application. This implies that conditions (5i)—(5ii)
+hold and therefore result in overestimation bias for the thresholded estimator. Furthermore, Y covaries negatively with I(A = a)
+and positively with I(A = b) conditionally on Z , also resulting in
+an overestimation bias for the weighted estimator. When d > 0,
+however, conditions (5i)—(5ii) are violated. The terms ∆1 (a) and
+∆1 (b) start to counteract overestimation bias, thus the overestimation bias decreases with d. Furthermore, Y now covaries positively
+with I(A = a) and negatively with I(A = b), also resulting in an
+underestimation bias for the weighted estimator.
+Figure 2(d) shows that in Experiment 4.1.2, only the terms ∆2 (a)
+and ∆2 (b) vary strongly with λ, so these terms are responsible for
+the variation observed in the thresholded estimator δˆq in Figure 2(c).
+As λ increases, both −∆2 (a) and ∆2 (b) > 0 increase, along with the
+overestimation bias of δˆq . In contrast, the weighted estimator δˆW is
+unbiased because the income distribution does not depend on race,
+and so Y is independent with I(A = a) and I(A = b) conditionally
+on Z .
+While presented only for the particular choices of λ = 1 for
+Experiment 4.1.1 and d = 0 for Experiment 4.1.2, the observation
+of which terms vary strongly with d and λ hold true for quite a few
+different choices.
+
+−0.2
+−0.50
+
+−0.25
+
+0.00
+
+0.25
+
+0.50
+
+d
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+l
+
+0.0
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+l
+
+Figure 2: Top row: performance of the thresholded (δˆq=0.75 ,
+red circles) and weighted (δˆW , blue triangles) estimators of
+demographic disparity in Experiments 4.1.1 (a) and 4.1.2 (c),
+relative to the true demographic disparity (black line). Bottom row: values of the terms ∆1 (a), −∆1 (b), ∆2 (a), and −∆2 (b)
+in Corollary 3.4 in Experiments 4.1.1 (b) and 4.1.2 (d), showing their contributions to the bias. Shown in light gray is
+the confidence interval within two standard deviations, averaged over 30 simulations, which in all cases is comparable
+to the width of the plotted lines.
+
+4.2
+
+Estimation biases in the HMDA mortgage
+data set with geolocation proxy for race
+
+In this section, we use the public HMDA (Home Mortgage Disclosure Act) data set8 to demonstrate demographic disparity estimation
+bias when using a probabilistic proxy for race. This data set contains
+mortgage loan application records in the U.S. for which the geolocation (state, county, and census tract), self-reported race/ethnicity,
+and loan origination outcome were reported, and has been used
+in the literature to evaluate the BISG race proxy [1, 12, 31]. We
+use the loan data for the years 2011—2012, consistent with [12].
+We denote Y = 1 if a loan application was approved or originated,
+and Y = 0 if it was denied. The final sample contains around 17
+million observations with non-missing geolocation, race, and loan
+origination outcome information.
+We consider a race proxy based only on geolocation, as the public
+data set is anonymized and omits surnames. This proxy is derived
+from the racial and ethnic composition of the U.S. population that
+is over 18 years of age, using the census tracts of the 2010 decennial
+census9 . For example, the proportion of Hispanic, white, black,
+and API (Asian or Pacific Islander) in census tract 020100, Autauga
+County, Alabama are 0.02, 0.86, 0.10, 0.01 respectively, according to
+the 2010 census. This quadruple is assigned to all applicants from
+this census tract as their race proxy. This probabilistic proxy, while
+different from BISG, is nevertheless sufficient to demonstrate the
+general result regarding disparity estimation bias in Section 3. We
+present results for Hispanic, white, and black subpopulations in
+this section, and defer the result for API to the Appendix.
+
+Experiment 4.1.1. The income is normally distributed according
+to N (µ X , 0.25) with mean value µ X depending on both geolocation
+and race:
+µX
+Z = z1 Z = z2 Z = z3
+A=a
+1+d
+2+d
+3+d
+A=b
+1−d
+2−d
+3−d
+where d controls the discrepancy of income X between the two
+race groups within the same geolocation. We fix λ = 1 and vary d
+from −0.5 to 0.5, which indirectly varies the magnitude of intrageolocation decision outcome variation between the two races. By
+construction, d should affect only the ∆1 (a), ∆1 (b) in (5i)—(5ii).
+Experiment 4.1.2. The income is normally distributed according to N (µ X , 0.25) with the mean value µ X depending on only
+geolocation:
+Z = z1 Z = z2 Z = z3
+µX
+1
+2
+3
+In other words, people with different races within the same geolocation have the same income distribution and thus the same decision
+outcome distribution. Therefore, there is no intra-geolocation decision outcome variation between the two races. As a result, when
+we vary λ from 0.2 to 2, only inter-geolocation outcome variation
+changes, which affects ∆2 (a), ∆2 (b) in conditions (5iii)—(5iv).
+
+Estimation bias of thresholded estimator and weighted estimator.
+In Figure 3, we show the estimation bias of the thresholded estimator with different thresholds and the weighted estimator. Clearly the
+
+Figure 2(b) shows that in Experiment 4.1.1, only ∆1(a) and ∆1(b)
+vary strongly with d, so they are largely responsible for the bias
+observed in Figure 2(a). When d < 0, the disadvantaged group
+have comparatively higher incomes and are thus more likely to be
+
+8 Data
+
+link: https://www.consumerfinance.gov/data-research/hmda/explore.
+use the census tract level geolocation-only proxy constructed by the CFPB, as
+described in https://github.com/cfpb/proxy-methodology.
+9 We
+
+345
+
+0.05
+
+0.00
+
+−0.05
+
+−0.10
+
+0.8
+
+0.10
+
+0.4
+
+0.05
+
+0.6
+
+0.00
+
+^
+P(A = u) − P(A = u)
+
+0.10
+
+J. Chen, N. Kallus, X. Mao, G. Svacha, M. Udell
+
+C2 − C1
+
+Demographic Disparity Estimation Bias
+
+Acceptance Rate Estimation Bias
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+
+0.4
+
+−0.05
+
+0.3
+
+0.2
+
+0.1
+
+0.2
+0.0
+
+−0.10
+0.0
+
+Black
+
+Hispanic
+
+White
+
+White−Black
+
+Race
+Method
+
+White−Hispanic
+
+Black
+
+Race Pair
+
+50% Thresholding
+
+80% Thresholding
+
+90% Thresholding
+
+Method
+
+Weighted
+
+Term Value
+
+50% Thresholding
+
+0.0
+
+80% Thresholding
+90% Thresholding
+−0.1
+
+(iii)
+
+50% Thresholding
+
+80% Thresholding
+
+90% Thresholding
+
+correlated with the disadvantaged group prevalence across the geolocations. In Example 2.6, we give a reason why loan acceptance
+is correlated with the race proxy probabilities: geolocation is correlated with both race proportions (i.e., race proxy probabilities) and
+socioeconomic status (e.g., income, FICO score, etc.) that affects
+loan approval. In Appendix C.3, we validate that such correlations
+are indeed obvious in the mortgage data set.
+In contrast to conditions (5iv), conditions (5i)—(5ii) are strictly
+violated, and condition (5iii) is slightly violated. However, the thresholded estimators still have overestimation bias because (5iii)—
+(5iv) have dominant effects, as shown in Figure 5. Moreover, as
+the threshold q increases, conditions (5iii)—(5iv) start to dominate,
+increasing the overestimation bias. Nevertheless, the apparent reduction of overestimation bias when using lower threshold does
+not mean that using lower threshold is better in practice. Instead,
+the reduction of overestimation bias is the consequence of delicate
+counterbalance between the two opposing bias sources: the violation of conditions (5i)—(5ii) contributes to underestimation bias
+and the conditions (5iii)—(5iv) contribute to overestimation bias.
+Thus, the smaller bias from using a lower threshold is not a robust
+finding. For example, for the experiments in Section 4, changing the
+threshold from 0.75 to 0.5 does not affect either the race imputation
+result or the demographic disparity estimation bias. This reflects
+the intrinsic complexity of the thresholded estimator.
+In summary, according to Corollary 3.5, the fact that the thresholded estimation rule for race excludes many unclassified examples
+makes the overestimation predominantly be determined by the
+inter-geolocation outcome variation captured by conditions (5iii)—
+(5iv), especially when the threshold q is very high. Moreover, strong
+racial segregation and socioeconomic status disparities across different geolocations make condition (5iii) or (5iv) (if not both) very
+
+Method
+
+(ii)
+
+White
+
+Race
+
+White−Hispanic
+
+0.1
+
+(i)
+
+Black
+
+Figure 5: Left: the difference between the terms C 2 (u) and
+C 1 (u) in Theorem 3.3 for races u = black or white and thresholds q = 0.5, 0.8 and 0.9 for estimating the race labels according to the thresholded rule of Definition 2.3. As q increases, C 2 (u) is increasingly larger than C 1 (u), and thus the
+∆2 (u) terms contribute more to the estimation bias than the
+∆1 (u) terms. Right: difference between the probabilities of
+the true and estimated race labels, P(A = u) − P(Â = u). As q
+increases from 0.5 to 0.9, the proportion of unclassified samples increases from 0.065 to 0.63, which causes P(Â = u) to
+decrease drastically. As a result, C 2 (u) − C 1 (u) increases due
+to Corollary 3.5.
+
+Figure 3: Left: estimation biases of loan acceptance rates
+µ for different races in the HMDA data set of Section 4.2,
+using the thresholded estimator for mean group outcome
+µ̂q (q = 0.5, 0.8, 0.9) from Definition 2.4, as well as the weighted estimator µ̂W from Definition 2.5, relative to the true
+mean group outcome µ calculated using the actual race labels. Right: estimation biases of demographic disparity δ
+between pairs of races, using the thresholded estimator δˆq
+from Definition 2.4 and weighted estimator δˆW from Definition 2.5, relative to the true demographic disparity δ calculated using the actual race labels.
+White−Black
+
+White
+
+Race
+
+(iv)
+
+(i)
+
+(ii)
+
+(iii)
+
+(iv)
+
+Conditions
+
+Figure 4: The values of the terms ∆1 (a), −∆1 (b), ∆2 (a), and
+−∆2 (b) in Corollary 3.4 for the mortgage data set of Section 4.2, for thresholds q = 0.5, 0.8, and 0.9. Negative values
+demonstrate partial violation of the conditions of Corollary
+3.4.
+
+thresholded estimator underestimates the loan acceptance rate of
+black and Hispanic groups but it estimates the loan acceptance rate
+for White group accurately. As a result, the thresholded estimator
+overestimates the demographic disparity. Moreover, the overestimation bias tends to decrease as the threshold q decreases. In
+contrast, the weighted estimator displays the opposite performance
+and underestimates the demographic disparity.
+Bias source of thresholded estimator. Figure 4 shows the conditions (5i)—(5iv). Only (5iv) strictly holds, meaning that people from
+the disadvantaged group (Hispanic or black) living in census tracts
+where their race ratio exceeds the corresponding classification threshold have lower average loan acceptance rate than people from
+the disadvantaged group living in census tracts where their race
+ratio is not as high as the classification threshold. This captures the
+inter-geolocation outcome variation: the loan approval is negatively
+
+346
+
+Covariance: being white and being accepted
+
+Fairness Under Unawareness
+
+0.68
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+
+0.14
+
+0.86
+
+0.1
+
+In the mortgage dataset, we show that the racial segregation, socioeconomic status, outcome disparity pattern with respect to geolocation make the thresholded estimator tend to overestimate the
+demographic disparity, and the weighted estimator tend to underestimate the demographic disparity. This explains the overestimation
+bias of the thresholded estimator with BISG reported by previous
+literature. Moreover, our results show that the estimation bias of
+thresholded estimator is sensitive to the threshold because of complex interplay of different bias sources. As a result, the observed
+estimation bias pattern in one setting may hardly generalize to
+other settings. In contrast, the weighted estimator only has one
+bias source, and is thus easier to reason about.
+
+0.06
+
+0.1
+
+count
+3e+05
+2e+05
+0.0
+
+0.0
+
+1e+05
+0e+00
+
+0.12
+−0.15
+
+−0.10
+
+−0.05
+
+0.07
+0.00
+
+0.05
+
+0.04
+0.10
+
+Covariance: being Hispanic and being accepted
+
+−0.15
+
+−0.10
+
+−0.05
+
+0.04
+0.00
+
+0.05
+
+0.10
+
+Covariance: being Black and being accepted
+
+Figure 6: The population distribution across different combinations of within-census-tract-covariances between the
+loan acceptance and the membership to advantaged group
+or the membership to disadvantaged group. The red numbers in each quadrant represents the proportion of people
+who live in census tracts with the corresponding covariance
+combination.
+
+5
+
+CONCLUSIONS
+
+This paper presents the first theoretical analysis of bias in outcome
+disparity assessments using a probabilistic proxy model for the
+unobserved protected class. In Theorem 3.3, we derived the bias
+of a thresholded estimator (Definition 2.4) that has been described
+in the literature. We also gave sufficient conditions in Corollary
+3.4 to understand when this methodology is biased, and to what
+extent. Our theoretical analysis is valid whenever a proxy model
+is used with a thresholded estimator to impute protected class
+membership, and is thus consistent with previous studies that had
+observed an overestimation bias of the thresholded estimator based
+on BISG. When applied to the public HMDA mortgage dataset with
+geolocation as the sole proxy for race membership (Section 4.2),
+we found that the estimation bias of the thresholded estimator
+depends on the complex interaction of multiple different biases,
+producing a strong sensitivity to the precise value of the threshold
+used. Further studies will be needed to demonstrate the robustness
+of this numerical finding, particularly when using other proxy
+models and other measures of fairness. Nevertheless, our work
+signals caution for choosing the ad hoc thresholds which are used
+in practice, as without the ground truth labels, we are unable to
+determine the optimal choice of threshold.
+To alleviate the theoretical challenges of the thresholded estimator, we also proposed a weighted estimator (Definition 2.5), which
+propagated the uncertainty resulting from the probabilistic proxy
+onto the final estimand. We found that the estimation bias of this
+weighted estimator has only one bias source, arising from the loan
+approval discrepancy between difference races within the same
+geolocation, which led to an overall underestimate. As the behavior
+of this estimator’s bias is simpler to reason about, we believe that
+the weighted estimator may be a useful new method to incorporate
+into outcome disparity evaluations when proxy models are used,
+especially if the sign of estimation bias can be determined with
+external knowledge.
+
+likely to hold. As a result, the thresholded estimator tends to overestimate the demographic disparity, especially when high threshold
+is used. Since BISG also uses geolocation for race estimation, the
+reported overestimation bias of using thresholded estimator with
+BISG should be at least largely (if not all) due to the same reason.
+Moreover, the estimation bias of thresholded can be very sensitive
+to the threshold value because the threshold value influences the
+interplay of the bias sources in (5i)—(5iv). This reflects the intrinsic
+limitation of the thresholded estimator.
+Bias source of the weighted estimator. Figure 6 shows the distribution of population who live in census tracts with different combinations of Cov(I(A = a), Y | Z ) and Cov(I(A = b), Y | Z ) with a
+representing white and b representing black or Hispanic. Theorem
+3.1 implies that the upper left quadrants account for the underestimation bias of weighted estimator for demographic disparity, as
+these quadrants contain all census tracts where the loan acceptance
+is positively correlated with membership to the advantaged group
+(Cov(I(A = a), Y | Z ) > 0), while negatively correlated with the
+membership to the disadvantaged group (Cov(I(A = b), Y | Z ) < 0).
+Figure 6 shows that the majority of people live in census tracts
+falling in the upper left quadrants. In other words, most people
+live in census tracts where white people have a higher average
+loan approval rate than their black or Hispanic neighbors. This
+explains the underestimation bias of the weighted estimator since
+the estimation bias of the weighted estimator is solely determined
+by the intra-geolocation outcome variation according to Theorem
+3.1.
+Summary. The empirical results show that our theoretical analysis provides convincing explanations for the observed estimation
+bias of the thresholded estimator and the weighted estimator. We
+show that the bias sources of the weighted estimator and the thresholded estimator are very different: the bias of the weighted
+estimator is solely determined by the intra-geolocation variation,
+and the bias of the thresholded estimator is determined by both
+inter-geolocation variation and intra-geolocation variation. When
+high threshold is used, the inter-geolocation variation dominates.
+
+REFERENCES
+[1] Arthur P Baines and Marsha J Courchane. 2014-11. Fair Lending: Implications for
+the Indirect Auto Finance Market. https://www.crai.com/sites/default/files/publi
+cations/Fair-Lending-Implications-for-the-Indirect-Auto-Finance-Market.pdf
+[2] Solon Barocas and Andrew Selbst. 2016. Big Data’s Disparate Impact. California
+Law Review 104, 1 (2016), 671–729. https://doi.org/10.15779/Z38BG31
+[3] Richard Berk, Hoda Heidari, Shahin Jabbari, Michael Kearns, and Aaron Roth.
+2018. Fairness in Criminal Justice Risk Assessments: The State of the Art. Sociological Methods & Research (2018), 1–42. https://doi.org/10.1177/0049124118782533
+arXiv:1703.09207
+
+347
+
+FAT* ’19, January 29–31, 2019, Atlanta, GA, USA
+
+J. Chen, N. Kallus, X. Mao, G. Svacha, M. Udell
+[26] Cecilia Munoz, Megan Smith, and DJ Patil. 2016. Big Data: A Report
+on Algorithmic Systems, Opportunity, and Civil Rights. Technical Report
+May. https://www.whitehouse.gov/sites/default/files/microsites/ostp/2016_
+0504_data_discrimination.pdf
+[27] Edward Hugh Simpson. 1951. The Interpretation of Interaction in Contingency
+Tables. Journal of the Royal Statistical Society Series B 13, 2 (1951), 238–241.
+http://www.jstor.org/stable/2984065
+[28] US Congress. 1968. 42 U.S.C. §3601 ff.: Fair Housing Act. https://www.justice.go
+v/crt/fair-housing-act-2
+[29] US Congress. 1974-10. 15 U.S.C. §1691 ff.: Equal Credit Opportunity Act. https://
+www.ecfr.gov/cgi-bin/text-idx?tpl=/ecfrbrowse/Title12/12cfr202_main_02.tpl
+[30] Muhammad Bilal Zafar, Isabel Valera, Manuel Gomez Rodriguez, and Krishna P
+Gummadi. 2017. Fairness Constraints: Mechanisms for Fair Classification, In
+Proceedings of the 20th International Conference on Artificial Intelligence and
+Statistics. Proceedings of Machine Learning Research 54, 962–970. arXiv:1507.05259
+[31] Yan Zhang. 2016-01. Assessing Fair Lending Risks Using Race/Ethnicity Proxies.
+Management Science 64, 1 (2016-01), 178–197. https://doi.org/10.1287/mnsc.2016.
+2579
+[32] Indrė Žliobaitė. 2015. On the relation between accuracy and fairness in binary
+classification. (2015). arXiv:1505.05723
+
+[4] P. J. Bickel, E. A. Hammel, and J. W. O’Connell. 1975. Sex Bias in Graduate
+Admissions: Data from Berkeley. Science 187, 4175 (1975), 398–404. https:
+//doi.org/10.1126/science.187.4175.398
+[5] Toon Calders and Sicco Verwer. 2010. Three naive Bayes approaches for
+discrimination-free classification. Data Mining and Knowledge Discovery 21,
+2 (2010), 277–292. https://doi.org/10.1007/s10618-010-0190-x
+[6] Jiahao Chen. 2018. Fair Lending Needs Explainable Models for Responsible
+Recommendation. In Proceedings of the 2nd FATREC Workshop on Responsible
+Recommendation (FATREC’18). ACM. arXiv:1808.04684
+[7] Alexandra Chouldechova. 2017. Fair prediction with disparate impact: A study
+of bias in recidivism prediction instruments. Big Data 5, 2 (2017). https://doi.or
+g/10.1089/big.2016.0047 arXiv:1703.00056
+[8] Committee on Financial Services. 2015-11. Unsafe at Any Bureaucracy: CFPB
+Junk Science and Indirect Auto Lending. https://financialservices.house.gov/upl
+oadedfiles/11-24-15_cfpb_indirect_auto_staff_report.pdf
+[9] Committee on Financial Services. 2016-01. Unsafe at Any Bureaucracy, Part II:
+How the Bureau of Consumer Financial Protection Removed Anti-fraud Safeguards to Achieve Political Goals. https://financialservices.house.gov/uploadedf
+iles/cfpb_indirect_auto_part_ii.pdf
+[10] Committee on Financial Services. 2017-01. Unsafe at Any Bureaucracy, Part III:
+The CFPB’s Vitiated Legal Case Against Auto-Lenders. https://financialservices
+.house.gov/uploadedfiles/1-18-17_cfpb_indirect_auto_staff_report_iii.pdf
+[11] Consumer Financial Protection Bureau. 2013-12. CFPB and DOJ Order Ally to Pay
+$80 Million to Consumers Harmed by Discriminatory Auto Loan Pricing. https:
+//www.consumerfinance.gov/about-us/newsroom/cfpb-and-doj-order-ally-topay-80-million-to-consumers-harmed-by-discriminatory-auto-loan-pricing/
+[12] Consumer Financial Protection Bureau. 2014. Using publicly available information to proxy for unidentified race and ethnicity: a methodology and assessment. https://www.consumerfinance.gov/data-research/research-reports/usingpublicly-available-information-to-proxy-for-unidentified-race-and-ethnicity/
+Statement of the
+[13] Consumer Financial Protection Bureau. 2018-05.
+Bureau of Consumer Financial Protection on enactment of S.J. Res.
+57. https://www.consumerfinance.gov/about-us/newsroom/statement-bureauconsumer-financial-protection-enactment-sj-res-57/
+[14] Delores A Conway and Harry V Roberts. 1983. Reverse Regression, Fairness, and
+Employment Discrimination. Journal of Business & Economic Statistics 1, 1 (1983),
+75–85. https://doi.org/10.1080/07350015.1983.10509326
+[15] Division of Consumer and Community Affairs. 2011-07. 12 CFR Supplement I to
+Part 202 - Official Staff Interpretations. https://www.law.cornell.edu/cfr/text/12/
+appendix-Supplement_I_to_part_202
+[16] Julia Dressel and Hany Farid. 2018. The accuracy, fairness, and limits of predicting
+recidivism. Science Advances 4, 1 (2018), eaao5580. https://doi.org/10.1126/scia
+dv.aao5580
+[17] Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer Reingold, and Richard
+Zemel. 2012. Fairness through awareness. In Proceedings of the 3rd Innovations in
+Theoretical Computer Science Conference. ACM, 214–226. https://doi.org/10.1145/
+2090236.2090255
+[18] Marc N. Elliott, Allen Fremont, Peter A Morrison, Philip Pantoja, and Nicole Lurie.
+2008. A new method for estimating race/ethnicity and associated disparities
+where administrative records lack self-reported race/ethnicity. Health Services
+Research 43, 5p1 (2008), 1722–1736. https://doi.org/10.1111/j.1475-6773.2008.
+00854.x
+[19] Marc N. Elliott, Peter A. Morrison, Allen Fremont, Daniel F. McCaffrey, Philip
+Pantoja, and Nicole Lurie. 2009-04. Using the Census Bureau’s surname list to
+improve estimates of race/ethnicity and associated disparities. Health Services
+and Outcomes Research Methodology 9, 2 (2009-04), 69–83. https://doi.org/10.
+1007/s10742-009-0047-1
+[20] William H. Greene. 1984. Reverse regression: The algebra of discrimination.
+Journal of Business and Economic Statistics 2, 2 (1984), 117–120. https://doi.org/
+10.1080/07350015.1984.10509378
+[21] Moritz Hardt, Eric Price, and Nathan Srebro. 2016. Equality of opportunity
+in supervised learning. In Advances in Neural Information Processing Systems.
+3315–3323. arXiv:1610.02413
+[22] Toshihiro Kamishima, Shotaro Akaho, Hideki Asoh, and Jun Sakuma. 2012.
+Fairness-Aware Classifier with Prejudice Remover Regularizer. In Machine Learning and Knowledge Discovery in Databases, Peter A Flach, Tijl De Bie, and
+Nello Cristianini (Eds.). Springer Berlin Heidelberg, Berlin, Heidelberg, 35–50.
+https://doi.org/10.1007/978-3-642-33486-3_3
+[23] Niki Kilbertus, Adrià Gascón, Matt J Kusner, Michael Veale, Krishna P Gummadi, and Adrian Weller. 2018. Blind Justice: Fairness with Encrypted Sensitive
+Attributes, In Proceedings of the 35th International Conference on Machine Learning. Proceedings of Machine Learning Research 80, 2630–2639. arXiv:1806.03281
+[24] James Rufus Koren. 2016-08. Feds use Rand formula to spot discrimination. The
+GOP calls it junk science. Los Angeles Times (2016-08). http://www.latimes.com/
+business/la-fi-rand-elliott-20160824-snap-story.html
+[25] Zachary C Lipton, Alexandra Chouldechova, and Julian McAuley. 2017.
+Does mitigating ML’s impact disparity require treatment disparity? (2017).
+arXiv:1711.07076
+
+348
+
+

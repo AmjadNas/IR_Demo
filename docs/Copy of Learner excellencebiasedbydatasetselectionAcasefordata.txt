@@ -1,0 +1,2162 @@
+Pattern Recognition 46 (2013) 1054–1066
+
+Contents lists available at SciVerse ScienceDirect
+
+Pattern Recognition
+journal homepage: www.elsevier.com/locate/pr
+
+Learner excellence biased by data set selection: A case for data
+characterisation and artiﬁcial data sets
+Núria Macia a,n, Ester Bernadó-Mansilla a, Albert Orriols-Puig a, Tin Kam Ho b
+a
+b
+
+Grup de Recerca en Sistemes Intel  ligents, La Salle - Universitat Ramon Llull, C/ Quatre Camins, 2, 08022 Barcelona, Spain
+Bell Laboratories, Alcatel-Lucent, 600 Mountain Ave., Murray Hill, NJ 07974-0636, USA
+
+a r t i c l e i n f o
+
+a b s t r a c t
+
+Article history:
+Received 10 October 2011
+Received in revised form
+19 September 2012
+Accepted 27 September 2012
+Available online 5 October 2012
+
+The excellence of a given learner is usually claimed through a performance comparison with other
+learners over a collection of data sets. Too often, researchers are not aware of the impact of their data
+selection on the results. Their test beds are small, and the selection of the data sets is not supported by
+any previous data analysis. Conclusions drawn on such test beds cannot be generalised, because
+particular data characteristics may favour certain learners unnoticeably. This work raises these issues
+and proposes the characterisation of data sets using complexity measures, which can be helpful for
+both guiding experimental design and explaining the behaviour of learners.
+& 2012 Elsevier Ltd. All rights reserved.
+
+Keywords:
+Supervised learning
+Learner assessment
+Data complexity
+
+1. Introduction
+Increasing interest in pattern recognition and machine learning has led to the development of numerous learning algorithms,
+most of which are designed with the aim of improving the
+existing ones. To demonstrate the excellence of a new learner,
+the trendy approach has been employing benchmarking studies in
+which the proposed learner is compared with a set of referenced
+learners. These comparisons usually follow a three-step procedure: (1) selection of a collection of data sets, typically from
+public repositories, (2) selection of some existing learners to
+compare the new approach with, and (3) extraction of performance conclusions supported by statistical tests.
+Although there is no common agreement on the comparison
+methodology, recent works have tried to systematise or provide
+guidelines for some of these phases. Efforts have been made to
+identify the most inﬂuential learning techniques [1], to design
+procedures to estimate learners’ error [2,3], and to deﬁne a
+statistical framework to extract signiﬁcant and reliable conclusions from results [4,5]. Despite these important advances, which
+have quickly been accepted and adopted by practitioners, data set
+selection is still overlooked in the majority of the studies; data
+sets are selected according to arbitrary criteria without a detailed
+analysis of their characteristics. This raises our concern since any
+change of the collection may cause variations on the ﬁnal claims.
+
+n
+
+Corresponding author. Tel.: þ1 412-320-5684.
+E-mail address: macia.nuria@gmail.com (N. Macia ).
+
+0031-3203/$ - see front matter & 2012 Elsevier Ltd. All rights reserved.
+http://dx.doi.org/10.1016/j.patcog.2012.09.022
+
+The purpose of this paper is to bring discussion on the
+implications of data set selection by studying why and how it
+inﬂuences the conclusions resulting from comparisons of supervised learning techniques. To address these questions, we conduct
+a systematic comparison of well-known learners on different realworld problems. We ﬁrst show how data set selection affects
+conclusions through a case study that uses collections of problems with no apparent differences between them. Then, we
+focus on why the results are biased to the selection of data sets,
+from where we motivate the need for characterising the properties of the data sets that are considered in experimental frameworks. A proper characterisation of the data would unveil the
+linkage between the performance of a classiﬁer and the properties
+of data sets and thus, would allow us to identify its domain of
+competence. The paper points out two alternatives for data
+characterisation by either (1) describing existing data sets with
+complexity descriptors [6] that explain the geometrical distributions of classes in the feature space, or (2) using artiﬁcial data sets
+synthesised according to previously deﬁned characteristics. These
+two alternatives set the ﬁrst steps towards a new methodology
+for assessing learner performance that does not intend to demonstrate that a particular learner outperforms others in all the
+domains, but attempts to identify where each learner excels
+and why.
+The remainder of this paper is organised as follows. Section 2
+gives a bird’s-eye view of the learner comparison methodologies
+in machine learning. Section 3 reports a case study where three
+learning techniques are compared over three collections of
+problems, yielding three contradictory conclusions regarding the
+excellence of these learners. Next, Section 4 presents data
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+1055
+
+and attributes of these data sets. If we look at the sources of data
+sets, we observe that the majority of the papers resort to data sets
+from public repositories (77.2%), the UCI repository being the
+most popular (63.9%). Interestingly, certain data sets from the UCI
+repository are often used, such as Iris classiﬁcation, Wine recognition, Ionosphere, Glass identiﬁcation, and Breast cancer (Wisconsin).
+This list partly matches the popularity ranking maintained by the
+UCI repository (see Table 2). Moreover, the communities of PR
+and ICML agree on the types of data sets selected, as it is shown in
+Fig. 1. It seems like there is a set of problems which is established
+as a standard de facto without any apparent reason—although
+popularity promotes a higher use of these data sets since authors
+need to place the learner performance with respect to well known
+expected performances. Other papers (22.8%) use synthetic data
+sets speciﬁcally designed for the particular purpose of the work,
+and a smaller percentage (11.2%) uses data from a given application problem.
+Regarding the size of the test bed, the majority of the works
+select a small set of problems. More than 50% of the papers use
+around 2–10 data sets. For the rest, the selection is composed of
+at most 30 data sets (16.7%), and this threshold is exceeded in a
+very few cases (2.3%). The mean value is eight data sets when
+problems are picked from the UCI repository, but there is not any
+deﬁned reason for such a value; it is mostly due to the compromise between what is normally understood as a representative
+amount of problems and the computational cost.
+The dimensionality of the problems tends to be small. Data
+sets with fewer than 1000 instances and with up to 100 attributes
+are the most commonly chosen. Nonetheless, it is very difﬁcult to
+parse such information because it is often not included in the
+papers—albeit this trend is reversing. Since October 2008, most of
+the papers from PR show a table with the observable (also referred
+to as extrinsic) characteristics of the data sets—i.e. the number of
+
+complexity analysis as an approach to problem characterisation.
+This analysis is used in Section 5 to characterise the data sets of
+the case study. It enables us to partially explain the contradictory
+conclusions initially obtained. The analysis continues by examining how the size and complexity of the test bed inﬂuence the
+statistical conclusions. Section 6 introduces the use of artiﬁcial
+data sets as an alternative to the use of real-world problems that
+would allow for the design of an experimental framework with
+tailored properties. Finally, Section 7 ends with the summary,
+conclusions, and suggestions of future work.
+
+2. Literature review
+A vast amount of new machine learning techniques have been
+added to the literature in recent years. How has the research
+community demonstrated the relevance of these techniques so
+far? This section presents a review that shows the different ways
+in which the performance of classiﬁers has been assessed.
+The study considered papers from some of the most relevant
+journals and conference proceedings of machine learning and
+pattern recognition, particularly the Pattern Recognition (PR)
+journal (2008–2010) and the Proceedings of the International
+Conference on Machine Learning (ICML) (2008–2010). We
+focused on the papers where a particular classiﬁer was analysed
+through the comparison of its performance with at least one other
+classiﬁer on a set of problems, among those papers that were
+categorised as classiﬁcation or contained this word and its derivatives in the title or abstract. Thus, among 1460 papers, 215
+constituted our panel study.
+Table 1 summarises the characteristics of the test beds used in
+the papers gathered for our analysis. The table details the sources
+and number of data sets, and the number of classes, instances,
+Table 1
+Overview of the current state of data set selection in the experiments.
+PR
+
+ICML
+
+Total
+
+2008
+
+2009
+
+2010
+
+2008
+
+2009
+
+2010
+
+322
+31
+
+315
+50
+
+353
+48
+
+158
+35
+
+160
+27
+
+152
+24
+
+25
+8
+2
+
+32
+17
+11
+
+36
+14
+5
+
+31
+3
+3
+
+22
+3
+2
+
+20
+4
+1
+
+166 (77.2%)
+49 (22.8%)
+24 (11.2%)
+
+7
+16
+7
+1
+
+19
+22
+7
+2
+
+12
+28
+8
+0
+
+6
+23
+4
+2
+
+6
+16
+5
+0
+
+5
+14
+5
+0
+
+55 (25.5%)
+119 (55.3%)
+36 (16.7%)
+5 (2.3%)
+
+Number of classes
+2
+42
+
+8
+14
+
+11
+13
+
+9
+10
+
+3
+5
+
+2
+5
+
+2
+4
+
+35
+51
+
+Number of instances
+(0,1000]
+(1000,10000]
+(10000,100000]
+4 100000
+
+14
+9
+3
+2
+
+11
+7
+1
+1
+
+14
+10
+6
+1
+
+2
+8
+4
+0
+
+3
+6
+3
+1
+
+3
+3
+2
+1
+
+47
+43
+19
+6
+
+Number of attributes
+(0,10]
+(10,25]
+(25,100]
+4 100
+
+10
+11
+11
+4
+
+13
+12
+10
+2
+
+12
+13
+12
+3
+
+3
+3
+3
+6
+
+4
+5
+4
+3
+
+3
+3
+3
+2
+
+45
+57
+43
+20
+
+Total published papers
+Papers relevant to our study
+Source of data sets
+Repositories
+Homemade
+Speciﬁc
+
+1460
+215
+
+a
+
+Number of data sets
+1
+(1,10]
+(10,30]
+4 30
+
+b
+
+a
+The sum of the three sources can be greater than the number of studied papers since some works use, in the experimentation, data sets from different sources at the
+same time.
+b
+In subsections number of classes, number of instances, and number of attributes, the number of papers can be lower than the number of studied papers since some
+works do not specify the characteristics of the data sets used in the experimentation.
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+1056
+
+Table 2
+Ranking of the most popular classiﬁcation data sets from the UCI repository, according to http://archive.ics.uci.edu/ml/ on January 19, 2010 (Hits counted since 2007), and
+their characteristic description. #Cl is the number of classes, #Inst is the number of instances, and #Att is the number of attributes. #Real, #Int and #Nom indicate the
+number of real-, integer- and nominal-valued attributes, respectively. %missInst, %missAtt, and %missVal correspond to the percentage of instances with missing values,
+attributes with missing values, and the total percentage of missing values, respectively. Finally, %Maj is the percentage of instances of the majority class and %Min is the
+percentage of instances of the minority class.
+Data set
+
+Hits
+
+#Cl
+
+#Inst
+
+#Att
+
+#Real
+
+#Int
+
+#Nom
+
+%missInst
+
+%missAtt
+
+%missVal
+
+%Maj
+
+%Min
+
+Iris
+Adult
+Wine
+Breast Cancer Wisconsin (Diagnostic)
+Abalone
+Car Evaluation
+Poker Hand
+Yeast
+Internet Advertisements
+SPECT Heart
+
+177 422
+130 239
+115 366
+94 377
+74 795
+71 042
+70 613
+51 539
+49 457
+46 258
+
+3
+2
+3
+2
+29
+4
+10
+10
+2
+2
+
+150
+48 842
+178
+699
+4177
+1728
+1 025 010
+1484
+3279
+267
+
+4
+14
+13
+9
+8
+6
+11
+8
+1558
+22
+
+4
+0
+13
+0
+7
+0
+0
+8
+3
+0
+
+0
+6
+0
+9
+0
+0
+5
+0
+0
+0
+
+0
+8
+0
+0
+1
+6
+6
+0
+1555
+22
+
+0.00
+7.41
+0.00
+2.29
+0.00
+0.00
+0.00
+0.00
+28.06
+0.00
+
+0.00
+21.43
+0.00
+11.11
+0.00
+0.00
+0.00
+0.00
+0.19
+0.00
+
+0.00
+0.95
+0.00
+0.25
+0.00
+0.00
+0.00
+0.00
+0.05
+0.00
+
+33.33
+76.07
+39.89
+65.52
+16.50
+70.02
+50.12
+31.20
+86.03
+79.40
+
+33.33
+23.93
+26.97
+34.48
+0.02
+3.76
+7.80e  4
+0.34
+13.97
+20.60
+
+30
+PR
+ICML
+
+Number of papers using the data set
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+Fig. 1. Data sets from the UCI repository used in PR and ICML.
+
+attributes, classes, and instances—and justify their selection
+under the basis of diversity. However, there is no guarantee that
+diversity of the dimensionality also implies diversity of intrinsic
+complexity. Even though this happens, it is also debatable that
+one can conclude any quality of the method across several types
+of problems [7].
+It is also worth mentioning that performance assessment includes
+some steps to statistically support the results. For instance, crossvalidation or leave-one-out methods are usually applied to estimate
+
+the error, which is especially needed when only small data set
+samples are available. Across the literature, we observed that there
+is no agreement in the parametrisation of the error estimation, and
+the well-known k-fold cross-validation can be set as k ¼ f4,5,10,20g
+arbitrarily. Classiﬁers’ performance is measured almost exclusively by
+classiﬁcation accuracy or error. Statistical tests are used to confer
+reliability on the observed differences between the methods. However, most of the employed tests are based on pairwise comparisons even though several classiﬁers are involved. Multiple
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+3. Learner comparison: a case study
+The previous section showed that the literature often analyses
+the performance of learners by means of comparisons between
+several techniques on a moderate number of data sets. This
+section shows an example of this approach that illustrates the
+risks behind this kind of comparisons. In the following, we
+present a case study where three learners are compared upon
+three different collections to empirically show that, although a
+correct statistical analysis is performed, contradictory conclusions
+can be reached depending on the collection of data sets used.
+3.1. Methodology for learner comparison
+For the analysis conducted, we departed from the classical
+methodology: (1) selection of data sets, (2) selection of learners,
+and (3) performance analysis which involves the selection of
+statistical tests to better support the conclusions.
+To select the data sets of our collection, we collected 153 data
+sets—binary and multi-class problems—from the following repositories: the UCI machine learning repository,1 Delve,2 LibSVM,3
+and Kent Ridge Bio-Medical.4 Among them, we deliberately built
+three collections of 20 data sets each—more than twice the mean
+number used in the literature as mentioned in Section 2. Each
+collection enables each particular learner to statistically outperform the others. Also, following the community’s belief about
+diversity in data set selection, we chose data sets with vastly
+different extrinsic characteristics in terms of number of attributes
+and number of instances, as summarised in Fig. 2. We can see that
+the samples are spread and reach a good coverage in the space
+deﬁned by these two dimensions.
+Secondly, we selected three widely used learning techniques
+from different learning paradigms: Instance Based (IBk) learning
+[10], Random Forest (RF) [11], and Sequential Minimal Optimisation (SMO) [12]. IBk is an implementation of the nearest neighbour algorithm. RF builds an ensemble of decision trees which are
+generated with a group of randomly selected instances and
+attributes from the original training set. SMO is an efﬁcient
+implementation for support vector machines [13]. All these
+methods were run using the Weka package [14] with the
+1
+2
+3
+4
+
+http://archive.ics.uci.edu/ml/
+http://www.cs.toronto.edu/  delve/
+http://www.csie.ntu.edu.tw/  cjlin/libsvmtools/datasets/
+http://datam.i2r.a-star.edu.sg/datasets/krbd/
+
+Collection 1
+Collection 2
+Collection 3
+
+5000
+
+Number of attributes
+
+comparison tests still have not been widely applied despite the
+recommendations by Demšar [4] and Garcı́a et al. [5].
+Our impression is that the community is aware of the need for
+a more formal methodology for performance estimation and
+statistical signiﬁcance, but has not paid much attention to the
+data set selection. Many works indicate that data sets are chosen
+because they vary in size, number of classes, and other characteristics such as class distribution, but this is not accompanied by
+any analysis. In addition, we ﬁnd quick justiﬁcations added to
+satisfy some reviewers’ comments and mask the fact that data
+selection is still shallow.
+Choosing data set carelessly from large repositories may
+thwart the statistical analysis, especially when data sets with
+similar characteristics are selected; some signiﬁcant differences
+may not be detected if certain types of problems are not
+represented in the test bed. Conversely, having a large collection
+of data sets with different complexities may lead to the conclusion that the learners perform the same on average, as shown in
+the case study that follows.
+
+1057
+
+500
+
+50
+
+10
+5
+
+1e+01
+
+1e+02
+1e+03
+1e+04
+Number of instances
+
+1e+05
+
+Fig. 2. Extrinsic characteristics—number of instances and number of attributes—of
+the data sets included in the three collections. Circles represent data sets from
+collection 1, triangles, data sets from collection 2, and crosses, data sets from
+collection 3.
+
+Table 3
+Comparison of IBk, RF, and SMO on the ﬁrst collection of data sets (DS1). The row
+Frd reports the p-value resulting of applying Friedman’s test and the row Rank
+provides the average rank of each learner.
+DS1
+
+IBk
+
+RF
+
+SMO
+
+AcuteInﬂammation-NephritisOfRenalPelvisOrigin
+BalanceScale
+BalloonsAdultStretch
+BloodTransfusionServiceCentre
+BreastCancerWisconsinDiagnosis
+Cardiotocography-10Classes
+CreditApproval
+Dermatology
+Ecoli
+HeartDisease-Processed.hungarian
+Hepatitis
+Iris
+MammographicMass
+Parkinsons
+PostOperativePatient
+SPECTHeart
+StatlogAustraliandCreditApproval
+StatlogLandsatSatellite
+VolcanoesOnVenus-C1
+WaveformDatabaseGenerator-Version1
+
+100
+83.84
+100
+77.14
+97.19
+100
+86.52
+96.17
+86.61
+81.97
+84.52
+96.67
+81.17
+93.33
+71.11
+82.02
+86.52
+90.89
+97.59
+83.24
+
+100
+76.96
+100
+74.33
+95.78
+98.59
+84.93
+95.08
+83.63
+79.25
+80.00
+95.33
+76.38
+90.26
+60.00
+79.40
+84.35
+90.66
+97.42
+82.90
+
+100
+72.80
+100
+76.60
+96.84
+99.91
+78.26
+96.17
+85.42
+72.45
+79.35
+90.00
+79.29
+89.23
+55.56
+79.03
+74.93
+88.53
+97.53
+80.74
+
+Frd
+
+8:83  106
+
+Rank
+
+1.13
+
+2.35
+
+2.53
+
+following conﬁgurations: (1) k¼7 for IBk, (2) a polynomial kernel
+of order 5 for SMO, and (3) the rest of the parameters set to their
+default value. The performance of each technique was estimated
+with stratiﬁed 10-fold cross-validation [3].
+Finally, we compared the results of the three learners with
+multiple comparison procedures based on non-parametric tests as
+suggested by Demšar [4].5 The statistical analysis ﬁrst applied
+Friedman’s test [15] to test the null hypothesis, which is that all the
+learning algorithms perform equivalently on average. If Friedman’s
+test rejected the null hypothesis, post hoc tests were applied to
+
+5
+
+This work has been a turning point in the use of statistical analysis in ML.
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+1058
+
+identify which learners behaved differently. Then, the aim turned
+to analyse whether all the methods performed equivalently to the
+best ranked learner. To this end, we used Holm’s test [16], which
+adjusts the value of a in a step down method without making any
+assumptions about the hypotheses tested. Let p1 , . . . ,pm —where m
+is the number of machine learning techniques—be the p-values
+increasingly sorted, and H1 , . . . ,Hm be the corresponding hypotheses. Holm’s procedure rejects hypotheses H1 to Hi if i is the
+smallest integer such that pi 4 a=ðmi þ1Þ.
+
+Table 4
+Comparison of IBk, RF, and SMO on the second collection of data sets (DS2). The
+row Frd reports the p-value resulting of applying Friedman’s test and the row Rank
+provides the average rank of each learner.
+DS2
+
+IBk
+
+RF
+
+SMO
+
+Arrhythmia
+ArtiﬁcialCharacters
+AudiologyStandardised
+BreastTissue-6Classes
+Flags
+GlassIdentiﬁcation
+HillValleyWithoutNoise
+LungCancer
+MAGICGammaTelescope
+Madelon
+Monks-2
+RobotExecutionFailures-LP1
+SoybeanSmall
+Spambase
+StatlogGermanCredirCard-Numeric
+StatlogHeart
+SteelsPlatesFaults
+TeachingAssistantEvaluation
+StatlogShuttle
+WineQualityRed
+
+58.76
+54.16
+56.64
+68.87
+54.12
+64.49
+55.69
+37.50
+83.91
+57.00
+58.40
+61.36
+100
+90.18
+90.00
+79.26
+69.65
+45.70
+99.86
+57.47
+
+66.74
+57.13
+76.55
+70.75
+65.46
+73.36
+61.06
+56.25
+86.92
+57.88
+84.69
+84.09
+100
+94.83
+96.40
+82.59
+78.46
+64.24
+99.99
+68.04
+
+63.86
+35.70
+73.01
+49.06
+64.95
+69.16
+56.85
+40.63
+86.08
+57.85
+76.71
+70.45
+100
+61.60
+93.30
+75.56
+71.87
+58.94
+99.72
+59.60
+
+Frd
+Rank
+
+4:80  107
+2.70
+
+1.05
+
+2.25
+
+Table 5
+Comparison of IBk, RF, and SMO on the third collection of data sets (DS3). The row
+Frd reports the p-value resulting of applying Friedman’s test and the row Rank
+provides the average rank of each learner.
+DS3
+
+IBk
+
+RF
+
+SMO
+
+Abalone-29Classes
+Abalone-3Classes
+AutoUni-au4_2500
+ChessKingRookVsKing
+Connect4
+HabermanSurvival
+HayesRoth
+LibrasMovement-9
+LibrasMovement-10
+LowResolutionSpectrometer
+MetaData
+MolecularBiology-PromoterGeneSequences
+MolecularBiology-SpliceJunctionGeneSequences
+Nursery
+OpticalRecognitionOfHandwrittenDigits
+PimaIndiansDiabetes
+StatlogVehicleSilhouttes
+TicTacToeEndgame
+Trains
+Zoo
+
+23.82
+63.63
+48.64
+73.05
+80.90
+72.55
+66.88
+8.89
+73.70
+42.94
+0.00
+79.25
+81.85
+98.06
+98.59
+74.74
+71.28
+98.75
+40.00
+89.11
+
+22.41
+62.03
+51.32
+65.06
+79.99
+69.28
+75.00
+17.78
+82.96
+51.98
+0.00
+77.36
+89.44
+98.20
+96.69
+72.40
+77.19
+91.34
+50.00
+91.09
+
+27.03
+65.33
+56.28
+92.34
+82.46
+73.20
+79.38
+17.78
+88.15
+58.76
+0.19
+83.02
+91.10
+99.97
+99.11
+75.13
+83.10
+99.69
+50.00
+93.07
+
+Frd
+Rank
+
+3.2. Analysis of results: only local superiority
+Tables 3, 4, and 5 report the average test classiﬁcation accuracies
+obtained by each learner on the problems of collection 1, collection 2,
+and collection 3, respectively. The row Frd is the p-value obtained
+from applying Friedman’s test and the row Rank provides the average
+rank of each learner.
+Note that for the three collections Friedman’s test rejected the
+null hypothesis. The three p-values {FrdDS1 ¼ 8:83  106 , FrdDS2 ¼
+4:80  107 , FrdDS3 ¼ 1:26  106 } are less than 0.05, the critical
+value, and it can be concluded that at least two of the learners are
+signiﬁcantly different from each other. As a consequence, Holm’s
+test was applied to ﬁnd out which methods are inferior with
+respect to the best method at a signiﬁcance level of 0.05. Table 6
+summarises the p-value of Holm’s test. Thus, for the ﬁrst collection
+of data sets, IBk presents signiﬁcantly better results than RF and
+SMO. For the second collection, RF presents signiﬁcantly better
+results than IBk and SMO. And, for the third collection, SMO
+presents signiﬁcantly better results than IBk and RF.
+Apparently each collection has its own best classiﬁer. However, no signiﬁcant differences can be found when all the data sets
+are considered in a single comparison. Friedman’s test does not
+reject the null hypothesis ðFrdDS1 þ DS2 þ DS3 ¼ 0:542Þ. The reliability
+of this assessment methodology is therefore challenged by an
+arbitrary selection of data sets. The experimental results evidence
+the principal limitation of the typical comparisons as well:
+conclusions reached over a collection of data sets are strictly
+valid only for this collection. Trying to extrapolate the conclusions
+to other domains may lead to incorrect claims.
+To sum up, the case study exempliﬁes two of the most
+common situations that can be found in comparative analyses.
+On the one hand, a comparison that considers just a single
+collection of data sets may result in conclusions too specialised
+to the chosen domains. Particular learning techniques may be
+overrated if the comparison is made over collections that contain
+data sets with certain characteristics which happen to be wellsuited to the given learner. On the other hand, a comparison that
+considers all the data sets from the three collections yields the
+conclusion that all techniques are equivalent on average, providing no valuable information to the practitioner. Actually, this
+conclusion is aligned with the interpretation of the No Free Lunch
+theorem6 [7], which formally demonstrates that no learner can
+systematically outperform any other if all possible classiﬁcation
+problems are contemplated.
+These observations not only exhibit how tricky multiple
+learner comparisons are, but also how relevant the study of data
+set characteristics is to the comparative analysis. Some studies
+have designed complexity estimates of data sets and have related
+them to the classiﬁers’ behaviours [6,17]. Complexity characterisation of the data sets could thus be used to identify the sweet
+spot in the problem complexity space where each learner actually
+excels. With this idea in mind, the next section introduces data
+complexity analysis.
+
+4. Data complexity in supervised learning
+This section brieﬂy describes the source of problem difﬁculty
+and introduces a set of complexity measures to estimate the
+geometry of the class boundary. It also gathers the different usage
+of complexity measures so far and sketches out our proposal.
+
+1:26  106
+2.53
+
+2.43
+
+1.05
+
+6
+The NFL theorem is not valid for classiﬁer systems such as boosting, bagging,
+and ensemble; just only for simple classiﬁers.
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+1059
+
+Table 6
+p-Values resulting of applying the post hoc Holm’s test for each data set collection. Holm’s procedure rejects those hypotheses that have a p-value r 0:05, which are
+marked in bold. Hypotheses sustain that classiﬁers behave differently in pairwise comparisons. If the hypothesis is rejected, there is no statistical evidence that classiﬁers
+are different.
+DS1
+IB7 vs SMO
+IB7 vs RF
+RF vs SMO
+
+DS2
+0.000010
+0.000107
+0.579991
+
+IB7 vs RF
+RF vs SMO
+IB7 vs SMO
+
+a=ðmi þ 1Þ
+
+DS3
+0
+0.000148
+0.154729
+
+Table 7
+Taxonomy of the complexity measures.
+Measures of overlap in feature values from different classes
+F1
+Maximum Fisher’s discriminant ratio
+F1v
+Directional-vector maximum Fisher’s discriminant ratio
+F2
+Overlap of the per-class bounding boxes
+F3
+Maximum (individual) feature efﬁciency
+F4
+Collective feature efﬁciency
+Measures of separability of classes
+L1
+Minimised sum of the error distance of a linear classiﬁer
+L2
+Training error of a linear classiﬁer
+N1
+Fraction of points on the class boundary
+N2
+Ratio of average intra/inter class nearest neighbour distance
+N3
+Leave-one-out error rate of the one-nearest neighbour classiﬁer
+Measures of geometry, topology, and density of manifolds
+L3
+Non-linearity of a linear classiﬁer
+N4
+Non-linearity of the one-nearest neighbour classiﬁer
+T1
+Fraction of maximum covering spheres
+T2
+Average number of points per dimension
+
+4.1. Sources of difﬁculty and complexity measures
+After recognising that the empirically observed behaviour of
+learners is strongly dependent on the particularities of the data,
+some authors have started studying different sources of problem
+difﬁculty. Among them, Ho and Basu [6] suggested three main
+sources for classiﬁcation problems: (1) the class ambiguity, (2) the
+boundary complexity, and (3) the sample sparsity and feature space
+dimensionality.
+Class ambiguity refers to the situation where two instances
+belonging to different classes cannot be distinguished by the given
+attributes. This ambiguity is often a consequence of (1) the
+problem formulation, i.e. concepts are intrinsically inseparable or
+not well deﬁned, or (2) a lack of discriminative attributes, i.e. the
+chosen attributes are not sufﬁcient to indicate such difference
+between classes. None of these causes can be solved at the
+classiﬁer level. Boundary complexity comes from the nature of the
+problem and the choice of the attributes, i.e. from the geometrical
+description of data. Sample sparsity and feature space dimensionality
+concern the representativeness of the training sample and to what
+extent it affects the learner’s generalisation mechanism.
+Among these sources, research has mainly focused on the
+characterisation of boundary complexity. For this purpose, a set of
+12 metrics was proposed in [6] and updated in [18]. Table 7 lists
+these measures, which are classiﬁed into three categories: (1) the
+overlap in feature values from different classes, (2) the separability of classes, and (3) the geometry, topology, and density of
+manifolds.
+From the set of complexity measures, we used only eight of
+them that are independent of speciﬁc classiﬁers—several complexity measures use the trained classiﬁer’s error to describe the
+difﬁculty of data; we discarded them to avoid underlying correlations with error estimates of learners that follow a similar
+concept with the complexity measure itself. In addition, all the
+measures involved in the study can be applied to both two-class
+problems and multi-class problems, as explained in Appendix A.
+
+IB7 vs SMO
+RF vs SMO
+IB7 vs RF
+
+0.000003
+0.000014
+0.751830
+
+0.016667
+0.025000
+0.050000
+
+4.2. Usage of complexity measures
+These complexity measures have been employed (1) to study
+the sources of problem difﬁculty that affect particular learners
+[8,17,19], (2) to study the effect of feature selection [20], (3) to
+compare different learners on collections of problems of bounded
+difﬁculty [9,21], (4) to guide data preprocessing techniques
+[20,22], and even (5) to guide the formulation of boundarydifﬁcult problems [23].
+In this work, we propose the inclusion of complexity measures
+in the design of the experimental framework in order to characterise which kind of data sets the learner is exposed to. This
+idea is further elaborated in the next section, which considers the
+problem complexity in the analysis of the results obtained in
+Section 3.
+
+5. Data complexity and learners’ behaviour
+Why do learners’ rankings vary depending on the test bed?
+Characteristics of data sets and their complexity may provide an
+answer to this question. In order to gain understanding of which
+problems are harder for the different learners, the case study in
+Section 3 is taken to the complexity space. To this end, we used
+the Data Complexity Library (DCoL)7 [18] to characterise each of
+the three data set collections and related these characteristics to
+the performance of the learners. In the following, we describe the
+experiments and provide some clues of how complexity dimensions explain learners’ behaviour and how the number of data
+sets affects statistical analyses.
+5.1. Classiﬁers’ domain of competence
+First, we tried to see whether it was possible to automatically infer
+patterns that related the performance of the three learners with the
+characteristics of the data sets. For this purpose, we built three data
+sets (referred to as meta-learning problems (MLPs)), where each
+instance represented one of the 60 data sets used in Section 3. Each
+instance of the MLP data set was characterised by eight attributes,
+each attribute being a complexity descriptor. That is, F1, F2, F3, F4,
+N1, N2, T1, and T2 (see Appendix A for the terminology). The metalearning problems are set up as two-class problems, where we
+evaluated when each classiﬁer outperformed the two others. Thus,
+MLP-1 focused on IB7 vs. the rest, MLP-2 focused on RF vs. the rest,
+and MLP-3 focused on SMO vs. the rest. Those cases where ties were
+found—i.e. several classiﬁers were equivalent—were removed. Then,
+we ran a classiﬁcation algorithm to verify whether the complexity
+descriptors could act as predictors of the classes and indicate when
+the studied classiﬁer was the best according to the inherent characteristics of the data sets.
+We ran the algorithm JRip from Weka, which is an implementation of the Repeated Incremental Pruning to Produce Error
+7
+
+Open source library available at http://dcol.sourceforge.net/.
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+1060
+
+Reduction (RIPPER) algorithm [24]. By creating conditions that
+maximise the information gain and cover the positive examples,
+this propositional rule learner is able to extract small and understandable (readable) sets of rules. The models obtained by the
+algorithm are plotted in Fig. 3. Their testing accuracies are about
+60–70%, which means that the algorithm correctly predicts the
+best classiﬁer given a data set characterised by the complexity
+descriptors in 60–70% of the cases. This tells us that there seems
+to be somewhat separable domains of competence of the
+algorithms, and that these domains can be identiﬁed by the
+characteristics of data described by the complexity measures.
+Looking at the rules extracted by JRip (see Fig. 3), we observe that
+
+Fig. 3. Rules obtained by applying JRip over the meta-learning problems.
+
+0
+
+40 80
+
+IBk outperforms the others when N2 r0:633. Since N2 measures
+the compactness of examples of the same class, IBk’s domain of
+competence is identiﬁed by problems whose classes are compact
+in the feature space, i.e. whose points are distributed in a way that
+they are closer to points of the same class rather than points of a
+different class. RF is the best performer when: (1) F2 is very low
+and N1 40:364 and (2) N2 r 0:683 and N2 Z 0:643. In the ﬁrst
+case, a low value of F2 represents that the classes are easily
+separable by the attribute values. The second case represents
+moderate values of N2, that is, problems where classes are more
+spread out than the problems where IBk was outperforming.
+Finally, SMO is the best classiﬁer when F2 Z 0:12 and N2 Z0:801,
+i.e. for complex problems where there is poor discriminative
+power of attributes and the classes are highly interleaved.
+Thus, the relations automatically found by JRip show that the
+domains of competence of the three learners can be separated by
+measures F2, N1, and N2, which estimate the discriminative power
+of attributes and the proximities between classes in the feature
+space. We plotted the performance of the three learners against the
+complexity measures for a visual analysis of the relations. Fig. 4
+gathers the scatter plots of all pairs of complexity measures. Each
+data set represents a point in the space, which is characterised by a
+given value of two complexity measures. The symbol used to
+represent this point is: (1) a circle if the data set belonged to the
+ﬁrst collection (that is, IB7 outperformed RF and SMO), (2) a triangle
+if the data set belonged to the second collection (RF outperformed
+IB7 and SMO), and (3) a cross if the data set belonged to the third
+collection (SMO outperformed IB7 and RF).
+
+0 2 4 6
+
+1.0
+
+0.0
+
+4000
+
+0
+
+100
+F1
+0
+80
+F2
+
+40
+0
+
+0.6
+F3
+0.0
+4
+F4
+0
+0.6
+N1
+0.0
+1.0
+N2
+0.0
+0.95
+T1
+0.85
+6000
+T2
+0
+0
+
+100 200
+
+0.0 0.4 0.8
+
+0.0
+
+0.4
+
+0.8
+
+Fig. 4. Scatter plot for all pairs of complexity measures.
+
+0.85
+
+0.95
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+We found that the most valuable information was supplied by
+the projection on N1 (see Fig. 5). In this complexity space, RF and
+SMO outperformed in problems with greater complexity on the
+class boundary.
+1. The data sets from the ﬁrst collection present the lowest N1
+and N2. This means that instances of different classes are
+lightly interleaved and instances of the same class are close in
+the feature space. Therefore, this type of problems should be
+easily classiﬁed by instance-based learners due to the proximity of the instances of the same class. The experiments made
+
+1.5
+
+Collection 1
+Collection 2
+Collection 3
+
+1.0
+
+1061
+
+in Section 3 conﬁrmed that IBk performs signiﬁcantly better
+than the other two learners on this collection.
+2. Some data sets from the second collection have moderate values
+of N1 and N2. So, there is a greater degree of interleaving among
+instances of different classes, and instances of the same class are
+more disperse. Thus, approaches that are able to approximate
+complex class boundaries and handle sparsity and noise may be
+a better option for this type of problems. This is the conclusion in
+the case study regarding the second collection, where RF
+achieved the most accurate classiﬁcation models.
+3. Some data sets from the third collection reach the highest values
+of N1 and N2. In most of these problems, more than half of the
+instances lay on the class boundary, drawing a narrow class
+boundary and increasing the difﬁculty of the problem. The
+experimental analysis demonstrates that SMO signiﬁcantly outranked the other two methods. For this type of problems, the
+high interleaving between instances of different classes seems to
+prevent decision trees with local splits of a ﬁxed shape from
+identifying the decision boundaries accurately. Yet, the ﬂexibility provided by the polynomial kernel used enables SMO to
+accurately approximate more complex class boundaries.
+
+N2
+
+The description of the class boundary appears as a valuable
+dimension of complexity that is intimately bound to the performance of learners as shown in the next section.
+0.5
+
+5.2. Boundary complexity as an estimate of classiﬁers’ performance
+
+0.0
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.0
+
+N1
+Fig. 5. Dominance of IB7, RF, and SMO projected on N1 and N2.
+
+We extended the study of the boundary complexity by
+projecting all the 153 data sets on N1 and running more
+learners—C4.5, Logistic, Multilayer Perceptron, Naive Bayes,
+PART, and Simple CART. These methods were run using the Weka
+package without tuning any of their hyper-parameters.
+We observe that the values of N1 are the most correlated with
+the learners’ performance (see Fig. 6). For all the learners, the more
+instances on the class boundary, the worse the accuracy is. In
+
+100
+
+Accuracy (%)
+
+80
+
+60
+
+C4.5
+IB7
+
+40
+
+Logistic
+Multilayer Perceptron
+Naive Bayes
+
+20
+
+PART
+Random Forest
+SMO
+Simple Cart
+
+0
+X0.002
+
+X0.05
+
+X0.079 X0.133 X0.193
+
+X0.32
+
+X0.438 X0.545 X0.644
+
+X1
+
+N1
+Fig. 6. Accuracies of C4.5, IB7, Logistic, Multilayer Perceptron, Naive Bayes, PART, Random Forest, SMO, and Simple Cart projected on N1. The coloured boxplot indicates
+the learner that outperforms the others. The circles correspond to outliers according to the R representation. (For interpretation of the references to colour in this ﬁgure
+legend, the reader is referred to the web version of this article.)
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+1062
+
+100
+
+Accuracy (%)
+
+80
+
+60
+
+C4.5
+IB7
+Logistic
+Multilayer Perceptron
+Naive Bayes
+PART
+Random Forest
+SMO
+Simple Cart
+
+40
+
+20
+
+0
+X0.002
+
+X0.05
+
+X0.079 X0.133 X0.193 X0.32
+N1
+
+X0.438 X0.545 X0.644
+
+X1
+
+Fig. 7. Accuracies of C4.5, IB7, Logistic, Multilayer Perceptron, Naive Bayes, PART, Random Forest, SMO, and Simple Cart projected on N1. The coloured boxplot indicates
+the learner that performs the worst with respect to the others. The circles correspond to outliers according to the R representation. (For interpretation of the references to
+colour in this ﬁgure legend, the reader is referred to the web version of this article.)
+
+addition, we can see that the increasing complexity of the boundary
+enlarges the differences between learners’ performance. This may
+indicate that test beds should be composed of problems whose
+value of N1 is greater than the threshold 0.3—which makes sense
+since any algorithm should perform well on simple boundaries. On
+the other hand, we can say that Logistic and Random Forest cover
+the region for medium values of N1. SMO and Simple CART seem
+suitable for complex problems. Fig. 7 plots the worst learners per
+data set, which provides interesting information about which
+learners should not be applied. For instance, Naive Bayes should
+be ruled out according our results, as well as Simple CART, except
+for problems with complex boundaries.
+Therefore, experimental frameworks should care about the
+analysis of data complexity that is able to differentiate the rival
+learners used in the comparisons. By limiting the assessment to
+speciﬁc complexities and learners, we still need to elucidate how
+many data sets we have to use in the experiments. As reported in
+Section 2, the number of data sets used in experimentation has
+tended to increase, since researchers aim to demonstrate the
+excellence of new techniques across a larger variety of domains.
+Nevertheless, the size of these collections has not been incremented by a substantial extent due to, as derived from the NFL
+theorem, the risk of not ﬁnding signiﬁcant conclusions if too
+many domains with different characteristics are considered. In
+any case, it is not clear how the conclusions change as new data
+sets are considered in multiple learner comparisons. The next
+section analyses how the collection size affects the conclusions
+through the prism of data complexity by examining the effect of
+progressively including problems of bounded difﬁculty into the
+collection of data sets.
+5.3. Use of large collections of data sets in experimental frameworks
+The analysis continues with an enlarged version of the collection used in Section 5.2, characterised by the complexity measures proposed by [6]. For problems that contained more than
+
+two classes, each discrimination of a class with respect to all the
+other classes was considered as an individual data set. Therefore,
+for an m-class problem ðm Z 2Þ, the data set was transformed into
+m two-class problems. This data preprocessing resulted in 266
+binary classiﬁcation problems. For each complexity measure, we
+sorted the data sets from the simplest to the most complex
+according to that particular dimension of complexity, and built
+266 collections of data sets, where the ﬁrst collection contains
+only the ﬁrst data set, the second collection contains the ﬁrst two
+data sets, and so forth, until the 266th collection contains all the
+data sets. Then, we evaluated the classiﬁcation accuracy of the
+three learners in each collection and applied Bonferroni–Dunn’s
+test—because it is easier to visualise—to identify which learners
+yield signiﬁcantly inferior results to those obtained with the best
+ranked learner.
+The results showed how the differences between learners
+progressively decrease as new data sets are introduced into the
+comparison, providing empirical evidence of the NFL theorem.
+When all the collections of data sets are considered, the rank of all
+the learners is approximately the same, which means that the
+accuracy of the three learners is equivalent. On the other hand,
+signiﬁcant differences are not found for small collections (0–20)
+of data sets. In these cases, the critical distance required by the
+statistical tests is large due to the low number of data sets, and
+the difference of ranks between learners is small; as a consequence, the statistical analysis cannot detect signiﬁcant differences. Thence, if signiﬁcant differences exist, they can be found in
+collections that contain, approximately, from 20 to 150 data sets.
+This analysis illustrates that, once a collection contains a
+certain number of data sets, the progressive inclusion of new
+domains with similar characteristics results in a systematic
+decrease of the rank differences between learners. Although our
+results may be limited to the current test bed, we emphasise the
+necessity for working in this direction, by enhancing these
+experiments with large number of data sets and with the use of
+data sets artiﬁcially designed. The next section presents how to
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+Table 8
+Taxonomy of meta-parameters grouped into two main categories: (1) extrinsic
+characteristics y18 and (2) intrinsic characteristics yM .
+Label Meta-parameters
+
+y1
+y2
+y3
+y4
+y5
+y6
+y7
+y8
+
+Number of instances
+Number of attributes
+Labelling noise
+Missing values
+Class imbalance
+Type of attributes
+Relevance of attributes
+Data distribution
+
+yM
+
+Complexity measures
+
+Additional information
+Also called examples or points
+Also called features, variables, or dimensions
+Erroneous labelling or outliers
+Unknown values
+Presence of a majority and minority class
+Continuous or nominal
+
+address the generation of artiﬁcial data sets so that it can serve as
+a new methodology in the design of experiments to test the
+performances of learners.
+
+6. Artiﬁcial data sets
+This paper has motivated the need for redeﬁning the purpose
+of learner comparison experiments. Rather than trying to demonstrate that a given learner outperforms others in all the problems,
+domains of competence of learners should be investigated. The
+characterisation of real-world data sets seems useful in seeking
+patterns that relate the performance of the learner to the complexity of the data set. However, publicly available real-world
+data sets are limited. And even though hundreds of data sets were
+available, they could hardly be well spread in the complexity
+space. For instance, Holte [25] reviewed the features of real-world
+data sets from the UCI repository and concluded that most of
+them contain very simple target concepts. We also observed that
+there are regions of the complexity space that are not represented
+by any data set (see Fig. 5). Thus, to conduct signiﬁcant knowledge extraction from pairs of characterised data sets and learners’
+performance, a large number of data sets is required. Due to the
+scarcity of available real-world problems, we should consider
+synthetic problems. The following subsections describe the design
+of such a collection of artiﬁcial data sets (ADS) and provide results
+that show the beneﬁts of their use.
+
+1063
+
+6.2. Multi-objective design
+As stated above, the generation of the data sets departs from the
+speciﬁcation of the values of the meta-parameters detailed in Table 8.
+Given N data sets, the generator should spread these data sets along
+the speciﬁed ranges. Each data set should satisfy a given value for
+each property. Tuning extrinsic characteristics is straightforward.
+However, creating a data set with a speciﬁc inherent geometry poses
+many difﬁculties. The key point of our approach is to rely on the
+complexity measures described in Section 4. In Section 5, we used a
+set of complexity descriptors to analyse the geometrical complexity
+of data and realised that certain patterns arose. Now, we use the
+measures as generators of speciﬁed complexities. There are several
+ways by which one could obtain a set of instances in a data set
+fulﬁlling given values of the aforementioned properties. After analysing some of them, we decided to impose an additional constraint,
+which was to build artiﬁcial data sets that could resemble structures
+from real-world problems or contain known learning concepts. This
+led us to consider different problems as representative seeds of our
+collection, from where we expanded a full range of data sets with
+different complexities. The chosen procedure was by sampling
+instances from the input problems until the given properties were
+satisﬁed. The data set generator problem was then formulated as:
+given a seed problem and a set of extrinsic and intrinsic properties, search
+through the space of instance samplings until the properties are satisﬁed.
+Because some of the intrinsic properties gave rise to conﬂicting
+objectives, the search was reﬁned to be a multi-objective search and
+formulated as follows: given a seed problem and a set of extrinsic
+properties, optimise simultaneously a set of intrinsic properties, by
+searching through the space of instance samplings. Multi-objective
+Evolutionary Algorithms (MOEAs) [26] have extensively been used
+in the literature to solve multi-objective problems. Thus, we relied on
+these algorithms and adapted a version of the well-known Nondominated Sorting Genetic Algorithm (NSGA-II) [27]. The particular
+design of the algorithm and the study of the evolutionary components are detailed in [23]. We used this algorithm to generate a
+collection of 80000 data sets. We ran the evolutionary synthetic
+generator over ﬁve seed problems: Checkerboard (a classical nonlinear problem with heavily interleaved classes following a checkerboard layout), Spiral (a problem with a non-linear class boundary
+following a spiral layout), Wave Boundary (a linearly separable
+problem deﬁned by a sinusoidal function), Yin Yang (a linearly
+problem with small disjuncts), and the Pima Indians Diabetes from
+
+6.1. Requirements for a collection of synthetic data sets
+The collection of data sets for the aforementioned investigation should satisfy the requirements of (1) being complete, i.e. the
+complexity spectrum has to be covered without signiﬁcant gaps,
+and (2) exhibiting enough resolution, i.e. providing sufﬁcient
+granularity to reveal differences among problems. To tackle these
+requirements we decomposed the properties of the data sets into
+two types: (1) extrinsic properties and (2) intrinsic properties.
+Extrinsic properties refer to the external characteristics that are
+measurable (such as the number of instances, number of attributes, and type of attributes), structural anomalies (such as
+labelling noise, missing values, and class imbalances), and the
+relevance of attributes. Note that all these characteristics are
+often used in the literature to confer a degree of difﬁculty to the
+data set, without considering the class boundaries. Intrinsic
+properties refer to the inherent complexity of the target concept;
+in particular, the geometry of class boundaries. Table 8 summarises the properties taken into account in the synthetic generator. The collection of data sets should contain a given number
+of data sets whose properties would range across the set of values
+speciﬁed by the user. The next section details how to design the
+synthetic generator to fulﬁl these requirements.
+
+Fig. 8. 80000 artiﬁcial data sets mapped onto the two principal complexity
+components.
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+100
+
+100
+
+90
+
+90
+
+90
+
+80
+70
+60
+50
+40
+
+Accuracy of SMO
+
+100
+Accuracy of RF
+
+Accuracy of IB7
+
+1064
+
+80
+70
+60
+
+0.2
+
+0.4
+N1
+
+0.6
+
+0.8
+
+70
+60
+50
+40
+
+50
+0.0
+
+80
+
+0.0
+
+0.2
+
+0.4
+N1
+
+0.6
+
+0.8
+
+0.0
+
+0.2
+
+0.4
+N1
+
+0.6
+
+0.8
+
+Fig. 9. Accuracy of learners computed over the generated ADS with respect to the complexity measure N1: (a) IB7, (b) RF, and (c) SMO.
+
+the UCI repository. The ﬁve seed data sets were evolved for different
+objective conﬁgurations, plus all the combinations of the optimisation of three complexity measures at each time. The selection of
+three complexity measures resulted in eight experiments which
+consisted in maximising or minimising each dimension of complexity. Each combination put together the two least correlated measures
+with respect to a third one. As a proof of concept, this experimentation was thus limited to the three chosen measures; future studies
+should extend it with more seeds and complexity measures.
+The next section presents some results that validate the
+proposed method.
+6.3. Complexity of generated artiﬁcial data sets
+The collection of 80000 data sets was mapped onto the
+measurement space deﬁned by the two principal components
+derived from a singular decomposition value analysis, as suggested in [21]. We observe that such collection provides a large
+coverage of the measurement space and better granularity than
+real-world problems (see Fig. 8). Fig. 8 also shows how the ADS
+spread from the original data sets. The synthetic generator seems
+promising since we were able to reach farther regions in the
+complexity space by using only ﬁve seed problems.
+Fig. 9(a), (b), and (c) plot the performance of IB7, RF, and SMO
+with respect to the complexity N1. The correlation between this
+complexity measure and the performance of the learners still
+exists. This indicates that the data synthesis does not affect the
+measurement scheme and the validity of the generative technique is hence established.
+Further work can be pursued to generate richer ADS by using a
+large and diverse set of seeds and raising the optimisation up to
+seven complexity measures at the same time. We believe that the
+generator gives a powerful tool both to create artiﬁcial benchmarks and to study the relation between data characteristics and
+the behaviour of learners in a systematic way.
+
+7. Summary, discussion, and future work
+Within the scope of this paper, we have shown that some
+traditional studies that advocate for the superiority of a given
+learner over a limited set of problems may be biased, and that
+further studies regarding the superiority of the learner on a given
+domain characterised by some complexity measures might be
+more accurate. We have taken an empirical approach to answer
+(1) why and (2) how data sets selection can alter the conclusions
+extracted from multiple learner comparisons.
+With the new insights provided by the inclusion of data
+complexity study in the analysis of results, we also have recognised aspects that need to be addressed in further work. In
+
+particular, we seek to design new measures and generate ADS
+to provide a more extensive coverage of the complexity space.
+Although the complexity measures provide informative descriptions of the problem difﬁculty, the experiments have shown that
+they are not sufﬁcient to fully discriminate between problems. In
+practice, noise and extreme outliers can also affect the computation of the complexity measures and require robust statistics that
+involve the use of quantiles, especially for measures F1 and F2.
+Changing the measures to more robust versions could be useful.
+However, the paper was devised with the use of the original
+complexity measures as proposed in [6]. A more detailed study on
+variations of the measures and addition of new ones could be
+provided as an extension of this work.
+Furthermore, a drawback experienced along this research has
+been the lack of resources in terms of storage and computational
+capacity. We ﬁnd an implicit combinatorial problem—number of
+complexity characteristics to evolve and the granularity of the
+scale of each characteristic—which increases the number of
+experiments exponentially. However, the performed experiments
+have pointed out the importance of different kinds of data sets
+and problem structures. In order to better understand the
+learners’ behaviour and to make guidelines for choosing the right
+learner for each case, we have to deal with three key points
+related to the construction of the testing framework: (1) complexity measures, (2) structural dimension, and (3) completeness.
+Complexity measures. It is important to analyse the contribution of each measure and how the problem distribution may be
+modiﬁed depending on the insertion of more complexity measures or the deletion of some. Moreover, it would be interesting to
+determine whether this space sufﬁces to provide some guidelines
+that link data characteristics to learner properties.
+Structural limits from seeding data. The coverage of the complexity space is based on the difﬁculty of the problems originated
+from the number of seed data sets each representing different
+class concepts. The nature of the seed distributions may inﬂuence
+the resulting testing framework. Further work should be planned
+to determine the effect of the seed data on the resulting coverage.
+Completeness. The two aforementioned aspects lead to the
+concern about whether and how the completeness of the space
+could be guaranteed. What is the minimum number of dimensions needed to fully represent the difﬁculty of a problem? Which
+of these dimensions are most suitable? What would be the
+proper seed data that have the furthest reach over the space?
+If we believe in the power of classiﬁcation using numerical
+features in real-world applications, we should also believe in the
+ability of a meta-classiﬁer in helping to choose among different
+classiﬁers. The missing piece is how to obtain a sufﬁciently discriminative set of numerical features that describe the real-world problems
+in ways relevant to the classiﬁer performances. This paper offers a
+few case studies and some steps in moving towards this goal.
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+Acknowledgements
+
+which is deﬁned as
+
+The authors would like to thank the Ministerio de Educación y
+Ciencia for its support under Project TIN2008-06681-C06-05,
+Fundació Cre dit Andorra , and Govern d’Andorra.
+
+F2 ¼
+
+Appendix A. Data complexity measures
+The complexity measures provide quantitative estimates of
+different notions of difﬁculty associated with the boundary
+complexity. The aim of these measures is to serve as a replacement for non-computable measures such as Kolmogorov complexity and characterise the problems without speciﬁc reference
+to a ﬁxed family of functions or learning mechanisms.
+This appendix describes the following measures: F1, F2, F3, F4,
+N1, N2, T1, and T2.
+Maximum Fishe’s discriminant ratio (F1). This measure
+computes the maximum discriminative power of each attribute,
+that is,
+m
+
+F1 ¼ max FDRj ,
+
+ðA:1Þ
+
+j¼1
+
+where m is the number of input attributes, and FDRj is Fisher’s
+discriminant ratio of each attribute. FDRj is calculated differently
+depending on whether the data set has two classes or more than
+two classes.
+1. For two-class data sets, the ratio for each attribute j is
+computed as
+FDRj ¼
+
+ðm1ðjÞ m2ðjÞ Þ2
+2
+ðs1ðjÞ Þ2 þ ðsðjÞ
+2 Þ
+
+,
+
+ðA:2Þ
+
+where, for continuous attributes, mkðjÞ and ðskðjÞ Þ2 are the mean
+and the variance of the attribute j for class k, respectively. For
+nominal attributes, each value is mapped onto an integer
+number. Then, mk is the median value of the attribute j for
+class k and ðsk Þ2 is the variance of the attribute j for class k
+computed as the variance of the binomial distribution, that is,
+qﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+ðA:3Þ
+sk ¼ þ pmk ð1pmk Þnnk ,
+where pmk is the frequency of the median value mk , and nk is the
+total number of instances of class k.
+2. For m-class data sets (m4 2), the ratio for each attribute j is
+computed as
+PC
+PC
+p p ðm ml Þ2
+FDRj ¼ k ¼ 1 PlC¼ k þ 1 k l 2 k
+,
+ðA:4Þ
+k ¼ 1 pk ðsk Þ
+where C is the maximum number of classes and pk is the
+proportion of instances of class k.
+High values of F1 indicate that at least one of the attributes
+enables the learner to separate the instances of different classes
+with partitions that are parallel to an axis of the feature space.
+Low values of this measure do not imply that the classes are not
+linearly separable, but that they cannot be discriminated by
+hyperplanes parallel to one of the axis of the feature space.
+The overlap of the per-class bounding boxes (F2). This measure
+computes the overlap of the tails of distributions deﬁned by the
+instances of each class.
+The deﬁnition of this measure for two-class data sets is the
+following. For each attribute, it computes the ratio of the width of
+the overlap interval (i.e. the interval that has instances of both
+classes) to the width of the entire interval. Then, the measure
+returns the product of the ratios calculated for each attribute,
+
+m
+Y
+MIN_MAXj MAX_MINj
+,
+MAX_MAXj MIN_MINj
+j¼1
+
+1065
+
+ðA:5Þ
+
+where m is the number of input attributes and,
+MIN_MAXj ¼ minðmaxðj,1Þ,maxðj,2ÞÞ,
+
+ðA:6Þ
+
+MAX_MINj ¼ maxðminðj,1Þ,minðj,2ÞÞ,
+
+ðA:7Þ
+
+MAX_MAXj ¼ maxðmaxðj,1Þ,maxðj,2ÞÞ, and
+
+ðA:8Þ
+
+MIN_MINj ¼ minðminðj,1Þ,minðj,2ÞÞ,
+
+ðA:9Þ
+
+where max(j,k) and min(j,k) are, respectively, the maximum and
+minimum values of the attribute j for class k. Nominal values are
+mapped to integer values to compute this measure.
+For m-class data sets ðm4 2Þ, we compute F2 for each pair of
+classes, get the absolute value of all them, and return the sum of
+all these values. Low values of this measure mean that the
+attributes can discriminate the instances of different classes.
+The maximum (individual) feature efﬁciency (F3). This measure
+computes the discriminative power of individual features and
+returns the value of the attribute that can discriminate the largest
+number of training instances.
+For each attribute, we consider the overlapping region (i.e. the
+region where there are instances of both classes) and return the
+ratio of the number of instances that are not in this overlapping
+region to the total number of instances. Then, the maximum
+discriminative ratio is taken as measure F3.
+Note that a problem is easy if there is one attribute for which
+the ranges of the values spanned by each class do not overlap (in
+this case, this would be a linearly separable problem). High values
+of this measure indicate that there is an attribute which is able to
+discriminate between instances of different classes.
+The collective feature efﬁciency (F4). This measure follows the
+same idea presented by F3, but now it considers the discriminative power of all the attributes.
+First, we select the most discriminative attribute, i.e. the
+attribute that can separate the majority of instances of one class.
+Then, all the instances that can be discriminated are removed from
+the data set, and the following most discriminative attribute (with
+regards to the remaining instances) is selected. This procedure is
+repeated until all the instances are discriminated or all the
+attributes in the feature space are analysed. Finally, the measure
+returns the proportion of instances that have been discriminated.
+Thus, it gives us an idea of the fraction of instances whose class
+could be correctly predicted by building separating hyperplanes
+that are parallel to one of the axes in the feature space.
+Like F3, high values of this measure indicate that there is an
+attribute which is able to discriminate between instances of
+different classes.
+The fraction of points on the class boundary (N1). This measure,
+inspired by the test proposed by [28], gives an estimate of the
+length of the class boundary.
+For this purpose, it builds a Minimum Spanning Tree over the
+entire data set by ﬁrst connecting all the points using the
+Euclidean distance. It returns the ratio of the number of nodes
+of the spanning tree that connect different classes to the total
+number of instances in the data set. If a node ni is connected to
+more than one node of a different class, ni is counted only once.
+High values of this measure indicate that the majority of the
+points are located near the class boundary, and so, that it may be
+more difﬁcult for the learner to model this class boundary
+accurately.
+
+1066
+
+N. Macia et al. / Pattern Recognition 46 (2013) 1054–1066
+
+The ratio of average intra/inter class nearest neighbour distance (N2). This measure compares the intra-class spread to the
+inter-class spread.
+For each input instance xi , we calculate the distance to its
+nearest neighbour within the class ðintraDistðxi ÞÞ and the distance
+to its nearest neighbour of any other class ðinterDistðxi ÞÞ. Then, the
+result is the ratio of the sum of the intra-class distances to the
+sum of the inter-class distances for each input instance, i.e.
+Pn
+intraDistðxi Þ
+,
+ðA:10Þ
+N2 ¼ Pin¼ 1
+i ¼ 1 interDistðxi Þ
+where n is the number of instances in the data set.
+Low values of this measure suggest that the instances of the
+same class lie closely in the feature space. High values indicate
+that the instances of the same class are disperse.
+The fraction of maximum covering spheres (T1). This measure
+originated in the work of [29], which described the shapes of class
+manifolds with the notion of an adherence subset. An adherence
+subset is a sphere centred on an instance of the data set which is
+grown as much as possible before touching any instance of
+another class. Therefore, an adherence subset contains a set of
+instances of the same class and cannot grow more without
+including instances of other classes. The measure considers only
+the biggest adherence subsets or spheres, removing all those that
+are included in others. Then, the measure returns the number of
+spheres normalised by the total number of points.
+Low values of this measure means that the instances are
+grouped in compact clusters.
+The average number of points per dimension (T2). This measure returns the ratio of the number of instances in the data set to
+the number of attributes. It is a rough indicator of sparseness of
+the data set.
+
+References
+[1] X. Wu, V. Kumar, J.R. Quinlan, J. Ghosh, Q. Yang, H. Motoda, G.J. McLachlan,
+A. Ng, B. Liu, P.S. Yu, Z.-H. Zhou, M. Steinbach, D.J. Hand, D. Steinberg, Top 10
+algorithms in data mining, Knowledge and Information Systems 14 (1) (2007)
+1–37.
+[2] R. Kohavi, A study of cross-validation and bootstrap for accuracy estimation
+and model selection, in: International Joint Conferences on Artiﬁcial Intelligence, vol. 14, 1995, pp. 1137–1145.
+[3] T.G. Dietterich, Approximate statistical tests for comparing supervised
+classiﬁcation learning algorithms, Neural Computation 10 (7) (1998)
+1895–1924.
+[4] J. Demšar, Statistical comparisons of classiﬁers over multiple data sets,
+Journal of Machine Learning Research 7 (2006) 1–30.
+[5] S. Garcı́a, F. Herrera, An extension on ‘‘statistical comparisons of classiﬁers
+over multiple data sets’’ for all pairwise comparisons, Journal of Machine
+Learning Research 9 (2008) 2677–2694.
+
+[6] T.K. Ho, M. Basu, Complexity measures of supervised classiﬁcation problems,
+IEEE Transactions on Pattern Analysis and Machine Intelligence 24 (3) (2002)
+289–300.
+[7] D.H. Wolpert, The lack of a priori distinctions between learning algorithms,
+Neural Computation 8 (7) (1996) 1341–1390.
+[8] J. Luengo, F. Herrera, Domains of competence of fuzzy rule based classiﬁcation systems with data complexity measures: a case of study using a fuzzy
+hybrid genetic based machine learning method, Fuzzy Sets and Systems 161
+(1) (2010) 3–19.
+[9] A. Orriols-Puig, J. Casillas, Fuzzy knowledge representation study for incremental learning in data streams and classiﬁcation problems, Soft Computing
+15 (12) (2010) 2389-2414. http://dx.doi.org/10.1007/s00500-010-0668-x.
+[10] D.W. Aha, D. Kibler, M.K. Albert, Instance-based learning algorithms, Machine
+Learning 6 (1) (1991) 37–66.
+[11] L. Breiman, Random forests, Machine Learning 45 (1) (2001) 5–32.
+[12] J.C. Platt, Fast training of support vector machines using sequential minimal
+optimization, Advances in Kernel Methods: Support Vector Learning MIT
+Press, 1999, pp. 185–208.
+[13] V.N. Vapnik, The Nature of Statistical Learning Theory, Springer Verlag, 1995.
+[14] I.H. Witten, E. Frank, Data Mining: Practical Machine Learning Tools and
+Techniques, second ed., Morgan Kaufmann, San Francisco, 2005.
+[15] M. Friedman, A comparison of alternative tests of signiﬁcance for the
+problem of m rankings, Annals of Mathematical Statistics 11 (1940) 86–92.
+[16] S. Holm, A simple sequentially rejective multiple test procedure, Scandinavian Journal of Statistics 6 (1979) 65–70.
+[17] E. Bernadó-Mansilla, T.K. Ho, Domain of competence of XCS classiﬁer system
+in complexity measurement space, IEEE Transactions on Evolutionary Computation 9 (1) (2005) 82–104.
+[18] A. Orriols-Puig, N. Macia , T.K. Ho, Documentation for the data complexity
+library in Cþþ, Technical Report, La Salle – Universitat Ramon Llull, 2010.
+[19] J.S. Sánchez, R.A. Mollineda, J.M. Sotoca, An analysis of how training data
+complexity affects the nearest neighbor classiﬁers, Pattern Analysis and
+Applications 10 (2007) 189–201.
+[20] S. Garcı́a, J.R. Cano, E. Bernadó-Mansilla, F. Herrera, Diagnose of effective
+evolutionary prototype selection using an overlapping measure, International
+Journal of Pattern Recognition and Artiﬁcial Intelligence 23 (8) (2009)
+1527–1548.
+[21] N. Macia , T.K. Ho, A. Orriols-Puig, E. Bernadó-Mansilla, The landscape contest
+at ICPR’10, ICPR 2010, Lecture Note in Computer Science, vol. 6388, Springer,
+2010, pp. 29–45.
+[22] J. Luengo, A. Fernández, S. Garcı́a, F. Herrera, Addressing data complexity for
+imbalanced data sets: Analysis of SMOTE-based oversampling and evolutionary undersampling, Soft Computing.Soft Computing 15 (10) (2011) 19091936. http://dx.doi.org/10.1007/s00500-010-0625-8.
+[23] N. Macia , A. Orriols-Puig, E. Bernadó-Mansilla, In search of targetedcomplexity problems, in: Proceedings of the 11th Annual Conference on
+Genetic and Evolutionary Computation, ACM, 2010, pp. 1055–1062.
+[24] W.W. Cohen, Fast effective rule induction, in: International Conference on
+Machine Learning, 1995, pp. 115–123.
+[25] R.C. Holte, Very simple classiﬁcation rules perform well on most commonly
+used datasets, Machine Learning 11 (1993) 63–90.
+[26] C.A. Coello, G.B. Lamont, D.A.V. Veldhuizen, Evolutionary Algorithms for
+Solving Multi-objective Problems (Genetic and Evolutionary Computation),
+Springer-Verlag New York, Inc., Secaucus, NJ, USA, 2006.
+[27] K.D. Deb, A. Pratap, S. Agarwal, T. Meyarivan, A fast and elitist multiobjective
+genetic algorithm: NSGA-II, IEEE Transactions on Evolutionary Computation
+6 (2) (2002) 182–197.
+[28] J.H. Friedman, L.C. Rafsky, Multivariate generalizations of the Wald–
+Wolfowitz and Smirnov two-sample tests, Annals of Statistics 7 (7) (1979)
+697–717.
+[29] F. Lebourgeois, H. Emptoz, Pretopological approach for supervised learning,
+Proceedings of the 13th International Conference on Pattern Recognition, vol. 4,
+IEEE Computer Society, Washington DC, USA, 1996, pp. 256–260.
+
+Núria Macia received the Ph.D. in Computer Engineering in 2011 from La Salle – Universitat Ramon Llull (Spain). Her research has concentrated on data complexity in
+supervised learning and generation of synthetic data sets.
+
+Ester Bernadó-Mansilla received a M.Sc. degree in Electronic Engineering in 1995 and a Ph.D. degree in Computer Science in 2002 from La Salle – Universitat Ramon Llull
+(Spain), where she is currently an associate professor. Her research interests focus on genetic algorithms, machine learning, and pattern recognition.
+
+Albert Orriols-Puig received a Ph.D. in Computer Engineering in 2008 from La Salle – Universitat Ramon Llull (Spain). His research interests include evolutionary learning,
+fuzzy modelling, and data complexity. He is currently a software engineer at Google.
+
+Tin Kam Ho received a Ph.D. in Computer Science from State University of New York at Buffalo in 1992. She pioneered research in decision combination in multiple
+classiﬁer systems, random decision forests, data complexity analysis. She is currently leading the Statistics and Learning Research Department of Bell Labs at Murray
+Hill, NJ.
+
+

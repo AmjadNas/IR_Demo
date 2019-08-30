@@ -1,0 +1,1170 @@
+Policy Optimization via Importance Sampling
+
+Alberto Maria Metelli
+Politecnico di Milano, Milan, Italy
+
+albertomaria.metelli@polimi.it
+
+Francesco Faccio
+Politecnico di Milano, Milan, Italy
+IDSIA, USI-SUPSI, Lugano, Switzerland
+francesco.faccio@mail.polimi.it
+
+Matteo Papini
+Politecnico di Milano, Milan, Italy
+matteo.papini@polimi.it
+
+Marcello Restelli
+Politecnico di Milano, Milan, Italy
+marcello.restelli@polimi.it
+
+Abstract
+Policy optimization is an effective reinforcement learning approach to solve continuous control tasks. Recent achievements have shown that alternating online and
+offline optimization is a successful choice for efficient trajectory reuse. However,
+deciding when to stop optimizing and collect new trajectories is non-trivial, as it
+requires to account for the variance of the objective function estimate. In this paper,
+we propose a novel, model-free, policy search algorithm, POIS, applicable in both
+action-based and parameter-based settings. We first derive a high-confidence bound
+for importance sampling estimation; then we define a surrogate objective function,
+which is optimized offline whenever a new batch of trajectories is collected. Finally,
+the algorithm is tested on a selection of continuous control tasks, with both linear
+and deep policies, and compared with state-of-the-art policy optimization methods.
+
+1
+
+Introduction
+
+In recent years, policy search methods [10] have proved to be valuable Reinforcement Learning
+(RL) [50] approaches thanks to their successful achievements in continuous control tasks [e.g.,
+23, 42, 44, 43], robotic locomotion [e.g., 53, 20] and partially observable environments [e.g., 28].
+These algorithms can be roughly classified into two categories: action-based methods [51, 34] and
+parameter-based methods [45]. The former, usually known as policy gradient (PG) methods, perform
+a search in a parametric policy space by following the gradient of the utility function estimated
+by means of a batch of trajectories collected from the environment [50]. In contrast, in parameterbased methods, the search is carried out directly in the space of parameters by exploiting global
+optimizers [e.g., 41, 16, 48, 52] or following a proper gradient direction like in Policy Gradients with
+Parameter-based Exploration (PGPE) [45, 63, 46]. A major question in policy search methods is:
+how should we use a batch of trajectories in order to exploit its information in the most efficient
+way? On one hand, on-policy methods leverage on the batch to perform a single gradient step, after
+which new trajectories are collected with the updated policy. Online PG methods are likely the most
+widespread policy search approaches: starting from the traditional algorithms based on stochastic
+policy gradient [51], like REINFORCE [64] and G(PO)MDP [4], moving toward more modern
+methods, such as Trust Region Policy Optimization (TRPO) [42]. These methods, however, rarely
+exploit the available trajectories in an efficient way, since each batch is thrown away after just one
+gradient update. On the other hand, off-policy methods maintain a behavioral policy, used to explore
+the environment and to collect samples, and a target policy which is optimized. The concept of offpolicy learning is rooted in value-based RL [62, 30, 27] and it was first adapted to PG in [9], using an
+actor-critic architecture. The approach has been extended to Deterministic Policy Gradient (DPG) [47],
+which allows optimizing deterministic policies while keeping a stochastic policy for exploration.
+32nd Conference on Neural Information Processing Systems (NeurIPS 2018), Montréal, Canada.
+
+More recently, an efficient version of DPG coupled with a deep neural network to represent the policy
+has been proposed, named Deep Deterministic Policy Gradient (DDPG) [23]. In the parameter-based
+framework, even though the original formulation [45] introduces an online algorithm, an extension has
+been proposed to efficiently reuse the trajectories in an offline scenario [67]. Furthermore, PGPE-like
+approaches allow overcoming several limitations of classical PG, like the need for a stochastic policy
+and the high variance of the gradient estimates.1
+While on-policy algorithms are, by nature, online, as they need to be fed with fresh samples whenever
+the policy is updated, off-policy methods can take advantage of mixing online and offline optimization.
+This can be done by alternately sampling trajectories and performing optimization epochs with the
+collected data. A prime example of this alternating procedure is Proximal Policy Optimization
+(PPO) [44], that has displayed remarkable performance on continuous control tasks. Off-line optimization, however, introduces further sources of approximation, as the gradient w.r.t. the target
+policy needs to be estimated (off-policy) with samples collected with a behavioral policy. A common
+choice is to adopt an importance sampling (IS) [29, 17] estimator in which each sample is reweighted
+proportionally to the likelihood of being generated by the target policy. However, directly optimizing
+this utility function is impractical since it displays a wide variance most of the times [29]. Intuitively,
+the variance increases proportionally to the distance between the behavioral and the target policy;
+thus, the estimate is reliable as long as the two policies are close enough. Preventing uncontrolled
+updates in the space of policy parameters is at the core of the natural gradient approaches [1] applied
+effectively both on PG methods [18, 33, 63] and on PGPE methods [26]. More recently, this idea
+has been captured (albeit indirectly) by TRPO, which optimizes via (approximate) natural gradient a
+surrogate objective function, derived from safe RL [18, 35], subject to a constraint on the KullbackLeibler divergence between the behavioral and target policy.2 Similarly, PPO performs a truncation
+of the importance weights to discourage the optimization process from going too far. Although TRPO
+and PPO, together with DDPG, represent the state-of-the-art policy optimization methods in RL for
+continuous control, they do not explicitly encode in their objective function the uncertainty injected
+by the importance sampling procedure. A more theoretically grounded analysis has been provided for
+policy selection [11], model-free [56] and model-based [54] policy evaluation (also accounting for
+samples collected with multiple behavioral policies), and combined with options [15]. Subsequently,
+in [55] these methods have been extended for policy improvement, deriving a suitable concentration
+inequality for the case of truncated importance weights. Unfortunately, these methods are hardly
+scalable to complex control tasks. A more detailed review of the state-of-the-art policy optimization
+algorithms is reported in Appendix A.
+In this paper, we propose a novel, model-free, actor-only, policy optimization algorithm, named
+Policy Optimization via Importance Sampling (POIS) that mixes online and offline optimization to
+efficiently exploit the information contained in the collected trajectories. POIS explicitly accounts for
+the uncertainty introduced by the importance sampling by optimizing a surrogate objective function.
+The latter captures the trade-off between the estimated performance improvement and the variance
+injected by the importance sampling. The main contributions of this paper are theoretical, algorithmic
+and experimental. After revising some notions about importance sampling (Section 3), we propose a
+concentration inequality, of independent interest, for high-confidence “off-distribution” optimization
+of objective functions estimated via importance sampling (Section 4). Then we show how this bound
+can be customized into a surrogate objective function in order to either search in the space of policies
+(Action-based POIS) or to search in the space of parameters (Parameter-bases POIS). The resulting
+algorithm (in both the action-based and the parameter-based flavor) collects, at each iteration, a set of
+trajectories. These are used to perform offline optimization of the surrogate objective via gradient
+ascent (Section 5), after which a new batch of trajectories is collected using the optimized policy.
+Finally, we provide an experimental evaluation with both linear policies and deep neural policies
+to illustrate the advantages and limitations of our approach compared to state-of-the-art algorithms
+(Section 6) on classical control tasks [12, 57]. The proofs for all Theorems and Lemmas can be found
+in Appendix B. The implementation of POIS can be found at https://github.com/T3p/pois.
+
+1
+Other solutions to these problems have been proposed in the action-based literature, like the aforementioned
+DPG algorithm, the gradient baselines [34] and the actor-critic architectures [21].
+2
+Note that this regularization term appears in the performance improvement bound, which contains exact
+quantities only. Thus, it does not really account for the uncertainty derived from the importance sampling.
+
+2
+
+2
+
+Preliminaries
+
+A discrete-time Markov Decision Process (MDP) [37] is defined as a tuple M = (S, A, P, R, γ, D)
+where S is the state space, A is the action space, P (·|s, a) is a Markovian transition model that
+assigns for each state-action pair (s, a) the probability of reaching the next state s0 , γ ∈ [0, 1] is
+the discount factor, R(s, a) ∈ [−Rmax , Rmax ] assigns the expected reward for performing action
+a in state s and D is the distribution of the initial state. The behavior of an agent is described by
+a policy π(·|s) that assigns for each state s the probability of performing action a. A trajectory
+τ ∈ T is a sequence of state-action pairs τ = (sτ,0 , aτ,0 , . . . , sτ,H−1 , aτ,H−1 , sτ,H ), where H is the
+actual trajectory horizon. The performance of an agent is evaluated in terms of the expected return,
+i.e., the expected discounted sum of the rewards collected along the trajectory: Eτ [R(τ )], where
+PH−1
+R(τ ) = t=0 γ t R(sτ,t , aτ,t ) is the trajectory return.
+We focus our attention to the case in which the policy belongs to a parametric policy space ΠΘ =
+{πθ : θ ∈ Θ ⊆ Rp }. In parameter-based approaches, the agent is equipped with a hyperpolicy ν
+used to sample the policy parameters at the beginning of each episode. The hyperpolicy belongs itself
+to a parametric hyperpolicy space NP = {νρ : ρ ∈ P ⊆ Rr }. The expected return can be expressed,
+in the parameter-based case, as a double expectation: one over the policy parameter space Θ and one
+over the trajectory space T :
+Z Z
+JD (ρ) =
+νρ (θ)p(τ |θ)R(τ ) dτ dθ,
+(1)
+Θ
+
+T
+
+QH−1
+where p(τ |θ) = D(s0 ) t=0 πθ (at |st )P (st+1 |st , at ) is the trajectory density function. The goal
+of a parameter-based learning agent is to determine the hyperparameters ρ∗ so as to maximize
+JD (ρ). If νρ is stochastic and differentiable, the hyperparameters can be learned according to
+0
+the
+R Rgradient ascent update: ρ = ρ + α∇ρ JD (ρ), where α > 0 is the step size and ∇ρ JD (ρ) =
+ν
+(θ)p(τ
+|θ)∇
+log
+ν
+(θ)R(τ
+) dτ dθ. Since the stochasticity of the hyperpolicy is a sufficient
+ρ
+ρ
+Θ T ρ
+source of exploration, deterministic action policies of the kind πθ (a|s) = δ(a − uθ (s)) are typically
+considered, where δ is the Dirac delta function and uθ is a deterministic mapping from S to A. In
+the action-based case, on the contrary, the hyperpolicy νρ is a deterministic distribution νρ (θ) =
+δ(θ − g(ρ)), where g(ρ) is a deterministic mapping from P to Θ. For this reason, the dependence on
+ρ is typically not represented and the expected return expression simplifies into a single expectation
+over the trajectory space T :
+Z
+JD (θ) =
+p(τ |θ)R(τ ) dτ.
+(2)
+T
+
+An action-based learning agent aims to find the policy parameters θ ∗ that maximize JD (θ). In
+this case, we need to enforce exploration by means of the stochasticity of πθ . For stochastic and
+differentiableRpolicies, learning can be performed via gradient ascent: θ 0 = θ + α∇θ JD (θ), where
+∇θ JD (θ) = T p(τ |θ)∇θ log p(τ |θ)R(τ ) dτ .
+
+3
+
+Evaluation via Importance Sampling
+
+In off-policy evaluation [56, 54], we aim to estimate the performance of a target policy πT (or
+hyperpolicy νT ) given samples collected with a behavioral policy πB (or hyperpolicy νB ). More
+generally, we face the problem of estimating the expected value of a deterministic bounded function
+f (kf k∞ < +∞) of random variable x taking values in X under a target distribution P , after having
+collected samples from a behavioral distribution Q. The importance sampling estimator (IS) [7, 29]
+corrects the distribution with the importance weights (or Radon–Nikodym derivative or likelihood
+ratio) wP/Q (x) = p(x)/q(x):
+µ
+bP/Q
+
+N
+N
+1 X p(xi )
+1 X
+=
+f (xi ) =
+wP/Q (xi )f (xi ),
+N i=1 q(xi )
+N i=1
+
+(3)
+
+where x = (x1 , x2 , . . . , xN )T is sampled from Q and we assume q(x) > 0 whenever f (x)p(x) 6= 0.
+This estimator is unbiased (Ex∼Q [b
+µP/Q ] = Ex∼P [f (x)]) but it may exhibit an undesirable behavior
+due to the variability of the importance weights, showing, in some cases, infinite variance. Intuitively,
+the magnitude of the importance weights provides an indication of how much the probability measures
+P and Q are dissimilar. This notion can be formalized by the Rényi divergence [40, 59], an
+information-theoretic dissimilarity index between probability measures.
+3
+
+Rényi divergence Let P and Q be two probability measures on a measurable space (X , F) such
+that P  Q (P is absolutely continuous w.r.t. Q) and Q is σ-finite. Let P and Q admit p and q as
+Lebesgue probability density functions (p.d.f.), respectively. The α-Rényi divergence is defined as:
+α
+α
+
+Z 
+Z
+1
+1
+dP
+p(x)
+Dα (P kQ) =
+dQ =
+dx,
+(4)
+log
+log
+q(x)
+α−1
+dQ
+α−1
+q(x)
+X
+X
+where dP/ dQ is the Radon–Nikodym derivative of P w.r.t. Q and α ∈ [0, ∞]. Some remarkable cases are: α = 1 when D1 (P kQ) = DKL (P kQ) and α = ∞ yielding D∞ (P kQ) =
+log ess supX dP/ dQ. Importing the notation from [8], we indicate the exponentiated α-Rényi
+divergence as dα (P kQ) = exp (Dα (P kQ)). With little abuse of notation, we will replace Dα (P kQ)
+with Dα (pkq) whenever possible within the context.
+The Rényi divergence
+provides
+a convenient expression for the moments
+
+
+ of the importance
+weights: Ex∼Q wP/Q (x)α = dα (P kQ). Moreover, Varx∼Q wP/Q (x) = d2 (P kQ) − 1 and
+ess supx∼Q wP/Q (x) = d∞ (P kQ) [8]. To mitigate the variance problem of the IS estimator, we can
+resort to the self-normalized importance sampling estimator (SN) [7]:
+PN
+N
+wP/Q (xi )f (xi ) X
+=
+µ
+eP/Q = i=1
+w
+eP/Q (xi )f (xi ),
+(5)
+PN
+i=1 wP/Q (xi )
+i=1
+PN
+where w
+eP/Q (x) = wP/Q (x)/ i=1 wP/Q (xi ) is the self-normalized importance weight. Differently
+from µ
+bP/Q , µ
+eP/Q is biased but consistent [29] and it typically displays a more desirable behavior
+because of its smaller variance.3 Given the realization x1 , x2 , . . . , xN we can interpret the SN
+estimator as the expected value of f under an approximation of the distribution P made by N deltas,
+PN
+i.e., pe(x) = i=1 w
+eP/Q (x)δ(x − xi ). The problem of assessing the quality of the SN estimator
+has been extensively studied by the simulation community, producing several diagnostic indexes to
+indicate when the weights might display problematic behavior [29]. The effective sample size (ESS)
+was introduced in [22] as the number of samples drawn from P so that the variance of the Monte
+Carlo estimator µ
+eP/P is approximately equal to the variance of the SN estimator µ
+eP/Q computed
+with N samples. Here we report the original definition and its most common estimate:
+ESS(P kQ) =
+
+N
+N
+
+
+=
+,
+d
+(P
+kQ)
+Varx∼Q wP/Q (x) + 1
+2
+
+d kQ) = P
+ESS(P
+N
+
+i=1
+
+1
+w
+eP/Q (xi )2
+
+.
+
+(6)
+
+The ESS has an interesting interpretation: if d2 (P kQ) = 1, i.e., P = Q almost everywhere, then
+ESS = N since we are performing Monte Carlo estimation. Otherwise, the ESS decreases as the
+dissimilarity between the two distributions increases. In the literature, other ESS-like diagnostics
+have been proposed that also account for the nature of f [24].
+
+4
+
+Optimization via Importance Sampling
+
+The off-policy optimization problem [55] can be formulated as finding the best target policy πT (or
+hyperpolicy νT ), i.e., the one maximizing the expected return, having access to a set of samples
+collected with a behavioral policy πB (or hyperpolicy νB ). In a more abstract sense, we aim to
+determine the target distribution P that maximizes Ex∼P [f (x)] having samples collected from the
+fixed behavioral distribution Q. In this section, we analyze the problem of defining a proper objective
+function for this purpose. Directly optimizing the estimator µ
+bP/Q or µ
+eP/Q is, in most of the cases,
+unsuccessful. With enough freedom in choosing P , the optimal solution would assign as much
+probability mass as possible to the maximum value among f (xi ). Clearly, in this scenario, the
+estimator is unreliable and displays a large variance. For this reason, we adopt a risk-averse approach
+and we decide to optimize a statistical lower bound of the expected value Ex∼P [f (x)] that holds with
+high confidence. We start by analyzing the behavior of the IS estimator and we provide the following
+result that bounds the variance of µ
+bP/Q in terms of the Renyi divergence.
+Lemma 4.1. Let P and Q be two probability measures on the measurable space (X , F) such that
+P  Q. Let x = (x1 , x2 , . . . , xN )T i.i.d. random variables sampled from Q and f : X → R be a
+3
+
+
+
+Note that µ
+eP/Q  ≤ kf k∞ . Therefore, its variance is always finite.
+
+4
+
+bounded function (kf k∞ < +∞). Then, for any N > 0, the variance of the IS estimator µ
+bP/Q can
+be upper bounded as:
+
+
+1
+(7)
+Var µ
+bP/Q ≤ kf k2∞ d2 (P kQ) .
+x∼Q
+N
+
+
+When P = Q almost everywhere, we get Varx∼Q µ
+bQ/Q ≤ N1 kf k2∞ , a well-known bound on the
+variance of a Monte Carlo estimator. Recalling the definition of ESS (6) we can rewrite the previous
+
+
+kf k2
+bound as: Varx∼Q µ
+bP/Q ≤ ESS(P∞kQ) , i.e., the variance scales with ESS instead of N . While
+µ
+bP/Q can have unbounded variance even if f is bounded, the SN estimator µ
+eP/Q is always bounded
+by kf k∞ and therefore it always has a finite variance. Since the normalization term makes all the
+samples w
+eP/Q (xi )f (xi ) interdependent, an exact analysis of its bias and variance is more challenging.
+Several works adopted approximate methods to provide an expression for the variance [17]. We
+propose an analysis of bias and variance of the SN estimator in Appendix D.
+4.1
+
+Concentration Inequality
+
+Finding a suitable concentration inequality for off-policy learning was studied in [56] for offline policy
+evaluation and subsequently in [55] for optimization. On one hand, fully empirical concentration
+inequalities, like Student-T, besides the asymptotic approximation, are not suitable in this case since
+the empirical variance needs to be estimated with importance sampling as well injecting further
+uncertainty [29]. On the other hand, several distribution-free inequalities like Hoeffding require
+knowing the maximum of the estimator, which might not exist (d∞ (P kQ) = ∞) for the IS estimator.
+Constraining d∞ (P kQ) to be finite often introduces unacceptable limitations. For instance, in the
+case of univariate Gaussian distributions, it prevents a step that selects a target variance larger than the
+behavioral one from being performed (see Appendix C).4 Even Bernstein inequalities [5], are hardly
+applicable since, for instance, in the case of univariate Gaussian distributions, the importance weights
+display a fat tail behavior (see Appendix C). We believe that a reasonable trade-off is to require the
+variance of the importance weights to be finite, that is equivalent to require d2 (P kQ) < ∞, i.e.,
+σP < 2σQ for univariate Gaussians. For this reason, we resort to Chebyshev-like inequalities and we
+propose the following concentration bound derived from Cantelli’s inequality and customized for the
+IS estimator.
+Theorem 4.1. Let P and Q be two probability measures on the measurable space (X , F) such that
+P  Q and d2 (P kQ) < +∞. Let x1 , x2 , . . . , xN be i.i.d. random variables sampled from Q, and
+f : X → R be a bounded function (kf k∞ < +∞). Then, for any 0 < δ ≤ 1 and N > 0 with
+probability at least 1 − δ it holds that:
+r
+N
+1 X
+(1 − δ)d2 (P kQ)
+wP/Q (xi )f (xi ) − kf k∞
+E [f (x)] ≥
+.
+(8)
+x∼P
+N i=1
+δN
+The bound highlights the interesting trade-off between the estimated performance and the uncertainty
+introduced by changing the distribution. The latter enters in the bound as the 2-Rényi divergence
+between the target distribution P and the behavioral distribution Q. Intuitively, we should trust
+the estimator µ
+bP/Q as long as P is not too far from Q. For the SN estimator, accounting for the
+bias, we are able to obtain a bound (reported in Appendix D), with a similar dependence on P as
+in Theorem 4.1, albeit with
+pdifferent constants. Renaming all constants involved in the bound of
+Theorem 4.1 as λ = kf k∞ (1 − δ)/δ, we get a surrogate objective function. The optimization can
+be carried out in different ways. The following section shows why using the natural gradient could be
+a successful choice in case P and Q can be expressed as parametric differentiable distributions.
+4.2
+
+Importance Sampling and Natural Gradient
+
+We can look at a parametric distribution Pω , having pω as a density function, as a point on a probability
+manifold with coordinates
+R ω ∈ Ω. If pω is differentiable, the Fisher Information Matrix (FIM) [39, 2]
+is defined as: F(ω) = X pω (x)∇ω log pω (x)∇ω log pω (x)T dx. This matrix is, up to a scale, an
+4
+Although the variance tends to be reduced in the learning process, there might be cases in which it needs to
+be increased (e.g., suppose we start with a behavioral policy with small variance, it might be beneficial increasing
+the variance to enforce exploration).
+
+5
+
+Algorithm 1 Action-based POIS
+
+Algorithm 2 Parameter-based POIS
+
+θ 00
+
+Initialize ρ00 arbitrarily
+for j = 0, 1, 2, ..., until convergence do
+Sample N policy parameters θ ji from νρj
+0
+Collect a trajectory with each πθj
+i
+for k = 0, 1, 2, ..., until convergence do
+Compute G(ρjk ), ∇ρj L(ρjk /ρj0 ) and αk
+
+Initialize
+arbitrarily
+for j = 0, 1, 2, ..., until convergence do
+Collect N trajectories with πθj
+0
+for k = 0, 1, 2, ..., until convergence do
+Compute G(θ jk ), ∇θj L(θ jk /θ j0 ) and αk
+k
+
+θ jk+1 = θ jk + αk G(θ jk )−1 ∇θj L(θ jk /θ j0 )
+k
+end for
+j+1
+j
+θ0 = θk
+end for
+
+k
+
+ρjk+1 = ρjk + αk G(ρjk )−1 ∇ρj L(ρjk /ρj0 )
+k
+end for
+j+1
+j
+ρ0 = ρk
+end for
+
+invariant metric [1] on parameter space Ω, i.e., κ(ω 0 − ω)T F(ω)(ω 0 − ω) is independent on the
+specific parameterization and provides a second order approximation of the distance between pω and
+pω0 on the probability manifold up to a scale factor κ ∈ R. Given a loss function L(ω), we define
+e ω L(ω) = F −1 (ω)∇ω L(ω), which represents the steepest ascent
+the natural gradient [1, 19] as ∇
+direction in the probability manifold. Thanks to the invariance property, there is a tight connection
+between the geometry induced by the Rényi divergence and the Fisher information metric [3].
+Theorem 4.2. Let pω be a p.d.f. differentiable w.r.t. ω ∈ Ω. Then, it holds that, for the Rényi
+T
+divergence: Dα (pω0 kpω ) = α2 (ω 0 − ω) F(ω) (ω 0 − ω)+o(kω 0 −ωk22 ), and for the exponentiated
+T
+Rényi divergence: dα (pω0 kpω ) = 1 + α2 (ω 0 − ω) F(ω) (ω 0 − ω) + o(kω 0 − ωk22 ).
+This result
+ providesan approximate expression for theT variance of the importance weights, as
+Varx∼pω wω0 /ω (x) = d2 (pω0 kpω ) − 1 ' α2 (ω 0 − ω) F(ω) (ω 0 − ω). It also justifies the use
+of natural gradients in off-distribution optimization, since a step in natural gradient direction has a
+controllable effect on the variance of the importance weights.
+
+5
+
+Policy Optimization via Importance Sampling
+
+In this section, we discuss how to customize the bound provided in Theorem 4.1 for policy optimization, developing a novel model-free actor-only policy search algorithm, named Policy Optimization
+via Importance Sampling (POIS). We propose two versions of POIS: Action-based POIS (A-POIS),
+which is based on a policy gradient approach, and Parameter-based POIS (P-POIS), which adopts
+the PGPE framework. A more detailed description of the implementation aspects is reported in
+Appendix E.
+5.1
+
+Action-based POIS
+
+In Action-based POIS (A-POIS) we search for a policy that maximizes the performance index JD (θ)
+within a parametric space ΠΘ = {πθ : θ ∈ Θ ⊆ Rp } of stochastic differentiable policies. In
+this context, the behavioral (resp. target) distribution Q (resp. P ) becomes the distribution over
+trajectories p(·|θ) (resp. p(·|θ 0 )) induced by the behavioral policy πθ (resp. target policy πθ0 ) and f
+H
+5
+is the trajectory return R(τ ) which is uniformly bounded as |R(τ )| ≤ Rmax 1−γ
+1−γ . The surrogate
+
+loss function cannot be directly optimized via gradient ascent since computing dα p(·|θ 0 )kp(·|θ)
+requires the approximation of an integral over the trajectory space and, for stochastic environments,
+to know the transition model P , which is unknown in a model-free setting. Simple bounds to this
+H
+quantity, like dα p(·|θ 0 )kp(·|θ) ≤ sups∈S dα (πθ0 (·|s)kπθ (·|s)) , besides being hard to compute
+due to the presence of the supremum, are extremely conservative since the Rényi divergence is
+raised to the horizon
+We suggest the replacement of the Rényi divergence with an estimate
+ H.
+PN QH−1
+0
+1
+b
+d2 p(·|θ )kp(·|θ) = N i=1 t=0 d2 (πθ0 (·|sτi ,t )kπθ (·|sτi ,t )) defined only in terms of the policy Rényi divergence (see Appendix E.2 for details). Thus, we obtain the following surrogate
+5
+
+When γ → 1 the bound becomes HRmax .
+
+6
+
+objective:
+s
+
+N
+X
+db2 p(·|θ 0 )kp(·|θ)
+1
+A−POIS 0
+Lλ
+wθ0 /θ (τi )R(τi ) − λ
+,
+(9)
+(θ /θ) =
+N i=1
+N
+0
+QH−1 πθ0 (aτi ,t |sτi ,t )
+i |θ )
+where wθ0 /θ (τi ) = p(τ
+t=0 πθ (aτi ,t |sτi ,t ) . We consider the case in which πθ (·|s) is a
+p(τi |θ) =
+Gaussian distribution over actions whose mean depends on the state and whose covariance is stateindependent and diagonal: N (uµ (s), diag(σ 2 )), where θ = (µ, σ). The learning process mixes
+online and offline optimization. At each online iteration j, a dataset of N trajectories is collected
+by executing in the environment the current policy πθj . These trajectories are used to optimize the
+0
+
+surrogate loss function LA−POIS
+. At each offline iteration k, the parameters are updated via gradient
+λ
+j
+j
+j −1
+ascent: θ k+1 = θ k + αk G(θ k ) ∇θj L(θ jk /θ j0 ), where αk > 0 is the step size which is chosen via
+k
+
+line search (see Appendix E.1) and G(θ jk ) is a positive semi-definite matrix (e.g., F(θ jk ), the FIM,
+for natural gradient)6 . The pseudo-code of POIS is reported in Algorithm 1.
+5.2
+
+Parameter-based POIS
+
+In the Parameter-based POIS (P-POIS) we again consider a parametrized policy space ΠΘ =
+{πθ : θ ∈ Θ ⊆ Rp }, but πθ needs not be differentiable. The policy parameters θ are sampled
+at the beginning of each episode from a parametric hyperpolicy νρ selected in a parametric space
+NP = {νρ : ρ ∈ P ⊆ Rr }. The goal is to learn the hyperparameters ρ so as to maximize JD (ρ).
+In this setting, the distributions Q and P of Section 4 correspond to the behavioral νρ and target
+νρ0 hyperpolicies, while f remains the trajectory return R(τ ). The importance weights [67] must
+take into account all sources of randomness, derived from sampling a policy parameter θ and a
+ν 0 (θ)p(τ |θ)
+ν 0 (θ)
+trajectory τ : wρ0 /ρ (θ) = νρρ (θ)p(τ |θ) = νρρ (θ) . In practice, a Gaussian hyperpolicy νρ with diagonal
+covariance matrix is often used, i.e., N (µ, diag(σ 2 )) with ρ = (µ, σ). The policy is assumed to
+be deterministic: πθ (a|s) = δ(a − uθ (s)), where uθ is a deterministic function of the state s [e.g.,
+46, 14]. A first advantage over the action-based setting is that the distribution of the importance
+weights is entirely known, as it is the ratio of two Gaussians and the Rényi divergence d2 (νρ0 kνρ )
+can be computed exactly [6] (see Appendix C). This leads to the following surrogate objective:
+r
+N
+1 X
+d2 (νρ0 kνρ )
+P−POIS
+0
+wρ0 /ρ (θ i )R(τi ) − λ
+,
+(10)
+Lλ
+(ρ /ρ) =
+N i=1
+N
+where each trajectory τi is obtained by running an episode with action policy πθi , and the corresponding policy parameters θ i are sampled independently from hyperpolicy νρ , at the beginning of each episode. The hyperpolicy parameters are then updated offline as ρjk+1 =
+ρjk + αk G(ρjk )−1 ∇ρj L(ρjk /ρj0 ) (see Algorithm 2 for the complete pseudo-code). A further adk
+vantage w.r.t. the action-based case is that the FIM F(ρ) can be computed exactly, and it is diagonal
+in the case of a Gaussian hyperpolicy with diagonal covariance matrix, turning a problematic inversion
+into a trivial division (the FIM is block-diagonal in the more general case of a Gaussian hyperpolicy,
+as observed in [26]). This makes natural gradient much more enticing for P-POIS.
+
+6
+
+Experimental Evaluation
+
+In this section, we present the experimental evaluation of POIS in its two flavors (action-based and
+parameter-based). We first provide a set of empirical comparisons on classical continuous control
+tasks with linearly parametrized policies; we then show how POIS can be also adopted for learning
+deep neural policies. In all experiments, for the A-POIS we used the IS estimator, while for P-POIS
+we employed the SN estimator. All experimental details are provided in Appendix F.
+6.1
+
+Linear Policies
+
+Linear parametrized Gaussian policies proved their ability to scale on complex control tasks [38]. In
+this section, we compare the learning performance of A-POIS and P-POIS against TRPO [42] and
+6
+
+The FIM needs to be estimated via importance sampling as well, as shown in Appendix E.3.
+
+7
+
+0.4
+0.1
+0.7
+0.9
+0.9
+
+0.4
+0.1
+0.2
+1
+0.8
+
+0.1 0.01
+0.1
+1
+1
+1
+0.01 1
+0.01 0.01
+
+5000
+
+average return
+
+(a)
+(b)
+(c)
+(d)
+(e)
+
+PPO
+
+average return
+
+Task A-POIS P-POIS TRPO
+
+4000
+
+2000
+
+0
+1
+
+2
+
+3
+
+4
+
+trajectories
+
+−1500
+0
+
+1
+
+2
+
+3
+
+4
+
+trajectories
+
+(c) Acrobot
+
+5
+×104
+
+1000
+
+0
+
+1
+
+2
+
+3
+
+4
+
+trajectories
+
+5
+×104
+
+(b) Inverted Double Pendulum
+
+average return
+
+−1000
+
+2000
+
+5
+×104
+
+(a) Cartpole
+
+average return
+
+average return
+
+P-POIS
+PPO
+
+−500
+
+3000
+
+0
+0
+
+A-POIS
+TRPO
+
+4000
+
+−100
+−200
+−300
+−400
+
+50
+0
+−50
+−100
+−150
+
+0
+
+1
+
+2
+
+3
+
+trajectories
+
+(d) Mountain Car
+
+4
+
+5
+×104
+
+0
+
+1
+
+2
+
+3
+
+4
+
+trajectories
+
+5
+×104
+
+(e) Inverted Pendulum
+
+Figure 1: Average return as a function of the number of trajectories for A-POIS, P-POIS and TRPO
+with linear policy (20 runs, 95% c.i.). The table reports the best hyperparameters found (δ for POIS
+and the step size for TRPO and PPO).
+PPO [44] on classical continuous control benchmarks [12]. In Figure 1, we can see that both versions
+of POIS are able to significantly outperform both TRPO and PPO in the Cartpole environments,
+especially the P-POIS. In the Inverted Double Pendulum environment the learning curve of P-POIS
+is remarkable while A-POIS displays a behavior comparable to PPO. In the Acrobot task, P-POIS
+displays a better performance w.r.t. TRPO and PPO, but A-POIS does not keep up. In Mountain Car,
+we see yet another behavior: the learning curves of TRPO, PPO and P-POIS are almost one-shot (even
+if PPO shows a small instability), while A-POIS fails to display such a fast convergence. Finally, in
+the Inverted Pendulum environment, TRPO and PPO outperform both versions of POIS. This example
+highlights a limitation of our approach. Since POIS performs an importance sampling procedure at
+trajectory level, it cannot assign credit to good actions in bad trajectories. On the contrary, weighting
+each sample, TRPO and PPO are able also to exploit good trajectory segments. In principle, this
+problem can be mitigated in POIS by resorting to per-decision importance sampling [36], in which
+the weight is assigned to individual rewards instead of trajectory returns. Overall, POIS displays
+a performance comparable with TRPO and PPO across the tasks. In particular, P-POIS displays a
+better performance w.r.t. A-POIS. However, this ordering is not maintained when moving to more
+complex policy architectures, as shown in the next section.
+In Figure 2 we show, for several metrics, the behavior of A-POIS when changing the δ parameter
+in the Cartpole environment. We can see that when δ is small (e.g., 0.2), the Effective Sample Size
+(ESS) remains large and, consequently, the variance of the importance weights (Var[w]) is small.
+This means that the penalization term in the objective function discourages the optimization process
+from selecting policies which are far from the behavioral policy. As a consequence, the displayed
+behavior is very conservative, preventing the policy from reaching the optimum. On the contrary,
+when δ approaches 1, the ESS is smaller and the variance of the weights tends to increase significantly.
+Again, the performance remains suboptimal as the penalization term in the objective function is too
+light. The best behavior is obtained with an intermediate value of δ, specifically 0.4.
+6.2
+
+Deep Neural Policies
+
+In this section, we adopt a deep neural network (3 layers: 100, 50, 25 neurons each) to represent
+the policy. The experiment setup is fully compatible with the classical benchmark [12]. While
+A-POIS can be directly applied to deep neural networks, P-POIS exhibits some critical issues. A
+highly dimensional hyperpolicy (like a Gaussian from which the weights of an MLP policy are
+8
+
+40
+
+3000
+2000
+1000
+
+Var[w]
+
+60
+
+4000
+
+ESS
+
+average return
+
+5000
+
+40
+
+30
+20
+10
+
+20
+
+0
+
+0
+0
+
+1
+
+2
+
+3
+
+4
+
+trajectories
+δ = 0.2
+
+5
+×104
+
+0
+
+1
+
+2
+
+3
+
+trajectories
+δ = 0.4
+
+δ = 0.6
+
+4
+
+0
+
+5
+×104
+
+1
+
+2
+
+3
+
+4
+
+trajectories
+δ = 0.8
+
+5
+×104
+
+δ=1
+
+Figure 2: Average return, Effective Sample Size (ESS) and variance of the importance weights
+(Var[w]) as a function of the number of trajectories for A-POIS for different values of the parameter
+δ in the Cartpole environment (20 runs, 95% c.i.).
+Table 1: Performance of POIS compated with [12] on deep neural policies (5 runs, 95% c.i.). In bold,
+the performances that are not statistically significantly different from the best algorithm in each task.
+Algorithm
+REINFORCE
+TRPO
+DDPG
+A-POIS
+CEM
+P-POIS
+
+Cart-Pole
+Balancing
+
+Mountain Car
+
+Double Inverted
+Pendulum
+
+Swimmer
+
+4693.7 ± 14.0
+4869.8 ± 37.6
+4634.4 ± 87.6
+4842.8 ± 13.0
+4815.4 ± 4.8
+4428.1 ± 138.6
+
+−67.1 ± 1.0
+−61.7 ± 0.9
+−288.4 ± 170.3
+−63.7 ± 0.5
+−66.0 ± 2.4
+−78.9 ± 2.5
+
+4116.5 ± 65.2
+4412.4 ± 50.4
+2863.4 ± 154.0
+4232.1 ± 189.5
+2566.2 ± 178.9
+3161.4 ± 959.2
+
+92.3 ± 0.1
+96.0 ± 0.2
+85.8 ± 1.8
+88.7 ± 0.55
+68.8 ± 2.4
+76.8 ± 1.6
+
+sampled) can make d2 (νρ0 kνρ ) extremely sensitive to small parameter changes, leading to overconservative updates.7 A first practical variant comes from the insight that d2 (νρ0 kνρ )/N is the
+inverse of the effective sample size, as reported in Equation 6. We can obtain a less conservative
+d ρ0 kνρ ). Another trick is to
+(although approximate) surrogate function by replacing it with 1/ESS(ν
+model the hyperpolicy as a set of independent Gaussians, each defined over a disjoint subspace of Θ
+(implementation details are provided in Appendix E.5). In Table 1, we augmented the results provided
+in [12] with the performance of POIS for the considered tasks. We can see that A-POIS is able
+to reach an overall behavior comparable with the best of the action-based algorithms, approaching
+TRPO and beating DDPG. Similarly, P-POIS exhibits a performance similar to CEM [52], the best
+performing among the parameter-based methods. The complete results are reported in Appendix F.
+
+7
+
+Discussion and Conclusions
+
+In this paper, we presented a new actor-only policy optimization algorithm, POIS, which alternates
+online and offline optimization in order to efficiently exploit the collected trajectories, and can be
+used in combination with action-based and parameter-based exploration. In contrast to the state-ofthe-art algorithms, POIS has a strong theoretical grounding, since its surrogate objective function
+derives from a statistical bound on the estimated performance, that is able to capture the uncertainty
+induced by importance sampling. The experimental evaluation showed that POIS, in both its versions
+(action-based and parameter-based), is able to achieve a performance comparable with TRPO, PPO
+and other classical algorithms on continuous control tasks. Natural extensions of POIS could focus
+on employing per-decision importance sampling, adaptive batch size, and trajectory reuse. Future
+work also includes scaling POIS to high-dimensional tasks and highly-stochastic environments. We
+believe that this work represents a valuable starting point for a deeper understanding of modern policy
+optimization and for the development of effective and scalable policy search methods.
+
+7
+
+This curse of dimensionality, related to dim(θ), has some similarities with the dependence of the Rényi
+divergence on the actual horizon H in the action-based case.
+
+9
+
+Acknowledgments
+The study was partially funded by Lombardy Region (Announcement PORFESR 2014-2020). F. F.
+was partially funded through ERC Advanced Grant (no: 742870). We gratefully acknowledge the
+support of NVIDIA Corporation with the donation of the Tesla K40cm, Titan XP and Tesla V100
+used for this research.
+
+References
+[1] Shun-Ichi Amari. Natural gradient works efficiently in learning. Neural computation, 10(2):251–276,
+1998.
+[2] Shun-ichi Amari. Differential-geometrical methods in statistics, volume 28. Springer Science & Business
+Media, 2012.
+[3] Shun-ichi Amari and Andrzej Cichocki. Information geometry of divergence functions. Bulletin of the
+Polish Academy of Sciences: Technical Sciences, 58(1):183–195, 2010.
+[4] Jonathan Baxter and Peter L Bartlett. Infinite-horizon policy-gradient estimation. Journal of Artificial
+Intelligence Research, 15:319–350, 2001.
+[5] Bernard Bercu, Bernard Delyon, and Emmanuel Rio. Concentration inequalities for sums. In Concentration
+Inequalities for Sums and Martingales, pages 11–60. Springer, 2015.
+[6] Jacob Burbea. The convexity with respect to gaussian distributions of divergences of order α. Utilitas
+Mathematica, 26:171–192, 1984.
+[7] William G Cochran. Sampling techniques. John Wiley & Sons, 2007.
+[8] Corinna Cortes, Yishay Mansour, and Mehryar Mohri. Learning bounds for importance weighting. In
+Advances in neural information processing systems, pages 442–450, 2010.
+[9] Thomas Degris, Martha White, and Richard S Sutton.
+arXiv:1205.4839, 2012.
+
+Off-policy actor-critic.
+
+arXiv preprint
+
+[10] Marc Peter Deisenroth, Gerhard Neumann, Jan Peters, et al. A survey on policy search for robotics.
+Foundations and Trends in Robotics, 2(1–2):1–142, 2013.
+[11] Shayan Doroudi, Philip S Thomas, and Emma Brunskill. Importance sampling for fair policy selection.
+Uncertainty in Artificial Intelligence, 2017.
+[12] Yan Duan, Xi Chen, Rein Houthooft, John Schulman, and Pieter Abbeel. Benchmarking deep reinforcement
+learning for continuous control. In International Conference on Machine Learning, pages 1329–1338,
+2016.
+[13] Xavier Glorot and Yoshua Bengio. Understanding the difficulty of training deep feedforward neural
+networks. In Proceedings of the thirteenth international conference on artificial intelligence and statistics,
+pages 249–256, 2010.
+[14] Mandy Grüttner, Frank Sehnke, Tom Schaul, and Jürgen Schmidhuber. Multi-dimensional deep memory
+go-player for parameter exploring policy gradients. 2010.
+[15] Zhaohan Guo, Philip S Thomas, and Emma Brunskill. Using options and covariance testing for long
+horizon off-policy policy evaluation. In Advances in Neural Information Processing Systems, pages
+2489–2498, 2017.
+[16] Nikolaus Hansen and Andreas Ostermeier. Completely derandomized self-adaptation in evolution strategies.
+Evolutionary computation, 9(2):159–195, 2001.
+[17] Timothy Classen Hesterberg. Advances in importance sampling. PhD thesis, Stanford University, 1988.
+[18] Sham Kakade and John Langford. Approximately optimal approximate reinforcement learning. In
+International Conference on Machine Learning, volume 2, pages 267–274, 2002.
+[19] Sham M Kakade. A natural policy gradient. In Advances in neural information processing systems, pages
+1531–1538, 2002.
+[20] Jens Kober, J Andrew Bagnell, and Jan Peters. Reinforcement learning in robotics: A survey. The
+International Journal of Robotics Research, 32(11):1238–1274, 2013.
+
+10
+
+[21] Vijay R Konda and John N Tsitsiklis. Actor-critic algorithms. In Advances in neural information processing
+systems, pages 1008–1014, 2000.
+[22] Augustine Kong. A note on importance sampling using standardized weights. University of Chicago, Dept.
+of Statistics, Tech. Rep, 348, 1992.
+[23] Timothy P Lillicrap, Jonathan J Hunt, Alexander Pritzel, Nicolas Heess, Tom Erez, Yuval Tassa, David
+Silver, and Daan Wierstra. Continuous control with deep reinforcement learning. arXiv preprint
+arXiv:1509.02971, 2015.
+[24] Luca Martino, Víctor Elvira, and Francisco Louzada. Effective sample size for importance sampling based
+on discrepancy measures. Signal Processing, 131:386–401, 2017.
+[25] Takamitsu Matsubara, Tetsuro Morimura, and Jun Morimoto. Adaptive step-size policy gradients with
+average reward metric. In Proceedings of 2nd Asian Conference on Machine Learning, pages 285–298,
+2010.
+[26] Atsushi Miyamae, Yuichi Nagata, Isao Ono, and Shigenobu Kobayashi. Natural policy gradient methods
+with parameter-based exploration for control tasks. In Advances in neural information processing systems,
+pages 1660–1668, 2010.
+[27] Rémi Munos, Tom Stepleton, Anna Harutyunyan, and Marc Bellemare. Safe and efficient off-policy
+reinforcement learning. In Advances in Neural Information Processing Systems, pages 1054–1062, 2016.
+[28] Andrew Y Ng and Michael Jordan. Pegasus: A policy search method for large mdps and pomdps. In
+Proceedings of the Sixteenth conference on Uncertainty in artificial intelligence, pages 406–415. Morgan
+Kaufmann Publishers Inc., 2000.
+[29] Art B. Owen. Monte Carlo theory, methods and examples. 2013.
+[30] Jing Peng and Ronald J Williams. Incremental multi-step q-learning. In Machine Learning Proceedings
+1994, pages 226–232. Elsevier, 1994.
+[31] Jan Peters, Katharina Mülling, and Yasemin Altun. Relative entropy policy search. In AAAI, pages
+1607–1612. Atlanta, 2010.
+[32] Jan Peters and Stefan Schaal. Reinforcement learning by reward-weighted regression for operational space
+control. In Proceedings of the 24th international conference on Machine learning, pages 745–750. ACM,
+2007.
+[33] Jan Peters and Stefan Schaal. Natural actor-critic. Neurocomputing, 71(7-9):1180–1190, 2008.
+[34] Jan Peters and Stefan Schaal. Reinforcement learning of motor skills with policy gradients. Neural
+networks, 21(4):682–697, 2008.
+[35] Matteo Pirotta, Marcello Restelli, Alessio Pecorino, and Daniele Calandriello. Safe policy iteration. In
+International Conference on Machine Learning, pages 307–315, 2013.
+[36] Doina Precup, Richard S Sutton, and Satinder P Singh. Eligibility traces for off-policy policy evaluation.
+In International Conference on Machine Learning, pages 759–766. Citeseer, 2000.
+[37] Martin L Puterman. Markov decision processes: discrete stochastic dynamic programming. John Wiley &
+Sons, 2014.
+[38] Aravind Rajeswaran, Kendall Lowrey, Emanuel V Todorov, and Sham M Kakade. Towards generalization
+and simplicity in continuous control. In Advances in Neural Information Processing Systems, pages
+6553–6564, 2017.
+[39] C Radhakrishna Rao. Information and the accuracy attainable in the estimation of statistical parameters. In
+Breakthroughs in statistics, pages 235–247. Springer, 1992.
+[40] Alfréd Rényi. On measures of entropy and information. Technical report, Hungarian Academy of Sciences
+Budapest Hungary, 1961.
+[41] Reuven Rubinstein. The cross-entropy method for combinatorial and continuous optimization. Methodology
+and computing in applied probability, 1(2):127–190, 1999.
+[42] John Schulman, Sergey Levine, Pieter Abbeel, Michael Jordan, and Philipp Moritz. Trust region policy
+optimization. In International Conference on Machine Learning, pages 1889–1897, 2015.
+
+11
+
+[43] John Schulman, Philipp Moritz, Sergey Levine, Michael Jordan, and Pieter Abbeel. High-dimensional
+continuous control using generalized advantage estimation. arXiv preprint arXiv:1506.02438, 2015.
+[44] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy
+optimization algorithms. arXiv preprint arXiv:1707.06347, 2017.
+[45] Frank Sehnke, Christian Osendorfer, Thomas Rückstieß, Alex Graves, Jan Peters, and Jürgen Schmidhuber.
+Policy gradients with parameter-based exploration for control. In International Conference on Artificial
+Neural Networks, pages 387–396. Springer, 2008.
+[46] Frank Sehnke, Christian Osendorfer, Thomas Rückstieß, Alex Graves, Jan Peters, and Jürgen Schmidhuber.
+Parameter-exploring policy gradients. Neural Networks, 23(4):551–559, 2010.
+[47] David Silver, Guy Lever, Nicolas Heess, Thomas Degris, Daan Wierstra, and Martin Riedmiller. Deterministic policy gradient algorithms. In International Conference on Machine Learning, 2014.
+[48] Kenneth O Stanley and Risto Miikkulainen. Evolving neural networks through augmenting topologies.
+Evolutionary computation, 10(2):99–127, 2002.
+[49] Yi Sun, Daan Wierstra, Tom Schaul, and Juergen Schmidhuber. Efficient natural evolution strategies. In
+Proceedings of the 11th Annual conference on Genetic and evolutionary computation, pages 539–546.
+ACM, 2009.
+[50] Richard S Sutton and Andrew G Barto. Reinforcement learning: An introduction, volume 1. MIT press
+Cambridge, 1998.
+[51] Richard S Sutton, David A McAllester, Satinder P Singh, and Yishay Mansour. Policy gradient methods
+for reinforcement learning with function approximation. In Advances in neural information processing
+systems, pages 1057–1063, 2000.
+[52] István Szita and András Lörincz. Learning tetris using the noisy cross-entropy method. Neural computation,
+18(12):2936–2941, 2006.
+[53] Russ Tedrake, Teresa Weirui Zhang, and H Sebastian Seung. Stochastic policy gradient reinforcement
+learning on a simple 3d biped. In Intelligent Robots and Systems, 2004.(IROS 2004). Proceedings. 2004
+IEEE/RSJ International Conference on, volume 3, pages 2849–2854. IEEE, 2004.
+[54] Philip Thomas and Emma Brunskill. Data-efficient off-policy policy evaluation for reinforcement learning.
+In International Conference on Machine Learning, pages 2139–2148, 2016.
+[55] Philip Thomas, Georgios Theocharous, and Mohammad Ghavamzadeh. High confidence policy improvement. In International Conference on Machine Learning, pages 2380–2388, 2015.
+[56] Philip S Thomas, Georgios Theocharous, and Mohammad Ghavamzadeh. High-confidence off-policy
+evaluation. In AAAI, pages 3000–3006, 2015.
+[57] Emanuel Todorov, Tom Erez, and Yuval Tassa. Mujoco: A physics engine for model-based control. In
+Intelligent Robots and Systems (IROS), 2012 IEEE/RSJ International Conference on, pages 5026–5033.
+IEEE, 2012.
+[58] George Tucker, Surya Bhupatiraju, Shixiang Gu, Richard E Turner, Zoubin Ghahramani, and Sergey Levine.
+The mirage of action-dependent baselines in reinforcement learning. arXiv preprint arXiv:1802.10031,
+2018.
+[59] Tim Van Erven and Peter Harremos. Rényi divergence and kullback-leibler divergence. IEEE Transactions
+on Information Theory, 60(7):3797–3820, 2014.
+[60] Jay M Ver Hoef. Who invented the delta method? The American Statistician, 66(2):124–127, 2012.
+[61] Ziyu Wang, Victor Bapst, Nicolas Heess, Volodymyr Mnih, Remi Munos, Koray Kavukcuoglu, and Nando
+de Freitas. Sample efficient actor-critic with experience replay. arXiv preprint arXiv:1611.01224, 2016.
+[62] Christopher JCH Watkins and Peter Dayan. Q-learning. Machine learning, 8(3-4):279–292, 1992.
+[63] Daan Wierstra, Tom Schaul, Jan Peters, and Juergen Schmidhuber. Natural evolution strategies. In
+Evolutionary Computation, 2008. CEC 2008.(IEEE World Congress on Computational Intelligence). IEEE
+Congress on, pages 3381–3387. IEEE, 2008.
+[64] Ronald J Williams. Simple statistical gradient-following algorithms for connectionist reinforcement
+learning. In Reinforcement Learning, pages 5–32. Springer, 1992.
+
+12
+
+[65] Cathy Wu, Aravind Rajeswaran, Yan Duan, Vikash Kumar, Alexandre M Bayen, Sham Kakade, Igor
+Mordatch, and Pieter Abbeel. Variance reduction for policy gradient with action-dependent factorized
+baselines. arXiv preprint arXiv:1803.07246, 2018.
+[66] Tingting Zhao, Hirotaka Hachiya, Gang Niu, and Masashi Sugiyama. Analysis and improvement of policy
+gradient estimation. In Advances in Neural Information Processing Systems, pages 262–270, 2011.
+[67] Tingting Zhao, Hirotaka Hachiya, Voot Tangkaratt, Jun Morimoto, and Masashi Sugiyama. Efficient
+sample reuse in policy gradients with parameter-based exploration. Neural computation, 25(6):1512–1547,
+2013.
+
+13
+
+

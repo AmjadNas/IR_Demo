@@ -1,0 +1,1752 @@
+Pretending Fair Decisions via
+Stealthily Biased Sampling
+
+arXiv:1901.08291v1 [stat.ML] 24 Jan 2019
+
+Kazuto Fukuchi
+
+∗†
+
+Satoshi Hara
+
+‡
+
+Takanori Maehara
+
+†
+
+Abstract
+Fairness by decision-makers is believed to be auditable by third parties. In this study, we
+show that this is not always true.
+We consider the following scenario. Imagine a decision-maker who discloses a subset of his
+dataset with decisions to make his decisions auditable. If he is corrupt, and he deliberately
+selects a subset that looks fair even though the overall decision is unfair, can we identify this
+decision-maker’s fraud?
+We answer this question negatively. We first propose a sampling method that produces
+a subset whose distribution is biased from the original (to pretend to be fair); however, its
+differentiation from uniform sampling is difficult. We call such a sampling method as stealthily
+biased sampling, which is formulated as a Wasserstein distance minimization problem, and is
+solved through a minimum-cost flow computation. We proved that the stealthily biased sampling
+minimizes an upper-bound of the indistinguishability. We conducted experiments to see that
+the stealthily biased sampling is, in fact, difficult to detect.
+
+1
+
+Introduction
+
+Background and Motivation Machine learning models are being increasingly used in individuals’
+consequential decisions such as a loan, insurance, and employment. In such applications, the models
+are required to be fair in the sense that their outputs should be irrelevant to the individuals’ sensitive
+feature such as gender, race, and religion [1]. Several efforts have devoted to establish mathematical
+formulation of fairness [2, 3, 4] and proposed algorithms that meet the fairness criteria [5, 6, 7].
+With an increasing attention to fairness, social communities now require to audit any system
+that incorporates the machine learning algorithm so that the system does not make unfair decisions. For example, a 2014 White House Report [8] mentioned “[t]he increasing use of algorithms
+to make eligibility decisions must be carefully monitored for potential discriminatory outcomes for
+disadvantaged groups, even absent discriminatory intent”. A similar statement also appeared in a
+2016 White House Report [9].
+To respond the above social request, a decision-maker must make his decision auditable. To this
+end, he should disclose dataset D with his decisions. Then, anyone (e.g., government, third-party, or
+individual) can verify whether the decisions are fair. However, disclosing whole dataset has several
+issues such as privacy and data size. Hence, we consider an alternative approach of disclosing subset
+S ⊆ D of the dataset with the decisions. If the subset is uniformly sampled from the dataset, and it
+looks fair, it will be an evidence of the fair decisions.
+∗ The
+
+authors are listed in alphabetical order.
+AIP, Japan. {kazuto.fukuchi,takanori.maehara}@riken.jp
+‡ Osaka University, Japan. satohara@ar.sanken.osaka-u.ac.jp
+† RIKEN
+
+1
+
+However, what will happen if the decision-maker is corrupt? In such a case, he will deliberately
+select a subset that looks fair even though the overall decision is unfair. Hence, the subset is a “false
+evidence” of his fair decision. If the fraud cannot be detected from the subset, he will be trusted as
+fair even though that is not the case. Here, our research question is as follows:
+Research Question: Can one detect the fraud of an unfair decision-maker from the false evidence?
+In the following text, we refer to a complainer as the who tries to detect the fraud of the decisionmaker. To answer the above question, we must consider how to construct a false evidence. The
+simplest approach might be the case-control sampling [10]. If the sensitive information is gender
+(man or woman) and the decision is binary (positive or negative), this method classifies the dataset
+into four classes: (man, positive), (woman, positive), (man, negative), and (woman, negative). Then,
+it samples the desired numbers of points from the classes. By controlling the number of points in
+each class appropriately, the case-control sampling produces fair subset S.
+Fortunately, the fraud of the case-control sampling could be detected as the procedure distinguishes the distribution of S from that of D. First, the complainer constructs independent observation D′ that follows the same distribution as D through publicly available data or by gathering
+data. Then, the complainer compares the distribution of S and D′ . If the distribution difference is
+revealed, the decision-maker will be accused for his fraud in the data-revealing process.
+Hence, the unfair decision-maker will select fair subset S whose distribution looks similar to that
+of D to avoid the above revealing methodology. We refer to such a subset as stealthily biased subset,
+and the problem of sampling such a subset as stealthily biased sampling. Intuitively, our problem is
+formulated as follows. Mathematical formulation of our problem is given in Section 3.
+Problem 1 (Stealthily biased sampling problem (informal)). Given a possibly unfair dataset D
+obtained from an underlying distribution P , sample subset S ⊆ D such that (i) S is fair in terms of
+some fairness criteria, and (ii) the distinguishing of the distribution of S from P is difficult.
+Here, our questions are the following.
+• (Q1). How can a decision-maker construct a stealthily biased subset S?
+• (Q2). When such S is provided, can a complainer distinguish the distributions of S and D?
+Our Contributions In this study, we answer the above two questions as follows.
+• (Answer to Q1). We formulate the stealthily biased sampling problem as a Wasserstein distance minimization problem. We show that this problem is reduced to the minimum-cost flow
+problem and solved it in polynomial time. (Section 3)
+• We prove the validity of our formulation. The stealthiness is mathematically evaluated by the
+advantage that is used in the cryptographic theory [11]; a smaller advantage indicates that
+S is more indistinguishable from D. We show that, if the complainer uses the Kolmogorov–
+Smirnov statistical test, the Wasserstein distance gives an upper-bound of the advantage; i.e.,
+our formulation minimizes the upper-bound of the advantage. (Section 4)
+• (Answer to Q2). Through synthetic and real-world data experiments, we show that the decisionmaker can indeed pretend to be fair by using the stealthily biased sampling. Specifically, we
+demonstrate that the complainer cannot detect the fraud of the decision-maker. (Section 5)
+These results indicate that an unfair decision-maker easily pretends to be fair by disclosing a
+subset of the dataset. Hence, conversely, a subset of the dataset cannot be used as an evidence of
+the decision-maker’s fair decisions.
+2
+
+2
+
+Preliminaries
+
+Wasserstein Distance Let V be a finite set, and µ, ν : V → R≥0 be a measure on V . A measure
+π on V × V is a coupling measure of µ and ν if
+X
+X
+µi =
+πij , and νj =
+πij ,
+(2.1)
+j∈V
+
+i∈V
+
+and is denoted by π ∈ ∆(µ, ν).
+Let (X , d) be a metric space, i.e., d : X × X → R is a positive definite, symmetric, and satisfies
+the triangle inequality. Suppose that each i ∈ V has feature xi ∈ X on the metric space. Then, the
+Wasserstein distance between µ and ν, denoted by W (µ, ν), is defined by the objective value of the
+following optimization problem [12]:
+X
+minimize
+d(xi , xj )πij ,
+(2.2)
+i,j∈V
+subject to π ∈ ∆(µ, ν).
+The Wasserstein distance is computed in polynomial time by reducing the minimum-cost flow problem or using the Sinkhorn iteration [13].
+Minimum-Cost Flow Let G = (V, E) be a directed graph, where V is a set of vertices and E is
+a set of edges, c : E → R be the capacity, and a : E → R be the cost. Then, the minimum-cost flow
+problem is given by
+X
+minimize
+a(e)f (e)
+e∈E
+
+subject to 0 X
+≤ f (e) ≤ c(e),X
+(e ∈ E),
+f (e) −
+f (e) = 0, (u ∈ V \ {s, t}),
+e∈δ + (u)
+
+e∈δ − (u)
+
+X
+
+f (e) −
+
+X
+
+f (e) = d,
+
+X
+
+f (e) −
+
+X
+
+f (e) = −d,
+
+e∈δ + (s)
+
+e∈δ + (t)
+
+(2.3)
+
+e∈δ − (s)
+
+e∈δ − (t)
+
+where δ + (u) = {(u, v) ∈ E} represents the out-going edges from u, δ − (v) = {(u, v) ∈ E} represents
+the in-coming edges to v, and d ≥
+√ 0 is the required amount of the flow.
+This problem is solved in Õ(E V) time in theory [14]1 . The practical evaluation of the minimumcost flow algorithms are given in the study by [15].
+
+3
+
+Algorithm for Stealthily Biased Sampling
+
+In this section, we formulate the stealthily biased sampling problem as a Wasserstein distance
+minimization problem. Here, we present a formulation for “categorical biasing,” which controls
+the number of points in each category. Another biasing method, which is for a quantitative biasing,
+is presented in Appendix A.
+1 Õ
+
+suppresses log factors.
+
+3
+
+3.1
+
+Problem Formulation
+
+Let X be a metric space for the feature space and Y be a finite set representing the outcome of
+the decisions. An entry of x ∈ X corresponds to a sensitive information; let S be a finite set
+representing the class of sensitive information, and let s : X → S be the mapping that extracts the
+sensitive information from the feature.
+The dataset is given by D = {(x1 , y1 ), . . . , (xN , yN )}, where xi ∈ X is the feature of the i-th
+point and yi ∈ Y is the decision of the i-th point. For notational simplicity, we write i ∈ D for
+(xi , yi ) ∈ D.
+Let ν be the uniform measure on D, whose expected number of points is K, i.e.,
+νi =
+
+K
+, (i ∈ D).
+N
+
+(3.1)
+
+This is our reference distribution, i.e., if the decision-maker is not cheating, he will disclose subset
+S ⊆ D following this distribution, i.e. P(i ∈ S) = νi , where P denotes the probability.
+However, as the decision-maker wants to show that the output is fair, he constructs another
+distribution µ. Similar to the case-control sampling discussed in Section 1, we classify the dataset
+into bins S × Y. Then, we control the expected number of points that should
+Pbe sampled from each
+bin. Let k : S × Y → Z be the number of points of the bins, where K = s∈S,y∈Y k(s, y) ≤ |D|.
+Then, µ satisfies the requirement if
+X
+µi = k(s, y), (s ∈ S, y ∈ Y).
+(3.2)
+(xi ,yi )∈D
+s(xi )=s,yi =y
+
+We denote by µ ∈ P (k) if µ satisfies the above constraint. Note that by choosing k appropriately,
+we can show that S is fair, thus meeting the first requirement in Problem 1.
+To meet the second requirement in Problem 1, the decision maker must determine distribution
+µ such that µ is indistinguishable from reference distribution ν. Here, we propose to measure the
+indistinguishability by using the Wasserstein distance. Then, the stealthily biased sampling problem
+is mathematically formulated as follows.
+Problem 2 (Stealthily biased sampling problem (formal)).
+minimize
+subject to
+
+W (µ, ν)
+µ ∈ P (k).
+
+(3.3)
+
+The validity of this formulation is discussed in Section 4. By substituting the definition of the
+Wasserstein distance into Problem 2, we obtain
+P
+minimize
+i,j∈D d(xi , xj )πij
+(3.4)
+subject to π ∈ ∆(µ, ν), µ ∈ P (k).
+As the objective function is linear in π and both ∆(µ, ν) and P (k) are polytopes, Problem 3.4 is
+a linear programming problem. As the numbers of variables and constraints are polynomial in the
+size of the input, this problem is solved in polynomial time by using the Ellipsoid method [16].
+
+3.2
+
+Efficient Algorithm
+
+The previous section showed that the stealthily biased sampling problem is solved in polynomial
+time. However, the naive algorithm that uses the ellipsoid method is not practical because of its
+4
+
+large complexity. Here, we reduce the problem to a minimum-cost flow problem to obtain more
+efficient algorithm.
+We construct the following network G = (V, E) with capacity c : E → R and cost a : E → R.
+Vertices V consist of the following five classes:
+• Supersource s
+• Case-controlling vertices usy for all s ∈ S and y ∈ Y
+• Left vertices li for all i ∈ D
+• Right vertices rj for all j ∈ D
+• Supersink t
+Edges E consist of the following four classes:
+• Edges (s, usy ) for all s ∈ S and y ∈ Y. The cost of (s, usy ) is zero and the capacity of (s, usy )
+is k(s, y).
+• Edges (usy , li ) for all i ∈ D such that s(xi ) = s and yi = y. The cost of (usy , li ) is zero and
+the capacity of (usy , li ) is one.
+• Edges (li , rj ) for all i ∈ D and j ∈ D. The cost of (li , rj ) is d(xi , xj ) and the capacity is
+infinity.
+• Edges (rj , t) for all j ∈ D. The cost of (rj , t) is zero and the capacity of (rj , t) is K/N .
+Figure 3.1 illustrates the network.
+By setting the flow amount to K, the solution to the aforementioned instance of the minimumcost flow problem gives the solution to the stealthily biased sampling problem, where πij is the the
+flow across edge (li , rj ), and µi is the flow across edge (us(xi )yi , li ).
+As |V| = O(|D|) and |E| = O(|D|2 ), the problem can be solved in Õ(|D|2.5 ) time by using the
+algorithm by [14]. The algorithm could be more efficient by incorporating advanced methods (e.g.,
+the Sinkhorn iteration). We leave establishing more efficient algorithms as a possible important
+future work.
+
+4
+
+Stealthiness of Sampling
+
+In the previous section, we formulated the stealthily biased sampling problem as a Wasserstein
+distance minimization problem. In this section, we confirm the validity of this formulation.
+The decision-maker’s purpose is to make distribution µ indistinguishable from uniform distribution ν. To measure the indistinguishability, we introduce advantage, which is commonly used in
+cryptographic theory [11].
+Let ν K be K samples drawn from the uniform probability distribution, and let µK be K samples
+generated by our stealthily biased sampling algorithm2 . To define the advantage, let us consider the
+following game in which a complainer attempts to distinguish µK and ν k :
+1. Flip an unbiased coin.
+2 Basically, ν K and µk correspond to ν and µ in the previous section. We use these notations to control the number
+of points.
+
+5
+
+usy (1, 0)
+
+li (∞, d(xi , xj )) rj
+
+(K/N, 0)
+
+(k(s, y), 0)
+s
+
+t
+
+Figure 3.1: Flow network for biased sampling. (c, a) on the edge indicates that the edge has capacity
+of c and cost of a.
+2. If a head outcome is achieved, the decision-maker reveals D ∼ µK to the complainer.
+3. If a tail outcome is achieved, the decision-maker reveals D ∼ ν K to the complainer.
+4. The complainer estimates the side of the flipped coin.
+If the probability that the complainer estimates the unbiased coin correctly is near 1/2, the complainer cannot distinguish whether the obtained samples are biased.
+Let H be a random variable such that P(H = 1) = P(H = 0) = 1/2, which represents the
+flipped unbiased coin. The complainer’s estimation algorithm is defined as mapping Φ from D to 0
+or 1, where the algorithm’s output is 1 if the complainer expects that the samples are drawn from
+ν K ; otherwise, the algorithm’s output is 0. Then, the probability that the complainer detects bias
+correctly is obtained as P(Φ(D) = H), where the randomness comes from flipped coin H and dataset
+D. Then, the advantage is defined as follows:
+
+
+
+1 
+K
+K
+
+Adv(Φ; µ , ν ) = P(Φ(D) = H) −  .
+(4.1)
+2
+
+According to the definition of the advantage, a smaller Adv value implies that biased distribution
+µK is more difficult to distinguish from ν K against a complainer with test algorithm Φ.
+
+4.1
+
+Stealthiness against Kolmogorov–Smirnov Test
+
+Here, we analyze the advantage when a complainer uses the Kolmogorov–Smirnov (KS) test [17].
+The KS test is a goodness-of-fit test for real-valued samples, in which the test result is determined
+by the KS statistic. Let Fµ be the cumulative distribution function of distribution µ, and let FK be
+the cumulative distribution function of the empirical measure of the obtained samples. Then, the
+KS statistic is defined as
+KS(D; µ) = sup |FK (x) − Fµ (x)|.
+x
+
+6
+
+(4.2)
+
+The KS test is rejected if KS(D; µ) is larger than an appropriate threshold.
+Let us consider the complainer’s algorithms based on the KS statistic. We formally define a
+complainer’s algorithm that returns 1 if the KS statistic is larger than threshold τ as
+ΦKS,τ (D) = I(KS(D; µ) > τ ),
+
+(4.3)
+
+where I is the indicator function.
+We analyze the advantage against ΦKS,τ under a flatness assumption on sample distribution µ.
+For x ∈ X , let Bǫ (x) be the ǫ-ball centered at x. Then, the flatness assumption is defined as follows:
+Assumption 3. There exist constants s > 0 and C > 0 such that for any ǫ > 0,
+ ǫ s
+.
+sup µ(Bǫ (x)) ≤
+C
+x∈X
+
+(4.4)
+
+Many natural distributions on a real line satisfy Assumption 3. For example, the one-dimensional
+normal distribution satisfies Assumption 3 with s = 1.
+Under the flatness assumption on µ, we reveal an upper bound on the advantage against the KS
+test in the categorical biasing setting. Let M be the number of pair types of decision and sensitive
+attribute. Let κ and κ′ be the distribution over pairs of decision and sensitive attribute on the
+sample distribution and biased distribution. Then, we reveal the following theorem.
+Theorem 4. Let W (µK , ν K ) be the Wasserstein distance equipped with the distance d(D, D′ ) =
+mini=1,...,K d(xi , x′i ) for D = {x1 , ..., xK } and D′ = {x′1 , ..., x′K }. Under Assumption 3, for threshold
+τ ≥ (C/K)1/s /2, we have
+Adv(ΦKS,τ ; µK , ν K ) ≤
+
+K 1/s W (µK , ν K )
++ 4K!
+C 1/s
+
+
+
+1 + TV(κ, κ′ )
+K
+
+where s and C are the constants from Assumption 3, TV(κ, κ′ ) =
+variation distance.
+
+PM
+i
+
+K
+
+,
+
+(4.5)
+
+|κi − κ′i |/2 is the total
+
+The proof of this theorem can be found in the supplementary material. Since 1 + TV(κ, κ′ ) ≤ e
+and K! ∼ (K/e)K , the second term in (4.5) is o(1) and is dominated by the first term. Hence, Theorem 4 indicates that the Wasserstein distance minimization implies a small advantage. Consequently,
+our proposed algorithm is justified in the sense of stealthiness.
+
+5
+
+Experiment: Pretending to be a Fair Decision-Maker
+
+In this section, we demonstrate the effectiveness of the proposed method through synthetic data and
+two real-world data (COMPAS and Adult). In the experiments, we adopted the demographic parity
+(DP) [18] as the fairness measure. Here, let s ∈ {0, 1} be a sensitive feature and y ∈ {0, 1} be a
+decision. The DP is then defined as follows:
+DP = |P(y = 1 | s = 1) − P(y = 1 | s = 0)| .
+
+(5.1)
+
+A large DP indicates that the decision is unfair because the decision-maker favors providing positive
+decisions to one group over the other group.
+
+7
+
+Summary of the Results Before moving to each experiment, we summarize the main results
+here. In all the experiments, we verified the following three points.
+R1 Both the proposed method and case-control sampling could successfully reduce the DP of
+sampled set S.
+R2 The proposed method was more resistant against the complainer’s bias detection compared
+to the case-control sampling. Specifically, the proposed method marked low scores for the
+complainer’s detection criteria for a wide range of the experimental settings.
+R3 In all the experiments, the decision-makers successfully pretended to be fair. They could select
+a subset S with small DPs and small detection criteria.
+Implementation We used Python 3 for data processing. In all the experiments, we used the
+squared Euclidean distance d(xi , xj ) = kxi − xj k2 as the metric in Wasserstein distance. To solve
+the minimum-cost flow problem (3.4), we used the network simplex method implemented in LEMON
+Graph Library 3 . With LEMON, the problem could be solved in a few seconds for the datasets with
+the size N up to a few thousands. For the Adult dataset, we used a bootstrap-type estimator to
+improve the computational scalability (see Appendix C for the detail).
+
+5.1
+
+Synthetic Example
+
+We first consider the following synthetic scenario.
+Example 5 (Loan check). Suppose that there are N people willing to lend money. Here, each
+individual possesses sensitive feature s ∈ {0, 1} (e.g., gender) and a d-dimensional feature vector
+x ∈ [0, 1]d , where first feature x1 is an income. A decision-maker determines whether to lend money
+(y = 1) or not (y = 0) to each individual based on their sensitive feature s and their income x1 .
+Specifically, we consider that a decision-maker makes decision y ∈ {0, 1} based on the following
+criteria
+y = I(x1 + as > 0.5)
+
+(5.2)
+
+where a ≥ 0 is a constant. We note that this decision-maker favors to lend money to the individuals
+who have higher incomes. Moreover, if a > 0, the decision-maker is unfair because the individuals
+with the sensitive attribute s = 1 can borrow money even if the income is low, compared to the
+individuals with s = 0.
+To pretend to be a fair, for a set of individual’s feature, sensitive feature, and the decision
+D = {(xi , si , yi )}N
+i=1 , the decision-maker selects subset S ⊆ D as an evidence that the decisions
+are fair. We solve this problem by using both the proposed method and case-control sampling and
+demonstrate the effectiveness of the proposed method.
+Data We set the underlying data distribution P as follows. We sampled sensitive feature s with
+P(s = 1) = 0.5, and sampled feature vector x in a uniformly random manner over [0, 1]d . Decision
+y is made following the criteria in (5.2). We sampled dataset D with N = 1, 000 observations from
+the underlying distribution P . We then selected subset S ⊆ D with size |S| = 200 using both the
+proposed method and case-control sampling.
+3 https://lemon.cs.elte.hu/trac/lemon
+
+8
+
+Complainer As a complainer, we adopted the Kolmogorov–Smirnov two-sample test. The complainer has an independent observation D′ = {(x′j , s′j )}200
+j=1 as a referential dataset sampled from
+underlying distribution P . Here, we note that the complainer has no access to decision y for D′
+because the decision criteria (5.2) is not disclosed. Given S, the complainer applies the Kolmogorov–
+Smirnov two-sample test to detect whether the distribution of S is different from that of referential
+set D′ . Here, we consider the strongest complainer: we assume that she knows that only income
+x1 is used in x for the decision. We denote the distribution of income x1 in S and D′ by PS (x1 )
+and PD′ (x1 ), respectively. The complainer can then use the Kolmogorov–Smirnov two-sample test4
+in three ways: (i) test PS (x1 ) = PD′ (x1 ), (ii) test PS (x1 | s = 1) = PD′ (x1 | s = 1), and (iii) test
+PS (x1 | s = 0) = PD′ (x1 | s = 0). In the experiment, we set the significance level of the test to be
+0.05.
+Result We set the parameters in (5.2) with a = 0.2. Thus, the DP of the decision-maker is 0.2.
+To reduce the DP in the sampling, we required the sampled set to satisfy P(y = 1 | s = 1) ≈ P(y =
+1 | s = 0) ≈ α for a predetermined ratio of positive decisions α ∈ [0, 1]. The expected number of
+sampling in each bin (s, y) ∈ {0, 1} × {0, 1} is then determined by k(s, y) = ⌈0.5Kαy (1 − α)1−y ⌉
+(recall that P(s) = 0.5, ∀s ∈ {0, 1}). We set feature dimensionality d = 15 , and conducted the
+experiment 100 times.
+The results for several different ratios of positive decisions α are shown in Figure 5.1. As we
+summarized earlier, there are three key observations R1, R2, and R3 in the figures.
+R1: Figure 3(a) shows that both the proposed method and case-control sampling successfully
+reduced DP to less than 0.1 through sampling the subset S. We note that no significant differences
+were observed in DPs between the two sampling methods.
+R2: Figures 3(b), 3(c), and 3(d) show that the proposed method is more resistant to the Kolmogorov–
+Smirnov test, compared to the case-control sampling. Specifically, the proposed method attained a
+small rejection rate in a wide range of α in the sampling process.
+R3: By using the proposed method, the decision-maker successfully pretended to be fair. By
+setting α in the sampling to be 0.6, none of the three tests could confidently reject that disclosed
+dataset S is different from the referential dataset D′ . For α = 0.6, the rejection rates of all the three
+tests are kept around 0.05, which is exactly the same as the significance level. These results indicate
+that with the proposed method, the complainer cannot detect the fraud of the decision-maker: the
+DP of S is small, and its distribution is sufficiently natural so that the statistical test cannot reject
+it. The case-control sampling showed higher rejection rates in tests of P(x | s = 1) and P(x | s = 0),
+and thus was outperformed by the proposed method.
+Lastly, we note that the stochastic decision-maker can be far evil than the deterministic decisionmaker considered in this section. See Appendix D.2 for the detail.
+4 In practice, the complainer does not know that x is a key feature. Thus, the complainer needs to use the two1
+sample test for multi-dimensional data. However, in our preliminary experiments, we found that multi-dimensional
+tests have very low detection powers. We therefore used an advantageous setting for the complainer.
+5 Results for higher dimensional settings were almost the same as d = 1, and thus we moved them to Appendix D.1.
+
+9
+
+Ratio of rejection
+
+Average DP
+
+0.15
+Case-control
+Proposed
+
+0.1
+0.05
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+Ratio of rejection
+
+Ratio of rejection
+
+0.5
+
+0.6
+
+0.7
+
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+(b) Ratio of rejection in test P(x)
+
+1
+
+0.5
+
+Case-control
+Proposed
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+0
+0.4
+
+1
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+1
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+(c) Ratio of rejection in test P(x|s = 1)
+
+(d) Ratio of rejection in test P(x|s = 0)
+
+Figure 5.1: Results for the decision-maker with a = 0.2. The shaded regions in (a) denotes the
+average DP ± std. The shaded regions in (b), (c), and (d) denote 95% confidence intervals. The
+dotted line in (b), (c), and (d) denotes the significance level 0.05.
+
+5.2
+
+COMPAS Data
+
+For the first real-world data experiment, we focus on the COMPAS dataset [19] 6 . The COMPAS
+dataset contains several defendant’s records obtained from the Broward County Sheriff’s Office in
+Florida. Each defendant is scored his or her risk of recidivism using a software called COMPAS.
+ProPublica [19] revealed that the COMPAS risk score is discriminative: it tends to score white
+defendants with low scores while scoring black defendants with high scores.
+Because Florida had strong open-records laws, the entire COMPAS dataset was made public
+and the bias in the COMPAS risk score was revealed. Here, we consider a virtual scenario that the
+decision-maker was aware of the bias in the risk score, and he wants to pretend to be fair by hiding
+the bias. To attain this goal, the decision-maker discloses a subset of the COMPAS dataset as an
+evidence that the COMPAS risk score is fair.
+Data We used the same data preprocessing following the analysis of ProPublica [19], which results
+in eight features x ∈ R8 of each defendant, with race as sensitive attribute s ∈ {0(black), 1(white)},
+and the decision y ∈ {0(low-risk), 1(middle/high-risk)}. The preprocessed data includes 5, 278
+records, which we randomly held out 1, 278 records as the referential dataset D′ for the complainer.
+From the remaining 4, 000 records D, we sampled 2, 000 records as S using both the proposed method
+and case-control sampling. To reduce the DP in the sampling, we required the sampled set to satisfy
+P(y = 1 | s = 1) ≈ P(y = 1 | s = 0) ≈ α for a predetermined ratio of positive decisions α ∈ [0, 1].
+6 https://github.com/propublica/compas-analysis
+
+10
+
+0.1
+
+Average WD
+
+Average DP
+
+Baseline
+Case-control
+Proposed
+
+0.2
+
+0
+0.4
+
+1.5
+1
+0.5
+
+0.6
+
+Ratio of positive decisions α in sampling
+
+Baseline
+Case-control
+Proposed
+
+0.4
+
+0.6
+
+Ratio of positive decisions α in sampling
+(b) Wasserstein distance in P(x)
+
+(a) Demographic parity
+
+Figure 5.2: Results for the COMPAS dataset: The shaded regions in (a) denotes the average DP ±
+std. The shaded regions in (b) denote the average WD ± std.
+Complainer The complainer tries to detect the bias in the disclosed dataset S by comparing its
+distribution with the referential dataset D′ . In the experiment, we adopted the Wasserstein distance
+(WD) as the complainer’s detection criteria 7 . If the WD between S and D′ is sufficiently large, the
+complainer can detect the bias in S.
+Result We repeated the experiment 100 times by randomly changing the data splitting, and
+summarized the results in Figure 5.2 8 . As the baseline without any biased sampling, we computed
+DP and the WD for randomly sampled 2, 000 records from D, which are denoted as Baseline in
+the figures. The figures show the clear success of the proposed method, as we summarized in R1,
+R2, and R3. In Figure 5.2(a), with the proposed method, the DP of S has reduced significantly,
+which attained almost zeros (R1). In Figure 5.2(b), the WD between S and D′ is sufficiently small
+for α ≥ 0.4 so that they are completely indistinguishable from the baselines (R3). The case-control
+sampling had higher WDs, and it was thus easier for the complainer to detect (R2).
+
+5.3
+
+Adult Data
+
+As the second real-world data experiment, we used the Adult dataset [20]. The Adult dataset contains 48,842 records with several individual’s features and their labels (high-income or low-income).
+The dataset is known to include gender bias: in the dataset, while 30% of the male have high-income,
+only 10% of the female have high-income. The DP of the dataset is therefore 0.2. If we naively train
+a classifier using the dataset, the resulting classifier inherits the bias and becomes discriminative, i.e.
+the classifier favors to classify males as high-income. The goal of this experiment is to show that as
+if the biased classifier is fair by disclosing a part of the dataset with classifier’s decision.
+Data & Classifier In the data preprocessing, we converted categorical features to numerical
+features 9 . We randomly split 10,000 records for the training set, 20,000 records for the test set, and
+the remaining 18,842 records for the referential set D′ . In the experiment, we first train a classifier
+using the training set. As a classifier, we used logistic regression and random forest with 100 trees.
+We labeled all the records in the test set using the trained classifier and obtained the dataset D with
+7 In COMPAS and Adult experiments, we did not adopt the multi-dimensional two-sample tests because they were
+too weak.
+8 Here, we measured the WD on P(x). The WD on P(x | s = 1) and P(x | s = 0) can be found in Appendix E.1
+9 We used the implementation used in https://www.kaggle.com/kost13/us-income-logistic-regression/notebook
+
+11
+
+0.15
+0.1
+
+Baseline
+Case-control
+Proposed
+
+Average WD
+
+Average DP
+
+0.2
+
+0.05
+0
+0.2
+
+0.4
+
+30
+
+Baseline
+Case-control
+Proposed
+
+25
+0.2
+
+Ratio of positive decisions α in sampling
+
+0.4
+
+Ratio of positive decisions α in sampling
+(b) Wasserstein Distance in P(x)
+
+(a) Demographic parity
+
+Figure 5.3: Results for the Adult dataset: The shaded regions in (a) denotes the average DP ± std.
+The shaded regions in (b) denote the average WD ± std.
+the classifier’s decision. We then sample the subset S ⊆ D with size |S| = 2, 000 using the proposed
+method and case-control sampling. To reduce the DP in the sampling, we required the sampled set
+to satisfy P(y = 1 | s = 1) ≈ P(y = 1 | s = 0) ≈ α for a predetermined ratio of positive decisions
+α ∈ [0, 1].
+Result We adopted the same complainer as the COMPAS data experiment, who refers to the WD
+as the bias detection metric. We repeated the experiment 100 times by randomly changing the data
+splitting, and summarized the results in Figure 5.3 10 . As the baseline, we computed the DP and
+the WD for randomly sampled 2, 000 sampled records from D, which are denoted as Baseline in the
+figures. Similar to the results of COMPAS, the figures again show the clear success of the proposed
+method (R1, R2, and R3).
+
+6
+
+Conclusion
+
+In this study, we studied the auditability of the fairness from a subset of the dataset with decisions.
+Formally, we consider the stealthily biased sampling problem, which finds a subset that is fair even
+though the overall dataset is unfair, and that is indistinguishable from the uniform distribution. We
+formulated the problem as a Wasserstein distance minimization problem, proposed an algorithm for
+the problem, and showed a validity of the formulation using the advantage used in the cryptographic
+theory. Our experiments showed that the stealthily biased sampling produces more indistinguishable
+distributions than the case-control sampling.
+Our results indicate that verifying the fairness of the decisions from a partially revealed dataset
+is difficult; hence, it should not be used as an evidence of fair decisions.
+Lastly, in this study, we revealed the difficulty of auditing fairnesses in practice. We hope that
+our study opens up new research directions for practical social mechanisms that enable us to audit
+fairnesses.
+10 Here,
+
+we show the results for logistic regression. The results for random forest can be found in Appendix E.2.
+
+12
+
+References
+[1] Dino Pedreshi, Salvatore Ruggieri, and Franco Turini. Discrimination-aware data mining. In
+Proceedings of the 14th ACM SIGKDD International Conference on Knowledge Discovery and
+Data Mining (KDD’08), pages 560–568. ACM, 2008.
+[2] Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer Reingold, and Richard Zemel. Fairness through awareness. In Proceedings of the 3rd innovations in theoretical computer science
+conference, pages 214–226. ACM, 2012.
+[3] Moritz Hardt, Eric Price, Nati Srebro, et al. Equality of opportunity in supervised learning. In
+Advances in neural information processing systems, pages 3315–3323, 2016.
+[4] Cynthia Dwork and Christina Ilvento. Individual fairness under composition. In Proc. Fairness
+Accountability Transp. Mach. Learn. Workshop, Stockholm, Sweden, 2018.
+[5] Tolga Bolukbasi, Kai-Wei Chang, James Y Zou, Venkatesh Saligrama, and Adam T Kalai.
+Man is to computer programmer as woman is to homemaker? debiasing word embeddings. In
+Advances in Neural Information Processing Systems, pages 4349–4357, 2016.
+[6] Michael Feldman, Sorelle A Friedler, John Moeller, Carlos Scheidegger, and Suresh Venkatasubramanian. Certifying and removing disparate impact. In Proceedings of the 21th ACM
+SIGKDD International Conference on Knowledge Discovery and Data Mining, pages 259–268.
+ACM, 2015.
+[7] Matthew Joseph, Michael Kearns, Jamie H Morgenstern, and Aaron Roth. Fairness in learning:
+Classic and contextual bandits. In Advances in Neural Information Processing Systems, pages
+325–333, 2016.
+[8] John Podesta, Penny Pritzker, Ernest J Moniz, John Holdern, and Jeffrey Zients. Big data
+- seizing opportunities, preserving values. Technical report, Executive Office of the President,
+The White House, 2014.
+[9] Cecilia Munoz, Megan Smith, and D J Patil. Big data: A report on algorithmic systems,
+opportunity, and civil rights. Technical report, Executive Office of the President, The White
+House, 2016.
+[10] Nathan Mantel and William Haenszel. Statistical aspects of the analysis of data from retrospective studies of disease. Journal of the national cancer institute, 22(4):719–748, 1959.
+[11] Oded Goldreich. Foundations of cryptography: volume 2, basic applications. Cambridge university press, 2009.
+[12] Leonid Nisonovich Vaserstein. Markov processes over denumerable products of spaces, describing large systems of automata. Problemy Peredachi Informatsii, 5(3):64–72, 1969.
+[13] Gabriel Peyré, Marco Cuturi, et al. Computational optimal transport. Technical report, 2017.
+√
+[14] Yin Tat Lee and Aaron Sidford. Path Finding II: An Õ(m n) Algorithm for the Minimum
+Cost Flow Problem. arXiv preprint arXiv:1312.6713, 2013.
+[15] Péter Kovács. Minimum-cost flow algorithms: an experimental evaluation. Optimization Methods and Software, 30(1):94–127, 2015.
+13
+
+[16] Martin Grötschel, László Lovász, and Alexander Schrijver. The ellipsoid method and its consequences in combinatorial optimization. Combinatorica, 1(2):169–197, 1981.
+[17] Frank J Massey Jr. The kolmogorov-smirnov test for goodness of fit. Journal of the American
+statistical Association, 46(253):68–78, 1951.
+[18] Toon Calders, Faisal Kamiran, and Mykola Pechenizkiy. Building classifiers with independency
+constraints. In Data mining workshops, 2009. ICDMW’09. IEEE international conference on,
+pages 13–18. IEEE, 2009.
+[19] Julia Angwin, Jeff Larson, Surya Mattu, and Lauren Kirchner. Machine bias. ProPublica, May,
+23, 2016.
+[20] Dua Dheeru and Efi Karra Taniskidou. UCI machine learning repository, 2017.
+
+14
+
+Appendix
+A
+
+Quantitative Biasing
+
+In the main body of the paper, we show a method for categorical biasing. Here, we show that the
+quantitative bias can be also included.
+Imagine that the sensitive attribute is quantitative (e.g., the height of a person). In this case, the
+fair decision must satisfy that the expected value of the sensitive attribute in each category y ∈ Y
+is the same. Let γ be the expected value of the sensitive attribute among the dataset. Then, this
+constraint is given by
+X
+γ−ǫ≤
+s(xi )µi ≤ γ + ǫ, (y ∈ Y).
+(A.1)
+i∈D:yi =y
+
+We denote this constraint µ ∈ P (γ). Then, the stealthily biased sampling problem is given as follows.
+Problem 6 (Stealthily biased sampling problem (Quantitative bias)).
+minimize
+subject to
+
+W (µ, ν)
+µ ∈ P (γ).
+
+(A.2)
+
+By substituting the definition of the Wasserstein distance, the above problem is reduced to the
+following linear programming problem.
+P
+minimize
+i,j∈V d(xi , xj )πij
+(A.3)
+subject to π ∈ ∆(µ, ν), µ ∈ P (γ).
+The problem is solved using the ellipsoid method or the alternating direction method of multiplier
+(ADMM) with minimum-cost flow computations.
+
+B
+
+Proof of Theorem 4
+
+Proof. The advantage can be rewritten as
+
+
+Adv(Φ; µK , ν K ) = PD∼µK (Φ(D) = 1) − PD∼ν K (Φ(D) = 1)
+Z
+
+Z
+
+
+K
+K
+
+=  I(Φ(D) = 1)µ (dD) − I(Φ(D) = 1)ν (dD) .
+
+Let us approximate the function D → I(Φ(D) = 1). Let ∂Φ be the boundary across which the
+output of Φ is changed from 0 or 1 to 1 or 0. For D, let d(D, ∂Φ) = inf D′ ∈∂Φ d(D, D′ ), where
+d(D, D′ ) = mini=1,...,K d(xi , x′i ) for D = (x1 , ..., xK ) and D′ = (x′1 , ..., x′K ). For ǫ > 0, define
+
+
+I(Φ(D) = 1) if d(D, ∂Φ) ≥ ǫ,
+˜
+(B.1)
+Iǫ (D) = 12 + d(D, ∂Φ) if Φ(D) = 1,
+
+1
+2 − d(D, ∂Φ) if Φ(D) = 0.
+
+Then, the advantage is approximated as
+Z
+
+
+
+K
+K
+K
+K 
+
+˜
+Adv(Φ; µ , ν ) ≤  Iǫ (dµ − dν )
+
++ PD∼µK (d(D, ∂Φ) ≤ ǫ) + PD∼ν K (d(D, ∂Φ) ≤ ǫ).
+15
+
+(B.2)
+(B.3)
+
+By definition, I˜ǫ is a 2ǫ-Lipschitz function. Hence, from Kantorovich–Rubenstein duality of 1Wasserstein distance [], we have
+Z
+
+K
+K
+
+
+ I˜ǫ (dµK − dν K ) ≤ W (µ , ν ) .
+(B.4)
+
+
+2ǫ
+Let us consider the condition under which ΦKS,τ (D) = 1. Let I1 , ..., IK be intervals such that
+Fµ (x) ∈ [(i − 1)/K, i/K] for any x ∈ Ii . For an interval I, let Iǫ = {x : inf x′ ∈I |x − x′ | ≤ ǫ}. Then,
+ΦKS,τ (D) = 1 if and only if x(i) ∈ (Ii )τ for all i = 1, ..., K, where x(1) , ..., x(K) be the ordered samples
+such that x(1) ≤ ... ≤ x(K) .
+Let xlow,i = inf{x ∈ (Ii )τ } and xup,i = sup{x ∈ (Ii )τ }. Then, we have
+PD∼ν K (d(D, ∂Φ) ≤ ǫ)
+
+(B.5)
+
+
+=PD∼ν K ∀i, min{|x(i) − xlow,i |, |x(i) − xup,i |} ≤ ǫ .
+
+(B.6)
+
+If ǫ ≤ τ , the event ∀i, min{|x(i) − xlow,i |, |x(i) − xup,i |} ≤ ǫ is equivalent to either
+∀i = 1, ..., K, |x(i) − xlow,i | ≤ ǫ,
+
+(B.7)
+
+∀i = 1, ..., K, |x(i) − xup,i | ≤ ǫ,
+
+(B.8)
+
+or
+
+because xlow,i − ǫ ≥ xup,i−1 + ǫ and xup,i−1 − ǫ ≥ xlow,i + ǫ for i = 2, ..., K.
+Let us derive a bound on the probability that the event Eq. B.7 occurs. It can be bounded by
+P(∃i, x1 ∈ B2ǫ (xlow,i ))
+
+(B.9)
+
+P(∃i, x1 ∈
+/ B2ǫ (xlow,i ), x2 ∈ B2ǫ (xlow,i ))
+P(∃i, x1 , x2 ∈
+/ B2ǫ (xlow,i ), x3 ∈ B2ǫ (xlow,i ))...
+
+(B.10)
+(B.11)
+
+Similarly, the probability that the event Eq. B.8 occurs can be bounded by
+P(∃i, x1 ∈ B2ǫ (xup,i ))
+P(∃i, x1 ∈
+/ B2ǫ (xup,i ), x2 ∈ B2ǫ (xup,i ))
+
+P(∃i, x1 , x2 ∈
+/ B2ǫ (xup,i ), x3 ∈ B2ǫ (xup,i ))...
+
+(B.12)
+(B.13)
+(B.14)
+
+Hence, under D ∼ µK , we have
+P((B.7)) ≤K!
+
+K
+Y
+
+µ(B2ǫ (xlow,i )),
+
+(B.15)
+
+P((B.8)) ≤K!
+
+K
+Y
+
+µ(B2ǫ (xup,i )).
+
+(B.16)
+
+P((B.7)) ≤K!
+
+K
+Y
+
+ν(B2ǫ (xlow,i )),
+
+(B.17)
+
+P((B.8)) ≤K!
+
+K
+Y
+
+ν(B2ǫ (xup,i )).
+
+(B.18)
+
+i=1
+
+i=1
+
+Similarly, under D ∼ ν K , we have
+
+i=1
+
+i=1
+
+16
+
+Suppose ǫ is sufficiently small so that B2ǫ (xlow,i ) for i = 1, ..., K are distinct sets. Under Assumption 3, it is enough if ǫ ≤ (C/K)1/s /2. Under Assumption 3, µ(B2ǫ (xlow,i )) ≤ (2ǫ/C)s and
+µ(B2ǫ (xup,i )) ≤ (2ǫ/C)s for any i = 1, ..., K. Note that the probability mass that is moved from µ
+PK
+to ν is at most TV(κ, κ′ ). There exist αi ≥ 0 satisfying i=1 αi = 1 such that for any i = 1, ..., K,
+ν(B2ǫ (xlow,i )) ≤ µ(B2ǫ (xlow,i )) + αi TV(κ, κ′ ).
+
+Thus, we have
+P((B.7)) ≤K!
+≤K!
+
+K
+Y
+
+(µ(B2ǫ (xlow,i )) + αi TV(κ, κ′ ))
+
+i=1
+
+
+
+2ǫ
+C
+
+s
+
++
+
+TV(κ, κ′ )
+K
+
+K
+
+.
+
+(B.19)
+
+The same bound holds for P((B.8)). Substituting these bounds into Eq. B.3 yields
+W (µK , ν K )
++ 4K!
+Adv(Φ; µ , ν ) ≤
+2ǫ
+K
+
+K
+
+
+
+2ǫ
+C
+
+s
+
+TV(κ, κ′ )
++
+K
+
+K
+
+.
+
+(B.20)
+
+Setting ǫ = (C/K)1/s /2 yields the claim.
+
+C
+
+Bootstrap-type Estimator
+
+In real-world data, the computational scalability of the proposed method can be a bottleneck: it
+requires Õ(N 2.5 ) time for the dataset of size N using a general minimum-cost flow solver. Empirically,
+we observed that solving the problem for N ≥ 10, 000 tends to be computationally prohibitive. Here,
+we consider a bootstrap-type estimator to bypass the prohibitive computation. In the every round
+of the bootstrap, we sample N ′ points D′ out of the N points in the dataset D, i.e. D′ ⊆ D and
+|D′ | = N ′ . We solve the minimum-cost flow problem only on the subset D′ and obtain a measure
+µ′ . Finally, we average the measures µ′ obtained in the every bootstrap round as the estimated
+measure µ. If we take N ′ in a reasonable size (e.g. around a few thousands), this estimation is
+sufficiently efficient, without much loss on the estimation accuracy. The bootstrap step can be easily
+parallelized to further speed up the computation.
+In the Adult data experiment in Section 5.3, we set the sample size N ′ = 4, 000 and the number
+of bootstrap steps to be 30.
+
+D
+
+Synthetic Example: Additional Results
+
+Here, we present additional results for the synthetic data experiment in Section 5.1.
+
+D.1
+
+Results in higher dimensional settings
+
+We conducted additional experiments by changing the dimensionality d of the feature x to d = 2, 5,
+and 10. The results are shown in Figures D.1, D.2, and D.3. Those results also support our key
+observations R1, R2, and R3 in Section 5.
+
+17
+
+D.2
+
+Stochastic decision-maker
+
+Here, we demonstrate that the stochastic decision-maker can be far evil than the deterministic
+decision-maker. That is, by using the proposed method, the stochastic decision-maker can choose
+the ratio of positive decisions α in sampling almost arbitrary. We show that even if the decisionmaker make such an intense sampling, the complainer cannot detect the fraud of the decision-maker.
+For the experiment, instead of the criteria (5.2), we consider the decision-maker that makes the
+decision based on the probability
+P(y = 1 | x, s) = x1 + bs,
+
+(D.1)
+
+where b ≥ 0 is a constant. The setup of the experiment is the same as Section 5.1 except for the
+criteria of the decision-maker.
+Result We set the parameters in (D.1) with b = 0.2, which makes the DP of the decision-maker to
+be 0.2. We run the experiment 100 times while requiring P(y = 1 | s = 1) ≈ P(y = 1 | s = 0) ≈ α for
+a predetermined ratio of positive decisions α ∈ [0, 1]. The results are summarized in Figure D.4. The
+figures indicate similar tendencies as we have already observed in the deterministic decision-maker
+in Section 5.1. One significant difference is that the proposed method marked low rejection rates
+to a very wide range of α in sampling. In the deterministic case, as shown in Figure 5.1, α = 0.6
+was the only choice for the decision-maker to pretend to be fair safely. In the stochastic case, the
+decision-maker can choose arbitrary α between 0.25 and 0.95. The results indicate that, even for
+such an intense sampling, the complainer cannot detect the fraud of the decision-maker.
+Discussion The high effectiveness of the proposed method in the stochastic decision-maker can
+be explained as follows. Suppose the original dataset D follows a distribution P (y, x, s), and the
+target distribution we want to attain in the sampled dataset S ⊆ D be Q(y, x, s). Recall that
+P (y, x, s) = P (y | x, s)P (x, s) and Q(y, x, s) = Q(y | x, s)Q(x, s). In the deterministic case, the
+decision criteria is given by (5.2) which indicates P (y | x, s) = Q(y | x, s). Hence, to modify the
+distribution P (y, x, s) to the target distribution Q(y, x, s) through sampling, we need to modify
+Q(x, s) from P (x, s). Thus, the distribution change from P (x, s) to Q(x, s) can be detected by using
+the complainer’s data D′ ∼ P and the two-sample test between P (x, s) and Q(x, s). To fool the twosample test and avoid the high rejection rate, we need to minimize the modification and keep Q(x, s)
+close to P (x, s) as much as possible. This is the reason why the available ratio of positive decisions α
+is limited in the deterministic case. If α is far from the true ratio of positive decisions in D, we need
+a large modification on Q(x, s), which makes it difficult to pass the two-sample test. By contrast,
+in the stochastic case, we have a chance to modify Q(y|x, s) from P (y|x, s) through sampling. We
+can therefore modify the distribution P (y, x, s) to Q(y, x, s) while keeping Q(x, s) ≈ P (x, s) by
+using the proposed method, which makes it easy to pass the two-sample test. This is the reason
+why the proposed method is highly effective in the stochastic case. This fact implies that, if the
+decision-maker is interested in pretending to be fair, making stochastic decisions helps.
+
+E
+
+Real-World Data: Additional Results
+
+Here, we show the full results we omitted in Section 5.2 and 5.3 due to the space limitation.
+
+18
+
+E.1
+
+COMPAS Data
+
+We show the full results of the COMPAS data experiment in Section 5.2 in Figure E.1. The figures
+now include the WDs on P(x | s = 1) and P(x | s = 0) addition to Figure 5.2. The results indicate
+the success of the proposed method.
+
+E.2
+
+Adult Data
+
+Logistic Regression We show the full results of the Adult data experiment in Section 5.3 in
+Figure E.2. The figures now include the WDs on P(x | s = 1) and P(x | s = 0) addition to
+Figure 5.3. The results indicate the success of the proposed method.
+Random Forest We show the results for the random forest on the Adult data experiment in
+Section 5.3 in Figure E.3. The results were almost the same as logistic regression.
+
+19
+
+Ratio of rejection
+
+Average DP
+
+0.15
+Case-control
+Proposed
+
+0.1
+0.05
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+Ratio of rejection
+
+Ratio of rejection
+
+0.5
+
+0.6
+
+0.7
+
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+(b) Ratio of rejection in test P(x)
+
+1
+
+0.5
+
+Case-control
+Proposed
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+0
+0.4
+
+1
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+1
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+(c) Ratio of rejection in test P(x|s = 1)
+
+(d) Ratio of rejection in test P(x|s = 0)
+
+Figure D.1: [d = 2] The results for the decision-maker with a = 0.2: The shaded regions in (a)
+denotes the average DP ± std. The shaded regions in (b), (c), and (d) denote 95% confidence
+intervals. The dotted line in (b), (c), and (d) denotes the significance level 0.05.
+
+Ratio of rejection
+
+Average DP
+
+0.15
+Case-control
+Proposed
+
+0.1
+0.05
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+Ratio of rejection
+
+Ratio of rejection
+
+0.5
+
+0.6
+
+0.7
+
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+(b) Ratio of rejection in test P(x)
+
+1
+
+0.5
+
+Case-control
+Proposed
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+0
+0.4
+
+1
+
+0.8
+
+Ratio of positive decisions α in sampling
+(c) Ratio of rejection in test P(x|s = 1)
+
+1
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+(d) Ratio of rejection in test P(x|s = 0)
+
+20
+Figure D.2: [d = 5] The results for the decision-maker with a = 0.2: The shaded regions in (a)
+denotes the average DP ± std. The shaded regions in (b), (c), and (d) denote 95% confidence
+intervals. The dotted line in (b), (c), and (d) denotes the significance level 0.05.
+
+Ratio of rejection
+
+Average DP
+
+0.15
+Case-control
+Proposed
+
+0.1
+0.05
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+Ratio of rejection
+
+Ratio of rejection
+
+0.5
+
+0.6
+
+0.7
+
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+(b) Ratio of rejection in test P(x)
+
+1
+
+0.5
+
+Case-control
+Proposed
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+0
+0.4
+
+1
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+1
+0.5
+0
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+(c) Ratio of rejection in test P(x|s = 1)
+
+(d) Ratio of rejection in test P(x|s = 0)
+
+Figure D.3: [d = 10] The results for the decision-maker with a = 0.2: The shaded regions in (a)
+denotes the average DP ± std. The shaded regions in (b), (c), and (d) denote 95% confidence
+intervals. The dotted line in (b), (c), and (d) denotes the significance level 0.05.
+
+21
+
+Ratio of rejection
+
+Average DP
+
+0.15
+Case-control
+Proposed
+
+0.1
+0.05
+0
+0.2
+
+0.4
+
+0.6
+
+0.6
+
+0.8
+
+(b) Ratio of rejection in test P(x)
+
+Ratio of rejection
+
+Ratio of rejection
+
+0.4
+
+Ratio of positive decisions α in sampling
+
+1
+0.5
+0
+0.6
+
+0
+0.2
+
+(a) Demographic parity
+
+0.4
+
+Case-control
+Proposed
+
+0.5
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+0.2
+
+1
+
+0.8
+
+1
+0.5
+0
+0.2
+
+Ratio of positive decisions α in sampling
+
+0.4
+
+0.6
+
+0.8
+
+Ratio of positive decisions α in sampling
+
+(c) Ratio of rejection in test P(x|s = 1)
+
+(d) Ratio of rejection in test P(x|s = 0)
+
+Figure D.4: Results for the stochastic decision-maker with b = 0.2: The shaded regions in (a) denotes
+the average DP ± std. The shaded regions in (b), (c), and (d) denotes 95% confidence intervals.
+The dotted line in (b), (c), and (d) denotes the significance level 0.05.
+
+22
+
+0.1
+
+Average WD
+
+Average DP
+
+Baseline
+Case-control
+Proposed
+
+0.2
+
+0
+0.4
+
+1.5
+1
+0.5
+
+0.6
+
+Ratio of positive decisions α in sampling
+
+Baseline
+Case-control
+Proposed
+
+0.4
+
+0.6
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+(b) Wasserstein distance in P(x)
+
+Average WD
+
+Average WD
+
+1.4
+2
+1.5
+1
+0.4
+
+0.6
+
+1.2
+1
+0.8
+0.6
+0.4
+
+Ratio of positive decisions α in sampling
+
+0.6
+
+Ratio of positive decisions α in sampling
+
+(c) Wasserstein distance in P(x|s = 1)
+
+(d) Wasserstein distance in P(x|s = 0)
+
+Figure E.1: Results for the COMPAS dataset: The shaded regions in (a) denotes the average DP ±
+std. The shaded regions in (b), (c), and (d) denote the average WD ± std.
+
+23
+
+0.15
+0.1
+
+Baseline
+Case-control
+Proposed
+
+Average WD
+
+Average DP
+
+0.2
+
+0.05
+0
+0.2
+
+30
+25
+
+0.4
+
+0.2
+
+Ratio of positive decisions α in sampling
+
+(b) Wasserstein Distance in P(x)
+
+Average WD
+
+Average WD
+
+25
+0.2
+
+0.4
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+30
+
+Baseline
+Case-control
+Proposed
+
+50
+45
+40
+35
+
+0.4
+
+0.2
+
+Ratio of positive decisions α in sampling
+
+0.4
+
+Ratio of positive decisions α in sampling
+
+(c) Wasserstein Distance in P(x|s = 1)
+
+(d) Wasserstein Distance in P(x|s = 0)
+
+Figure E.2: [Logistic Regression] Results for the Adult dataset: The shaded regions in (a) denotes
+the average DP ± std. The shaded regions in (b), (c), and (d) denote the average WD ± std.
+
+0.1
+
+Baseline
+Case-control
+Proposed
+
+Average WD
+
+Average DP
+
+0.2
+
+0
+0.2
+
+30
+25
+
+0.4
+
+0.2
+
+Ratio of positive decisions α in sampling
+
+(b) Wasserstein Distance in P(x)
+
+Average WD
+
+Average WD
+
+28
+26
+24
+
+0.4
+
+Ratio of positive decisions α in sampling
+
+(a) Demographic parity
+
+30
+
+Baseline
+Case-control
+Proposed
+
+50
+45
+40
+35
+
+22
+0.2
+
+0.4
+
+Ratio of positive decisions α in sampling
+(c) Wasserstein Distance in P(x|s = 1)
+
+0.2
+
+0.4
+
+Ratio of positive decisions α in sampling
+(d) Wasserstein Distance in P(x|s = 0)
+
+Figure E.3: [Random Forest] Results for the Adult dataset: The shaded regions in (a) denotes the
+average DP ± std. The shaded regions in (b), (c),
+24 and (d) denote the average WD ± std.
+
+

@@ -1,0 +1,678 @@
+Information Processing and Management 38 (2002) 141±156
+
+www.elsevier.com/locate/infoproman
+
+Assessing bias in search engines
+Abbe Mowshowitz *, Akira Kawaguchi
+Department of Computer Science, The City College of New York, Convent Avenue at 138th Street,
+New York, NY 10031, USA
+Received 18 August 2000; accepted 25 January 2001
+
+Abstract
+This paper deals with the measurement of bias in search engines on the World Wide Web. Bias is taken to
+mean the balance and representativeness of items in a collection retrieved from a database for a set of
+queries. This calls for assessing the degree to which the distribution of items in a collection deviates from
+the ideal. Ascertaining this ideal poses problems similar to those associated with determining relevance in
+the measurement of recall and precision. Instead of enlisting subject experts or users to determine such an
+ideal, a family of comparable search engines is used to approximate it for a set of queries. The distribution
+is obtained by computing the frequencies of occurrence of the uniform resource locators (URLs) in the
+collection retrieved by several search engines for the given queries. Bias is assessed by measuring the deviation from the ideal of the distribution produced by a particular search engine. Ó 2001 Elsevier Science
+Ltd. All rights reserved.
+Keywords: Bias; Search engines; Retrieval performance; System measurement
+
+1. Introduction
+Information retrieval systems are designed to furnish information in response to queries; they
+organize collections of items such as business records, medical ®les, scienti®c articles, etc. by
+indexing the collections, providing a language for asking questions, and a retrieval algorithm for
+extracting responses to queries. Search engines are information retrieval systems whose collection
+consists of pages on the World Wide Web (Chu & Rosenthal, 1996; Clever Project Members,
+1999).
+
+*
+
+Corresponding author. Tel.: +1-212-650-6161.
+E-mail address: abbe@cs.ccny.cuny.edu (A. Mowshowitz).
+
+0306-4573/01/$ - see front matter Ó 2001 Elsevier Science Ltd. All rights reserved.
+PII: S 0 3 0 6 - 4 5 7 3 ( 0 1 ) 0 0 0 2 0 - 6
+
+142
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+Bias in retrieval systems is evidenced by undue inclusion or exclusion of certain items among
+those retrieved in response to queries; or it is revealed in giving undue prominence to some items
+at the expense of others. The main challenge in measuring bias is to give a precise de®nition of
+``undue''. An unbiased system should retrieve a selection that neither exaggerates nor downplays
+any particular items in the database in response to a set of queries. We propose to measure bias by
+comparing the performance of one retrieval system to that of a group of such systems, all of which
+function in the same information universe (Mowshowitz & Kawaguchi, 1999).
+This study is concerned primarily with bias on the World Wide Web. The Web is playing an
+increasingly important role as a source of information. Individuals search the Web for information pertaining to work, leisure, entertainment, current events, personal ®nance, politics, etc.
+As dependence on the Web grows, so grows the need for reliable and ± especially in the realm of
+citizenship ± unbiased information. Decision makers in private organizations and public agencies
+also have a need for unbiased information, or at least knowledge of the bias of their sources
+(Redman, 1998).
+Bias may also be viewed as a tool in the marketing arena. Here it is not necessarily something to
+be expunged from an information system, but rather it may be seen as a system feature to be
+manipulated so as to obtain the maximum exposure for a given product or service. Marketers
+want to ensure that their company's product name appears close to the top of the list of items
+retrieved by a search engine in reponse to a query about products of that type.
+Search engines, such as Yahoo, Alta Vista, Infoseek, Excite, Google, et al., produce a list of
+Web pages in response to a query. Each item on such a list usually consists of a title, truncated
+description, and the Web page's uniform resource locator (URL). Both the composition of the list
+and the order of presentation may re¯ect bias.
+Evaluation of retrieval system performance typically encompasses coverage, recall, precision,
+response time, user eort and form of output (Salton & McGill, 1983). Quantitative measures of
+recall and precision have been used extensively to assess the way a retrieval system responds to a
+query (Meadow, 1973). Recall is the ratio of the number of relevant items retrieved to the total
+number of relevant items in the database; precision is the ratio of the number relevant items
+retrieved to the total number retrieved. Both of these measures apply to a particular query, although they may be aggregated over several queries to provide more information about retrieval
+eectiveness. Bias is also performance-related, but is de®ned relative to a set of queries, which may
+consist of one or more entries. Traditional information retrieval research has paid very little attention to the issue of bias; our aim is to demonstrate the applicability of one particular approach
+to measuring bias, and thereby stimulate research in this area (Sparck Jones & Willett, 1997).
+2. What is bias?
+Political propaganda and commercial advertising are familiar examples of biased communication. The former is designed to persuade people to accept a political position; the latter aims to
+stimulate the purchase of particular products or services. Both political propaganda and commercial advertising consist of material, possibly including text, data, images and sound, intended
+to convey a speci®c viewpoint. The material is biased in the sense that it deliberately provides an
+unbalanced picture of its subject. Bias in presentation is an adjunct to persuasion.
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+143
+
+Many types of communication are biased. Legal arguments presented in a trial by either the
+prosecution or the defense attorney are meant to persuade a judge or jury of the merits of a
+particular case, not to present a balanced argument that both sides can accept. Advocates of
+scienti®c theories present biased arguments in favor of their position. Employees asking for a
+raise do not usually devote as much time to their de®ciencies as to their contributions to
+the ®rm. Clearly, some forms of biased communication have a legitimate role to play in society.
+In each of the above examples two sides are represented. Both prosecution and defense arguments are heard in a trial; the review procedure for scienti®c articles usually insures that potentially non-con®rming evidence is examined by the author; an employee's plea for a raise is
+typically heard by a critical manager. The analogue of these adversarial relationships is missing in
+the application of retrieval systems. There are no mechanisms to insure fairness in the information
+such systems present to users in response to queries.
+It is generally agreed that citizens in a democracy should be able to recognize propaganda,
+advertising, and other forms of biased presentations when they see them. Indeed, secondary
+school civics classes have long included units on propaganda and advertising. School children are
+taught to identify ``testimonials'', ``glittering generalities'', and ad hominum arguments commonly
+used in advertising and political campaigning. The role played by retrieval systems as gateways to
+information coupled with the absence of mechanisms to insure fairness makes bias in such systems
+an important social issue.
+Research on propaganda and advertising focuses on analyzing the content of communication.
+Content analysis, in particular, is a systematic approach to the analysis of bias in communication
+(Berelson, 1971; Carley, 1990). Detecting bias in an information retrieval system is dierent from
+analyzing the content of a message. A retrieval system contains a set of items (typically titles,
+citations, or brief subject descriptions) that represent messages, rather than the messages themselves. Bias is exhibited in the selection of items, rather than in the content of any particular
+message. The fomer may be termed indexical bias; the latter, content bias.
+Indexical bias (or retrieval system representativeness) implies slant or emphasis, attributable to
+the inclusion or exclusion or the order of presentation of references. By its nature bias is relative to
+some norm of representation. A fundamental problem of measurement is how to de®ne the norm.
+One way is to obtain independent judgments of subject experts; another is to use an implicit norm
+as de®ned by a collection of systems. An implicit norm for assessing a search engine can be established with a basket of appropriately chosen search engines oered on the Internet. Criteria of
+appropriateness are discussed in Section 6.
+3. Sources of bias
+Bias may be introduced into a retrieval system at any stage of its operation, from the choice of
+items to be included in the database to the retrieval algorithm employed.
+The rules for selecting items for a database may be a source of bias in a retrieval system.
+Assuming that items are drawn from a universe of possible items, systematic inclusion of certain
+items and the exclusion of others can slant the information obtained from the system. This source
+of bias can be deliberate or inadvertent. Search engines that only include paying Websites or those
+
+144
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+representing some political persuasion exemplify deliberate bias. Failure to include an item resulting from ignorance of its existence is a case of inadvertent bias.
+Bias may also be propagated by the way items are indexed. If, for example, index terms are
+drawn from a set provided by an interested party (e.g., metatags inserted in the HTML code by
+the Website designer), the terms may not accurately re¯ect the content of the database. This may
+account for the occasional retrieval of pornographic Websites for queries whose semantic content
+is far removed from pornography. For example, a search conducted by one of the authors on the
+query ``gas boilers'' turned up a Website advertising ``gas pedal girls''.
+The text in a Webpage may also be manipulated to increase the likelihood of retrieval on
+certain keywords. If index terms are chosen on the basis of frequency of occurrence in the text,
+some words can deliberately be repeated to achieve the desired result.
+The dynamic character of the World Wide Web makes the selection and indexing issues especially important in the treatment of bias. New Webpages are continually being added, existing
+ones are removed, and many change their content over time. `Fair' selection regimens and `objective' indexing schemes are essential to the production of unbiased information in this dynamically changing environment. Since the search engines on the Web contain proprietary
+programs, it is understandable that operational details are not publicly available. However,
+speci®cations needed by users to make informed judgments about possible bias would be helpful.
+Constraints or predispositions in the formulation of queries is another potential source of bias.
+Choice of search terms and simple transformations such as changing the order of terms in a query
+may aect the set of items retrieved. Eects linked to query formulation may bias outcomes if
+users are predisposed to use certain terms or orderings of terms rather than others. Limitations of
+knowledge of the query language may reinforce such predispositions.
+The search algorithm used in a retrieval system or search engine may also bias results. For
+example, syntactic or semantic processing of queries or the assignment of weights to terms in the
+query may lead to disproportionate emphasis on some items to the exclusion of others that may
+also be relevant and worthy of inclusion.
+4. Measures of bias
+The main quantitative performance measures applied to retrieval systems are recall and precision. Both of these measures are de®ned for a particular query q. Recall is the proportion of the
+items in the system relevant to q that are retrieved in processing q. Precision is the proportion of
+the items retrieved that are relevant to q.
+These measures presuppose that some independent determination of relevance ± the semantic
+or pragmatic `distance' between retrieved item and query ± can be made (Saracevik, 1975). In
+studies of retrieval systems, such determinations typically have been made by human subject
+experts or users. Gordon and Pathak (1999) have relied on users in their investigation of recall and
+precision in eight popular search engines, and they argue rightly that relevance determinations are
+best made ``by those who actually require the information''. Unfortunately, this approach is costly
+and time consuming. In the dynamically changing environment of the World Wide Web (Lawrence & Giles, 1998, 1999) it is wholly impractical if the performance of search engines is to be
+assessed on a regular basis.
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+145
+
+Bias is concerned with emphasis, i.e., the balance and representativeness of items in a collection
+retrieved from a database for a set of queries. Relevant or irrelevant items retrieved in response to
+a query may exhibit bias. Measurement of bias thus calls for assessing the degree to which the
+distribution of items in the collection deviates from the ideal. Ascertaining this ideal poses
+problems similar to those associated with measuring recall and precision. It is not feasible to enlist
+subject experts or users to determine such an ideal. Fortunately, the World Wide Web oers a
+practical alternative. A family of comparable search engines can be used to approximate the ideal
+or fair distribution of items retrieved for a set of queries. The distribution is obtained by computing the frequencies of occurrence of the URLs in the collection retrieved by several search
+engines for the given queries. Bias can be assessed by measuring the deviation from the ideal of the
+distribution produced by a particular search engine.
+Frequency of occurrence or popularity of a particular item retrieved by several search engines
+for queries on some subject may or may not correlate with relevance or usefulness to a user.
+However, bias is not concerned with individual items but rather with their distribution. The bias
+of a particular search engine signi®es the degree of conformity of the sets of results of searches in a
+given subject area with those produced by a collection of search engines for the same queries.
+Assuming sucient variability among the search engines (including dierences in the underlying
+databases), this method of approximating the fair distribution seems reasonable. Note that bias
+(or unrepresentativeness) can be interpreted in two very dierent ways. On the positive side, the
+skewing of results may mean that an engine picks up interesting items not found by the others; on
+the negative side, it may be that the engine simply fails to ®nd the most interesting items retrieved
+by the majority.
+Performance measures do not pinpoint causes or sources of system behavior. Recall and precision are in¯uenced by indexing and the retrieval algorithm, and to some extent by the query
+language. However, a poor recall or precision value does not tell us whether the retrieval algorithm or the indexing is at fault. Bias is also a performance measure, but being de®ned for a set of
+queries, it may be more sensitive to the query language and/or the formulation of queries by a user
+than is recall or precision.
+Bias signi®es undue emphasis. For a retrieval system this means selecting some items in the
+database too frequently and others not frequently enough, or presenting some items too prominently and others not prominently enough. Clearly, ``too frequently/prominently'' and ``not frequently/prominently enough'' are relative terms. Thus, to measure bias it is necessary to establish
+a norm of representativeness or appropriate emphasis. A collection of search engines is used to
+establish such a norm. Two variant measures of bias, one that ignores the order in which the
+retrieved URLs are presented, and one that takes account of order, are formulated.
+For either variant, the measurement of bias is based on a procedure for obtaining the collection
+of URLs corresponding to a set of queries processed by a set of search engines. The URLs may be
+obtained by processing randomly selected queries constituting a representative sample of inquiries
+about a given subject area. These queries can be constructed from a set of empirically determined
+search terms, i.e., terms consisting of conjunctions of words or phrases likely to be used to obtain
+information on the given subject. The number of search terms per query should approximate
+actual usage.
+A random sample of queries can be constructed by selecting one or more search terms from
+the ones available. Suppose, for simplicity, a query consists of a disjunction of search terms.
+
+146
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+Given a total of w search terms, and assuming no dierences arising from dierent orderings
+in a disjunction, the number of possible queries with at most m search terms is the sum of the
+binomial coecients C(w,i) for 1 6 i 6 m, with m 6 w. The value of w is to be determined
+empirically. Query selection is considered further below in the discussion of experimental results.
+4.1. Bias (ignoring order)
+Suppose t queries qi 1 6 i 6 t are to be processed by a given search engine. Let Ri;j denote the
+response sequence of URLs generated for query qi 1 6 i 6 t by search engine Ej 1 6 j 6 n; and let
+Si;j be the set of URLs included in Ri;j . Then Ri;j  u1 ; u2 ; . . . ; uli;j  and Si;j  fu1 ; u2 ; . . . ; uli;j g
+where uk is the kth URL in the list retrieved by search engine Ej in processing query qi , and li;j is
+the size of the list.
+The URLs making up the response sets Ri;j specify pages on the World Wide Web. Since
+dierent pages belonging to the same Website may be included in a response set, and it may be
+desirable under some circumstances to treat URLs from the same site as identical, a system for
+bias measurement should allow the user to specify the de®nition of URL equality.
+Since there is anecdotal evidence to suggest that users rarely examine retrieved URLs beyond a
+relatively small number m, it is reasonable to assume that each of the Ri;j has m elements, i.e.,
+li;j  m for all i and j. The appropriate value of m to use in benchmarking search engines is a
+matter for empirical investigation. It is conceivable that less bias would be observed if the entire
+set of URLs retrieved by each of the engines were included in the computation. Since the bias
+values can be obtained for dierent values of m, the presence of such an eect could be detected
+using the approach taken here.
+Suppose the union of the tn sets Si;j consists of the set A  fa1 ; a2 ; . . . ; aK g; and let
+R i 1nj  Ri;j , i.e., the response sets listed in row major form. The number of times each URL
+occurs among the Rk 1 6 k 6 nt must be tabulated. This can be done by computing a tn  K
+matrix whose klth element is 1 if Sk;l contains al and 0 otherwise. Clearly, the sum Pl of the lth
+column is the number of times URL al occurs among the response sets R1 ; . . . ; Rtn . To facilitate
+comparison, assume the URLs of A are given in non-increasing order of frequency. The vector
+X  P1 ; P2 ; . . . ; PK  is called the response vector for the collection of search engines.
+Next the response vector for a particular search engine E (which may or may not be one of the n
+search engines considered above) is determined. As before the union V of response sets is ®rst
+computed. In this case there are t sets Ri making up the union, one for each set of responses
+generated by E for query i 1 6 i 6 t. Suppose B  fb1 ; b2 ; . . . ; bN g is the union of the Ri . Note that
+if engine E is included in the collection de®ning the norm, B is a subset of A, however, if E is
+excluded, B may contain URLs not in A. Now form the membership matrix Ti;j whose i,jth element is 1 if bj belongs to Ri and 0 otherwise. Let pl be the sum of the elements in column
+l 1 6 l 6 N . The response vector for E is given by x  p1 ; p2 ; . . . ; pN .
+Since the presence or absence of E in the collection of search engines will in¯uence the bias
+value, we need to distinguish two cases, one in which E is included in the norm and the other in
+which E is excluded. Bias values with the engine excluded are generally higher than those computed with the engine included. The eect of a single engine on bias values can be reduced by
+increasing the number of engines de®ning the norm. Both variants of the bias measure are
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+147
+
+computed, despite the systematic dierence, to allow for proper comparisons of engine performance.
+If E is included, the response vector for E is v1 ; v2 ; . . . ; vK  where vl  pl if bl is in A and 0
+otherwise. If E is excluded, both response vectors must be modi®ed. The response vector for the
+collection must have h 0's appended to take account of the h elements of B that are not in A. The
+components of x are ordered so as to correspond to those of X, with the URLs of B that are not in
+A occupying positions K  1 to K  h: For simplicity of presentation, we will use the notation X
+ (Xl ) and x  xl  to represent the response vectors and assume that each is appropriately ordered with the requisite number K of components.
+The bias of an engine E with respect to a set of search engines and a collection of queries
+(representing a given subject) can be measured as the dissimilarity of or the distance between
+the vectors x and X. For purposes of comparison, it is useful to choose normalized measures.
+Measured by dissimilarity or distance, the bias should be 0 when the results produced by E
+are `essentially' the same as those produced by the collection; and 1 when there is `no
+agreement'. The precise conditions for these extreme values will be examined for two wellknown measures.
+4.1.1. Dissimilarity measure
+The following formula for the similarity s (v; w) of vectors v  v1 ; . . . ; vn  and w  w1 ; . . . ; wn 
+representing, respectively, queries and documents, has long been used in information retrieval
+research. (Becker & Hayes, 1963; Salton, 1968; Salton & McGill, 1983)
+s v; w 
+
+Rvi wi
+2
+
+2 1=2
+
+fR vi  R wi  g
+
+where all the summations are from i  1 to i  n:
+
+Taking v and w as vectors passing through the origin in an n-dimensional Euclidean space, this
+measure can be interpreted as the cosine of the angle between them. It can also be interpreted as
+the correlation coecient of v and w, taken as random variables with 0 means. This measure is
+invariant under normalization, i.e., s v; w  s v=Rv i; w=Rw i.
+s v; w  1 when v  cw, for any real number c; and s v; w  1 when v and w are orthogonal,
+i.e., when vi wi  0 for all i. Thus, de®ning the bias of an engine E (relative to a collection C) by
+b E; q1 ; . . . ; qt ; E1 ; . . . ; En   1
+
+s x; X
+
+gives the extreme values 0 (when X is a scalar multiple of x), and 1 (when Xi or xi is 0 for each i).
+Example 1. Suppose two search engines A and B are used to de®ne the norm, and three queries
+are processed by each engine. Furthermore, suppose the URLs retrieved by A and B, respectively,
+for the three queries are:
+abcd
+A: bad c
+cd ba
+
+acef
+B: cg f a
+ef gh
+
+Then the (eight) distinct URLs retrieved by either A or B are a b c d e f g h, and the response
+vectors for A, B and the norm are: x  3; 3; 3; 3; 0; 0; 0; 0, y  2; 0; 2; 0; 2; 3; 2; 1, and
+X  5; 3; 5; 3; 2; 3; 2; 1, respectively.
+
+148
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+Now, the cosines of the angles between x and X and y and X are 48= 108 361=2  0:8729,
+and 38= 84 261=2  0:8131, respectively. So, the bias of search engine A (with respect to the
+norm de®ned by A and B, and the three queries) is 1 0:8729  0:1271 and the bias of B is
+1 0:8131  0:1869.
+4.1.2. Distance measure
+An alternative way to gauge how vectors x and X dier is to measure the distance between
+them. This leads to the following de®nition:
+b E; q1 ; . . . ; qt ; E1 ; . . . ; En   f 1=KRPl =nt
+
+pl =t2 g1=2
+
+where l runs from 1 to K:
+
+This is the (normalized) Euclidean distance between vectors X and x. Each component of X is
+divided by nt since nt response sets are generated by the n search engines in processing the t
+queries. Similarly, each component of x is divided by t since the given search engine generates
+t response sets in processing the t queries. b measures the deviation of E from the collection of
+search engines. When (1/nt)X agrees with (1/t)x on each component, the value of b is zero,
+meaning there is no bias; when all the Pl or all the pl are 0, the bias, as measured by b,
+reaches its theoretical maximum value of 1. Using relative frequencies, rather than frequency
+counts as in the dissimilarity de®nition of bias, is necessary in order to insure that a zero bias
+reading is obtained when for each URL a, the relative frequency of a in the response set
+retrieved by engine E is the same in the set retrieved by the collection C. Unlike the dissimilarity measure, Euclidean distance is not invariant under normalization of the vector
+components.
+Example 2. Given the same engines, queries, and retrieved URLs as in Example 1, the vectors
+1=3x; 1=3y; 1=6X are given by 1; 1; 1; 1; 0; 0; 0; 0; 2=3; 0; 2=3; 0; 2=3; 1; 2=3; 1=3, (5/6,1/2,5/
+6,1/2,1/3,1/2,1/3,1/6), respectively. Then the distance between x and X is f 1=8 1=62 
+1=22  1=62  1=22  1=32  1=22  1=32  1=62 g1=2  0:1319, which is the same as
+the distance between y and X in this case.
+4.2. Bias (taking account of order)
+Since users of search engines tend to pay more attention to URLs appearing at the top of a
+response sequence than they do to those at the bottom, bias measures should be able to take
+account of the order in which URLs appear. Although this observation is based on informal
+evidence compiled by the authors, it is strongly con®rmed by the behavior of the typical marketer
+or advertiser who is evidently willing to pay for software and services designed to get search
+engines to display her company's products among the top ten or twenty items retrieved for search
+terms related to those products. To take account of the order in which URLs are presented by a
+search engine in response to queries, it is necessary to shift the focus of attention from the URLs
+themselves to the positions they occupy in response sequences.
+A simple way to take account of position is to increment the count of a URL by an amount
+dependent on the position in which it occurs. Possible schemes include the following, where m
+represents the number of positions in a response sequence. Increment the count of a URL in
+position i by
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+149
+
+Table 1
+Four measurement conditions
+Engine included
+URL complete
+
+Engine included
+URL truncated
+
+Engine excluded
+URL complete
+
+Engine excluded
+URL truncated
+
+(1) m  1 i=m: In this case, the URL in the ®rst position counts 1, and the URL in the mth
+position count 1=m.
+(2) m/i. Here, the URL in the ®rst position counts m, while the last one counts only 1.
+Positional weighting is re¯ected in the value obtained from the bias measure de®ned above.
+For each of the measurement conditions shown in Table 1, a weighting scheme must be chosen.
+Unordered bias is given by the scheme in which each occurrence of a URL is incremented by 1,
+regardless of the position it occupies. If URLs are incremented by a factor varying with position,
+the value computed is a variant of ordered bias.
+Including versus excluding the search engine under investigation in the measurement norm was
+detailed above. The other condition in the Table refers to the URL string used in the analysis ± it
+serves to de®ne equality between the items retrieved by the search engines. ``URL complete''
+means that dierent Web pages (possibly belonging to the same site) are distinguished in the
+analysis, whereas ``URL truncated'' means that dierent Web sites only are distinguished (i.e.,
+Web pages belonging to the same site are treated as identical).
+Another approach to the measurement of ordered bias involves the use of the edit distance
+(Cormen, Leiserson, & Rivest, 1990, p. 325) between two strings of symbols. Suppose L and M are
+ordered lists of symbols corresponding to the sequences of URLs representing, respectively, a
+given search engine E and a collection C of engines. The ordered bias of E with respect to C could
+be measured by the edit distance between L and M. For example, suppose E is represented by the
+sequence L  a; b; c; d of URLs and C by M  b; a; c; d. Since L can be obtained from M by a
+single transposition, the edit distance (and ordered bias) is 1. Candidate sequences for use in
+measuring bias are the URLs retrieved by E and C, respectively, listed in non-increasing order of
+frequency.
+4.3. Entropy measure of positional bias
+If the number of queries is large enough, it may be useful to consider a measure based on a
+decomposition of the collection of response sets.
+Two response sequences with the same URL in a given position can be regarded as similar with
+respect to that position. More formally, for each position i we can de®ne an equivalence relation
+on the set of response sequences (for a query or group of queries) as follows: response sequences R
+and S are i-equivalent if both have the same URL in position i. Each such equivalence relation
+induces a partition on the set of response sequences, and this can be used to de®ne a ®nite
+probability scheme whose entropy can be computed (Mowshowitz, 1968). The result is a sequence
+of entropy values, one for each position. Comparison of the sequence of entropy values for a set
+of queries processed by search engine E, with the corresponding sequence computed for the same
+queries processed by a group of search engines (including or excluding E), provides a measure of
+
+150
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+the bias of E on a given subject. The procedure described below is for the case in which engine E is
+included in the group. Excluding E entails minor modi®cations.
+There are two ways to construct the sequence of entropy values for a set of queries processed by
+n dierent search engines. One is to de®ne the equivalence relations on the set of all response
+sequences obtained by processing t queries by n search engines. An alternative is to obtain a
+sequence of entropy values for each search engine and to compute an average. Each of these
+alternatives is described below.
+4.3.1. Collective entropy sequence
+Let R qi ; Ej  be the response sequence produced by search engine Ej for query qi , for 1 6 i 6 t
+and 1 6 j 6 n. Suppose there are m positions in each response sequence, and that the union of the
+sets of URLs retrieved by the n search engines in response to one or more of the t queries is
+U  fui g, for 1 6 i 6 K. As before the nt response sequences are listed in row major order, i.e.,
+S i 1tj  R qi ; Ej . Now let A  ak;l  be the m  nt matrix where ak;l denotes the URL in position
+k of response sequence Sl . Each row of this matrix consists of the (not necessarily distinct) URLs
+occurring in a given position of the nt response sequences.
+The equivalence relation de®ned above induces a partition of the response sequences for each
+position. Let ui;1 ; . . . ; ui;ki be the distinct URLs in the ith row of A, and suppose there are ti;r copies
+of ui;r 1 6 r 6 ki . The equivalence relation de®ned above induces a partition of the response sequences for each row i of A; the equivalence class si;r consists of sequences that have URL ui;r in
+position i 1 6 r 6 ki . There is one equivalence class for each distinct URL ui;r . Thus for each row
+(or position), i we can de®ne a ®nite probability scheme whose rth component 1 6 r 6 ki  is the
+pair Wi;r ; pi;r , where pi;r  ti;r =nt (the number of elements in equivalence class Wi;r divided by the
+total number of response sequences). The entropy of this ®nite probability scheme is given by
+H i  Rpi;r log pi;r , where the sum is taken over all values of r from 1 to ki . The value of H i
+varies between 0 and log nt.
+When ki  1 (only one equivalence class), all the response sequences have the same URL in the
+ith position and H i  0. At the other extreme, ki  nt (nt equivalence classes), no two response
+sequences have the same URL in the ith position, and H i  log nt.
+The entropy measure H i re¯ects agreement on position, where agreement is taken to mean
+that dierent reponse sequences tend to have the same URL in a particular position. Letting
+f i  log nt H i, we see that the maximum (log nt) value occurs when a given position is
+occupied by the same URL for each of the nt response sets; and the minimum (0) occurs when no
+two URLs in the ith position are the same.
+The norm proposed for bias measurement is based on the entropy values corresponding to the
+rows of A. We de®ne the entropy vector HE1 ; . . . ; En ; q1 ; . . . ; qt   H i 1 6 i 6 m as the m-tuple
+of entropy values corresponding to the rows of A, one value for each position in the list generated
+by a search engine for a query. The entropy vector HE1 ; . . . ; En ; q1 ; . . . ; qt  computed for the nt
+response sequences serves as a norm for measuring the bias of a particular search engine E  Ej 
+for 1 6 j 6 t in processing the set of n queries.
+The bias computation calls for determining a second entropy vector hE; q1 ; . . . ; qt  for the t
+(ordered) response sequences generated by the search engine E for the t queries. With a
+single search engine we obtain an m  t matrix B  [bi;j ] where bi;j is the URL in the ith
+position of the jth response sequence (i.e., the one resulting from the processing of query qj ).
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+151
+
+As before a ®nite probability scheme is constructed for each row i of B and its entropy hi
+computed.
+Now, with H  H i and h  h i 1 6 i 6 m, the positional bias b0 of E with respect to
+engines E1 ; . . . ; En and queries q1 ; . . . ; qt is de®ned as the dissimilarity of H and h. Thus,
+b0 E; E1 ; . . . ; En ; q1 ; . . . ; qt  
+
+RH ih i
+
+fRH i2 Rh i2 g1=2
+where all the summations are from i  1 to i  m:
+
+4.3.2. Entropy segregated by search engine
+The matrix A de®ned above can be divided into n submatrices, corresponding to the n search
+engines. Each of these is an m  t matrix whose rows represent the m positions of a response
+sequence, and whose columns represent the t response sequences produced by a given search
+engine. Thus, we obtain n entropy vectors, one for each matrix (search engine). The average of
+these n vectors can be used as the norm of the bias computation.
+5. Software environment for bias measurement
+To facilitate empirical investigation, we have developed a system that acts as a meta-search
+engine (Liu, 1998) and automatically computes bias for a set of queries. Currently, the system can
+invoke 15 commercially available search engines, including Yahoo, Northern Light, Google,
+Infoseek, Lycos, et al. A set of key words, obtained from search engine users or other sources, is
+®rst compiled. Queries consisting of subsets of the keywords are then plugged into the search
+engines and the response sets are captured and processed. These response sets contain the data
+needed for the bias computations.
+The system has two parts: a query driver (implemented in Java) and a response pro®ler (implemented using Oracle 8). Both components coexist with and act as functional layers to search
+engines. We construct a sequence of queries qi consisting of key words. Some queries will have
+multiple key words in varying Boolean combinations. These queries are kept in a separate ®le as
+string images.
+The query driver reads each qi from the ®le and pipes it into a chosen search engine. Generating qi
+makes it possible to re-execute the identical query set for other search engines, which allows us to
+compare and characterize various search engines from the bias viewpoint. A corresponding result
+set, Rq , is obtained by executing q on the search engine. Rq is an HTML document produced by the
+search engine. It is immediately piped into the response pro®ler. The response pro®ler analyzes the
+Rq and extracts a collection of URLs, each of which represents an index to the ranked data item.
+The main features and options of the system (accessible at http://www-cs.engr.ccny.cuny.edu/
+project/) are as follows. To establish a norm for measuring bias, a subset of the currently available
+search engines must be selected in the box labelled ``Search With''. Queries must be entered one
+per line under ``Related Keyword Set for Search''. Each query/line in this box is submitted to the
+selected search engines as given. ``Max Per Engine'' determines the size (m) of the response sequences retrieved by the search engines. Three choices of ``Weightings'' are provided. The ®rst
+dictates a simple count of URLs; the other two modify the count by the position in which the
+
+152
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+URL is found. Finally, the ``Prominence Summary'' box allows the user to specify the size (up to
+60) of the list of URLs presented in non-increasing order of (position-weighted) frequency.
+The results of a particular bias assessment are presented in a series of tables called ``Cumulative
+Bias Measures: after searching [query x]''. The bias values in each table are based on the combined
+results of all the queries shown in square brackets. Four independent values, divided into two
+groups, are computed. The ®rst two (from left to right) include the engine being assessed in the
+collection de®ning the norm; the latter two exclude that engine. Complete URL means that the
+bias computation treats Web pages as the fundamental unit, whereas ``Truncated URL'' means
+Web pages from the same Website are taken to be identical. The last column ``Average'' is the
+numerical mean of the complete URL for the ``Engine Included'' and ``Engine Excluded'' cases.
+The value in the ®rst column (``Collected'') should be the number speci®ed by the user under
+Max Per Engine. If this value is less than what was speci®ed, it means either that the given engine
+retrieved a lower number of URLs, or (more likely) there is a problem with the interface between
+the metasearcher and the engine.
+Following the ith cumulative bias table is a list by search engine of the (complete) URLs retrieved by that engine for the ith query. Some additional information is presented at the bottom of
+each table. This includes the number of distinct URLs collected, the number of distinct sites
+among those URLs, the total number of URL tokens collected, and the elapsed time in seconds
+taken to complete the search. After the last cumulative bias table, a list of the most prominently
+occurring URLs (with their weighted frequencies) is presented. A facility for graphing bias values
+for each engine as a function of the number of queries is also available.
+6. Experimental results
+Critical choices concerning the norm, subject areas, and queries have to be made before the
+measures de®ned above can be applied. Search engines to be used in de®ning the measurement
+norm have to be identi®ed; subject areas to be covered in measuring bias must be selected; and
+queries for each subject area must be formulated.
+The search engines included in the set de®ning the norm should be commensurate with the
+individual engines to be assessed. For example, it might not make sense to compare an engine that
+indexes only German language Web pages to engines that index all pages on the Web. The main
+criterion in selection should be comparability of the sets of URLs that might be retrieved in response to a query.
+Since the bias exhibited by a search engine is likely to vary from one subject to another,
+measurement must be subject speci®c. An assessment of bias in a commercial search engine like
+Yahoo might be conducted for subjects such as ``jobs'', ``health'', ``travel'', ``real estate'', ``®nance'', etc. For each of the subject areas, a set of search terms must be identi®ed for purposes of
+constructing queries to be used in testing. For example, terms used to search the subject ``real
+estate'' might include ``residential real estate'', ``commercial real estate'', ``houses for sale'',
+``rental apartments'', ``real estate agents'', ``mortgages'', etc.
+Preliminary experiments have centered on the ability of the measures to discriminate between
+search engines, and on the correctness and reliability of the software environment. The graphs
+reproduced below in Fig. 1 show quite clearly that the dissimilarity-based bias measure does
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+153
+
+Fig. 1. Bias measurements in four subject areas: (a) integrated circuits; (b) euthanasia; (c) molecular genetics; and (d)
+campaign ®nance.
+
+indeed discriminate between search engines. These graphs, plotting bias values for each of several
+engines as a function of number of search terms in a query, show the results of searches in four
+dierent subject areas, namely, ``euthanasia'', ``molecular genetics'', ``integrated circuits'' and
+``campaign ®nance''. Thirteen, global (i.e., indexing pages drawn from the entire Web), commercial search engines (AltaVista, Excite, Google, Goto, HotBot, InfoSeek, ICQIT, LookSmart,
+MSN, NorthernLight, Snap, Yahoo, WebCrawler) were used to de®ne the norm. Results are
+plotted for only eight of the engines simply to improve readability of the graphs. The bias values
+
+154
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+are computed with the engine under study included in the norm; the URLs distinguish dierent
+pages; and unit weighting of URLs is used, meaning order of presentation is not taken into account. Based on these very limited test results, no general conclusion can be drawn about the
+relative performance of the engines shown. More extensive testing and statistical analysis in each
+of several subject areas would be required to support general conclusions about the bias of any of
+the search engines.
+Twelve queries (from a single search term to a disjunction of all 12 terms) were tested for each
+of the subjects. Note that each succeeding query adds one additional search term from the list of
+terms used to retrieve information on the given subject. Twenty URLs were retrieved for each
+query. The bias values for euthanasia fall in the range 0.28±0.70, with Excite at the bottom (0.35±
+0.45) and Northern Light at the top (0.57±0.72). The range of bias values for the subject molecular
+genetics is 0.30±0.81, with MSN (0.30±0.47) at the bottom and Northern Light (0.71±0.81) at the
+top. Bias values for the topic integrated circuits are in the range 0.40±0.75, with MSN and HotBot
+(0.40±0.52) sharing the bottom and Northern Light (0.71±0.75) at the top. Finally, the bias values
+for the subject campaign ®nance fall in the range 0.34±0.74, with HotBot (0.40±0.48) at the
+bottom and Northern Light (0.63±0.74) at the top.
+Northern Light consistently exhibits the greatest amount of bias among the engines plotted
+because it is the only one retrieving URLs representing proprietary items not indexed by the other
+engines. Excluding Northern Light, the engines with the highest bias readings are HotBot (0.56±
+0.61) for subject euthanasia, AltaVista (0.49±0.62) for subject molecular genetics, Excite (0.56±
+0.68) for subject integrated circuits, and Excite and AltaVista (0.48±0.64) for subject campaign
+®nance.
+These sample measurements suggest that the bias exhibited by a particular search engine stabilizes as search terms are added to a query. As a consequence, dierences between search engines
+might be relatively stable for a given subject area. Of course, the bias value for a disjunction of k
+search terms might depend on the particular choice of terms, so more complete experiments
+controlling for this eect are required to resolve the issue.
+7. Benchmarking search engines
+The bias measures de®ned in this paper could be used to establish search engine benchmarks,
+i.e., tests that measure bias-related performance of a search engine on a prescribed set of retrieval
+tasks. Such benchmarks could be used to monitor and diagnose or to predict the performance of a
+search engine. Bias is subject speci®c. A search engine may be highly biased in one subject, and not
+at all in another. Thus any benchmarking procedure for a search engine must compute bias values
+for a collection of subject areas, providing a `bias pro®le'. An average value taken over all the
+subject areas may serve as a summary statistic for the pro®le.
+A benchmarking procedure calls for de®ning a set of retrieval tasks. As explained above, bias is
+subject speci®c, so the retrieval tasks must be linked to speci®c subject areas. A practical
+benchmarking procedure could be implemented as follows:
+1. Choose a basket of search engines to de®ne a performance norm.
+2. Select subject areas for testing.
+3. For each subject, identify the terms that might be used to search for information on that subject.
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+155
+
+4. Formulate a series of queries, each consisting of a distinct selection of i search terms where
+1 6 i 6 k search terms. (Since queries must be processed by each of a number of search engines,
+there is a practical limit to the number of queries that can be used. For example with 20 search
+terms, the number of subsets of size 5 would be 15,504. One way to reduce the processing time
+without sacri®cing accuracy is to choose a representative sample for each value of i. Assuming
+no more than 30 search terms per subject, this would allow for reducing the number of queries
+to no more than a few hundred.)
+5. Compute bias values for each of the queries speci®ed in step 3.
+6. Use the arithmetic average of the bias values for i search terms (1 6 i 6 k) to de®ne the bias pro®le for the search engine. (These bias values would indicate the degree to which the performance of a particular search engine departs from the norm implicitly de®ned by the chosen
+basket of engines.)
+In addition to providing comparative performance measures of search engines, this procedure
+could be used to investigate dierences in the eectiveness of queries.
+8. Conclusion
+Assessing bias is of considerable social signi®cance since the Internet is an important source of
+information for organizations as well as individuals, and its role as a source can be expected to
+increase in the future. The measures and procedures for assessing bias, described in this paper, are
+oered in the hope of providing some additional tools for assessing the quality and reliability of
+information obtained on the new medium. In particular, practical measures have been developed
+for use in detecting bias in Web search engines. A comprehensive test of the bias metrics described
+in this paper is currently underway.
+At the moment, libraries and related repositories of traditional sources coexist with the Internet, and many dierent search engines are available for accessing the vast repositories of information on the World Wide Web. These are `natural' safeguards against biased information in
+reference sets. But what if traditional repositories become too expensive to maintain, and economic forces lead to consolidation in the search engine business? Search engines serve as the
+`reference librarians' of the Web. Individuals and organizations would be ill served if all the libraries of the world shared the same reference librarian. Similarly, they would be ill served by a
+search engine monopoly. If consolidation does occur, bias detectors (however computed) will be
+indispensable to informed use of search results. But even if the search engine business remains
+highly competitive, users will have need of performance measures to assist them in assessing the
+representativeness or bias of response sets, as well as in judging the coverage and relevance of
+search results.
+Acknowledgements
+The authors are grateful to Professors Hal Borko and Charles Meadow for helpful comments
+on a draft of this paper.
+
+156
+
+A. Mowshowitz, A. Kawaguchi / Information Processing and Management 38 (2002) 141±156
+
+References
+Becker, B., & Hayes, R. M. (1963). Information storage and retrieval: Tools, elements, theories. New York: Wiley.
+Berelson, B. (1971). Content analysis in communication research. New York: Hafner Publishing.
+Carley, K. (1990). Content analysis. In R. E. Asher (Ed.), The encyclopedia of language and linguistics. Edinburgh:
+Pergamon Press.
+Chu, H., & Rosenthal, M. (1996). Search engines for the World Wide Web: A comparative study and evaluation
+methodology. In ASIS Annual Conference and Proceedings, 19±24 October 1996.
+Clever Project Members (1999). Hypersearching the Web. Scienti®c American, June 1999, 54±60.
+Cormen, T. H., Leiserson, C. E., & Rivest, R. L. (1990). Introduction to algorithms. Cambridge, MA: MIT Press.
+Gordon, M., & Pathak, P. (1999). Finding information on the World Wide Web: the retrieval eectiveness of search
+engines. Information Processing and Management, 35, 141±180.
+Lawrence, S., & Giles, C. L. (1998). Searching the World Wide Web. Science, 280(3), 98±100.
+Lawrence, S., & Giles, C. L. (1999). Accessibility of information on the Web. Nature, 400(199), 107±109.
+Liu, J. (1998). Guide to meta-search engines. BF Bulletin (Special Libraries Association, Business and Finance
+Division), 107, Winter 1998, 17±20.
+Meadow, C. T. (1973). The analysis of information systems (2nd ed.). Los Angeles: Melville.
+Mowshowitz, A. (1968). Entropy and the complexity of graphs: I. An index of the relative complexity of a graph.
+Bulletin of Mathematical Biophysics, 30, 175±204.
+Mowshowitz, A., & Kawaguchi, A. (1999). Bias in information retrieval systems. Workshop on Information Systems and
+technologies (WITS'99), 11±12 December 1999, Charlotte, NC.
+Redman, T. C. (1998). The impact of poor data quality on the typical enterprise. Communications of the ACM, 41(2),
+79±82.
+Salton, G. (1968). Automatic information organization and retrieval. New York: McGraw-Hill.
+Salton, G., & McGill, M. J. (1983). Introduction to modern information retrieval. New York: McGraw-Hill.
+Saracevik, T. (1975). Relevance: a review of and a framework for thinking on the notion in information science. Journal
+of the American Society for Information Science, 26, 321±343.
+Sparck Jones, K., & Willett, P. (Eds.) (1977). Readings in information retrieval. San Francisco: Morgan Kaufmann.
+
+

@@ -1,0 +1,1249 @@
+Fair and Diverse DPP-Based Data Summarization
+L. Elisa Celis 1 Vijay Keswani 1 Damian Straszak 1 Amit Deshpande 2 Tarun Kathuria 3 Nisheeth K. Vishnoi 1
+
+Abstract
+Sampling methods that choose a subset of the
+data proportional to its diversity in the feature
+space are popular for data summarization. However, recent studies have noted the occurrence
+of bias – e.g., under or over representation of a
+particular gender or ethnicity – in such data summarization methods. In this paper we initiate a
+study of the problem of outputting a diverse and
+fair summary of a given dataset. We work with
+a well-studied determinantal measure of diversity and corresponding distributions (DPPs) and
+present a framework that allows us to incorporate a general class of fairness constraints into
+such distributions. Designing efficient algorithms
+to sample from these constrained determinantal
+distributions, however, suffers from a complexity
+barrier; we present a fast sampler that is provably
+good when the input vectors satisfy a natural property. Our empirical results on both real-world and
+synthetic datasets show that the diversity of the
+samples produced by adding fairness constraints
+is not too far from the unconstrained case.
+
+1. Introduction
+A problem facing many services – from search engines and
+news feeds to machine learning – is data summarization:
+how can one select a small but representative, i.e., diverse,
+subset from a large dataset. For instance, Google Images
+outputs a small subset of images from its enormous dataset
+given a user query. Similarly, in training a learning algorithm one may be required to choose a subset of data points
+to train on as training on the entire dataset may be costly.
+However, data summarization algorithms prevalent in the
+online world have been recently shown to be biased with respect to sensitive attributes such as gender, race or ethnicity.
+For instance, a recent study found evidence of systematic
+1
+École Polytechnique Fédérale de Lausanne (EPFL), Switzerland 2 Microsoft Research, India 3 UC Berkeley. Correspondence
+to: L. Elisa Celis <elisa.celis@epfl.ch>, Nisheeth K. Vishnoi
+<nisheeth.vishnoi@epfl.ch>.
+
+Proceedings of the 35 th International Conference on Machine
+Learning, Stockholm, Sweden, PMLR 80, 2018. Copyright 2018
+by the author(s).
+
+under-representation of women in search results (Kay et al.,
+2015). Concretely, the above work studied the output of
+Google Images for various search terms involving occupations and found, e.g., that for the search term “CEO”, the
+percentage of women in top 100 results was 11%, significantly lower than the ground truth of 27%. Through studies
+on human subjects, they also found that such misrepresentations have the power to influence people’s perception about
+reality. Beyond humans, since data summaries are used to
+train algorithms, there is a danger that these biases in the
+data might be passed on to the algorithms that use them;
+a phenomena that is being revealed more and more in automated data-driven processes in education, recruitment,
+banking, and judiciary systems, see (O’Neil, 2016).
+A robust and widely deployed method for data summarization is to associate a diversity score to each subset and
+select a subset with probability proportional to this score;
+see (Hesabi et al., 2015). This paper focuses on a concrete
+geometric measure of diversity of a subset S of a dataset
+{vx }x∈X of vectors – the determinantal measure denoted
+by G(S) (Kulesza & Taskar, 2012); and the resulting probability distribution is called a determinantal point process
+(DPP). G(S) generalizes the correlation measure for two
+vectors to multiple vectors and, intuitively, the larger G(S),
+the more diverse is S in the feature space. Among benefits
+of G(·) are its overall simplicity, wide applicability – not
+depending on combinatorial properties of the data, and efficient computability. A potential downside might be the
+additional effort required in modeling, i.e., to represent the
+data in a suitable vector form so that the geometry of the
+dataset indeed corresponds to diversity.
+Despite the well-acknowledged ability of DPPs to produce
+diverse subsets, unfortunately, there seems to be no obvious way to ensure that this also guarantees fairness in the
+DPP samples in the form of appropriate representation of
+sensitive attributes in the subset selected. Partially, this is
+due to the fact that fairness could mean different things in
+different contexts. For instance, consider a dataset in which
+each data point has a gender. One notion of fairness, useful
+in ensuring that the ground truth does not get distorted, is
+proportional representation: i.e., the distribution of sensitive characteristics in the output set should be identical to
+that of the input dataset (Kay et al., 2015). Another notion
+of fairness, argued to be necesseary to reverse the effect of
+
+Fair and Diverse DPP-Based Data Summarization
+
+historical biases (Koriyama et al., 2013), could be equal
+representation – the representation of sensitive characteristics should be equal independent of the ratio in the input
+dataset. While these measures of fairness have natural generalizations to the case when the number of sensitive types
+is more than two, and can be refined in several ways, one
+thing remains common: they all operate in the combinatorial space of sensitive attributes of the data points. Simple
+examples (see, e.g., Figure 1 in the Supplementary File)
+show that, in certain settings, geometric diversity does not
+imply fairness and vice-versa; however, there seems to be
+no intrinsic barrier in attaining both.
+We initiate a rigorous study of the problem of incorporating
+fairness with respect to sensitive attributes of data in DPPbased sampling for data summarization. Our contributions
+are: A framework that can incorporate a wide class of notions of fairness with respect to disjoint sensitive attributes
+and, conditioned on being fair in the specified sense, outputs
+subsets where the probability of a set is still proportional to
+˙ In particular, we model the problem as sampling from a
+G().
+partition DPP – the parts correspond to different sensitive attributes and the goal is to select a specified number of points
+from each. Unfortunately, the problem of sampling from
+partition DPPs has been recently shown to be intractable
+in a strong sense (Celis et al., 2017) and the question of
+designing fast algorithms for it, at the expense of being approximate, has been open. Our main technical result is a
+linear time algorithm (see Section 3.1) to sample from partition DPPs that is guaranteed to output samples from close
+to the DPP distribution under a natural condition on the
+data (see Definition 4). We prove that random data matrices
+satisfy this condition in Section 3.3. We run our algorithm
+on the Adult dataset (Blake & Merz, 1998) and a curated
+image dataset with various parameter settings and observe a
+marked improvement in fairness without compromising geometric diversity by much. A theoretical justification of this
+low price of fairness is provided in Section 4; while there
+have been few works on controlling fairness, ours is the first
+to give a rigorous, quantitative price of fairness guarantee
+in any setting. Overall, our work gives a general and rigorous algorithmic solution to the problem of controlling bias
+in DPP-based sampling algorithms for data summarization
+while maximizing diversity.
+Related Work. There are several data pre-processing approaches to reduce bias in training data. For example, in
+(Kamiran & Calders, 2012) or (He & Garcia, 2009), bias
+is removed from training data by over- or under-sampling
+from the dataset with appropriately defined cardinality constraints on the parts of a partition. The sampling approach
+used is often either uniform or preferential (according to a
+problem-dependent ranking). We show that sampling using
+partition-DPPs has better results in ensuring diversity of the
+sampled subset than any such sampling method.
+
+DPP-based sampling has been deployed for many data summarization tasks including text and images (Kulesza &
+Taskar, 2011), videos (Gong et al., 2014), documents (Lin
+& Bilmes, 2012), recommendation systems (Zhou et al.,
+2010), and sensors (Krause et al., 2008); and the study of
+DPPs with additional budget or resource constraints is of importance. While for unconstrained DPPs there are efficient
+algorithms to sample (Hough et al., 2006), the problem of
+sampling from constrained DPPs is intractable; see (Celis
+et al., 2017), where pseudopolynomial time algorithms for
+partition DPPs are presented. There is also work on approximate MCMC algorithms for sampling from various discrete
+point processes (see (Rebeschini & Karbasi, 2015; Anari
+et al., 2016) and the references therein), and algorithms that
+are efficient for constrained DPPs under certain restrictions
+on the data matrix and constraints (see (Li et al., 2016) and
+the references therein). To the best of our knowledge, ours
+is the first algorithm for constrained DPPs that is near-linear
+time. Our algorithm is a greedy, approximate algorithm, and
+can be considered an extension of a similar algorithm for unconstrained DPPs given by (Deshpande & Vempala, 2006).
+Finally, our work contributes towards an ongoing effort
+to measure, understand and incorporate fairness (e.g., see
+(Barocas & Selbst, 2015; Caliskan et al., 2017; Dwork et al.,
+2012; Zafar et al., 2017)) in fundamental algorithmic problems, including ranking (Celis et al., 2018b), voting (Celis
+et al., 2018a), and personalization (Celis & Vishnoi, 2017).
+
+2. Our Model
+In this section we present the formal notions, model and
+other theoretical constructs studied in this paper. X will
+denote the dataset and we let m denote its size. We assume
+that for each x ∈ X, we are given a (feature) vector vx ∈
+Rn , where n ≤ m is the dimension of the data. Let V
+denote the m × n matrix whose rows correspond to the
+vectors vx for x ∈ X. For a set S ⊆ X, we use VS to
+denote the submatrix of V that is obtained by picking the
+rows of V corresponding to the elements of S. We can now
+describe geometric diversity formally.
+Definition 1. (Geometric Diversity) Given a dataset X
+and the corresponding feature vectors V ∈ Rm×n , the
+geometric diversity of a subset S ⊆ X is defined as
+G(S) := det VS VS> , which is the squared volume of
+the parallelepiped spanned by the rows of VS .
+This volume generalizes the correlation measure for two
+vectors to multiple vectors and, intuitively, the larger the
+volume, the more diverse is S in the feature space; see
+Figure 2 in the Supplementary File for an illustration. Geometric diversity gives rise to the following distribution on
+subsets known as a determinantal point process (DPP).
+Definition 2. (DPPs and k-DPPs) Given a dataset X and
+the corresponding feature vectors V ∈ Rm×n , the DPP is a
+distribution over subsets S ⊆ X such that the probability
+
+Fair and Diverse DPP-Based Data Summarization
+det(VS VS> )
+> ,
+T ∈B det(VT VT )
+
+
+P[S] ∝ det VS VS> . The induced probability distribution
+over k-sized subsets is called k-DPP.
+
+have qS? :=
+
+A characteristic of a DPP measure is that the inclusion of
+one item makes including other similar items less likely.
+Consequently, DPPs assign greater probability to subsets of
+points that are diverse; for example, a DPP prefers search
+results that cover multiple aspects of a user’s query, rather
+than the most popular one.
+
+Given the results of (Celis et al., 2017), we know that sampling from P -DPPs is #P-hard and exact sampling algorithm for P -DPPs are unlikely. Correspondingly, the flexibility that our framework provides in specifying the fairness
+constraints comes at a computational cost. In this paper, we
+give a fast, approximate sampling algorithm for P -DPPs.
+
+Our Algorithmic Framework: We are given a dataset X
+along with corresponding feature vectors V ∈ Rm×n and a
+positive number k ≤ m that denotes the size of the subset
+or summary that needs to be generated. The dataset X is
+partitioned into p disjoint classes X1 ∪ X2 ∪ · · · ∪ Xp , each
+corresponding to a sensitive class. A key feature of our
+model is that we do not fix one notion of fairness; rather,
+we allow for the specification of fairness constraints with
+respect to these sensitive classes. Formally, we do this
+by taking
+Pp as input p natural numbers (k1 , k2 , . . . , kp ) such
+that j=1 kj = k is the sample size. These numbers give
+rise to a fair family of allowed subsets defined to be B :=
+{S ⊆ X : |S ∩ Xj | = kj for all j = 1, 2, . . . , p}. By
+setting (k1 , . . . , kp ) appropriately, the user can ensure their
+desired notion of fairness. For example, if the dataset has mi
+items with the i-th sensitive attribute, then we can set ki :=
+kmi /m to obtain proportional representation. Similarly,
+equal representation can be implemented by setting ki =
+k/p for all i.
+
+3. Our Algorithm
+
+The fair data summarization problem is to sample from a
+distribution that is supported on B. However, there could be
+many such distributions; we pick one that is “closest” to the
+to the k-DPP described by V . We use the Kullback-Leibler
+(KL) divergence
+Pbetween distributions q and q̃ defined as
+DKL (q||q̃) := S qS log qq̃SS .1 The following lemma characterizes the distribution supported on B that has the least
+KL-divergence to a given distribution (see Appendix B.1 in
+the Supplementary File for the proof).
+Lemma 1. Given a distribution q̃ with support set C, let
+B ⊆ C and q be any distribution on B. Then the optimal
+value of minq DKL (q||q̃) is achieved by the distribution q ? ,
+such that qS? ∝ q̃S , for S ∈ B and 0 otherwise.
+Thus, the distribution above can be thought of as the most
+diverse while being fair; we call it partition DPP, or P -DPP.
+Definition 3. (P -DPP) Given a dataset X, the corresponding feature vectors V ∈ Rm×n , a partition X =
+X1 ∪ X2 ∪ · · · ∪ Xp into p parts, and natural numbers
+?
+k1 , . . . , kp , P -DPP defines
+Pp a distribution q over subsets
+S ⊆ X of size k = i=1 ki such that for all S ∈ B we
+1
+
+Note that when there are only two parts, one can recover the
+percentages of elements from each part from the KL-distance. For
+multiple parts, the KL-distance is a natural (and general) singledimensional function of the percentage vector with which to measure the deviation from the target distribution.
+
+P
+
+and qS? = 0 otherwise.
+
+Notions of Volume and Projection. Let us recall the interpretation of determinants in terms of volumes. For S ⊆ X,
+VS is the set of vectors {vx }x∈S . If the vectors in S
+are pairwise orthogonal, then the matrix VS VS> is diago2
+nal with entries {kvx k }x∈S on the diagonal and, hence,
+Q
+2
+>
+det(VS VS ) = x∈S kvx k . In the general case, the determinant is not simply the (squared) product of the norms of
+vectors, however a similar formula still holds. Let H ⊆ Rn
+be any linear subspace and H ⊥ be its orthogonal complement, i.e., H ⊥ := {y ∈ Rn | hx, yi = 0 for all x ∈ H}.
+Let ΠH : Rn → Rn be the orthogonal projection operator
+on the subspace H ⊥ , i.e., whenever w ∈ Rn decomposes as
+w1 +w2 for w1 ∈ H and w2 ∈ H ⊥ , then ΠH (w) = w2 . By
+a slight abuse of notation, we also denote by Πv the operator
+that projects a vector to another that is orthogonal to a given
+2
+vector v ∈ Rn , i.e., Πv (w) := w − hw, vi / kvk .
+The following lemma is a simple generalization of the formula derived above for orthogonal families of vectors and
+inspires our algorithm for P -DPPs. The proof of this lemma
+is presented in Section B.3 in the Supplementary File.
+Lemma 2 (Determinant Volume Lemma). Let
+n
+w1 , . . . , wk ∈ RQ
+be the rows of a matrix W ∈ Rk×n , then
+k
+2
+>
+det(W W ) = i=1 kΠHi wi k , where Hi is the subspace
+spanned by {w1 , . . . , wi−1 } for all i = 1, 2, . . . , k.
+3.1. Our Sample and Project Algorithm
+Before we describe our algorithms for sampling from P DPPs, it is instructive to consider the special case of k-DPPs
+itself and the simple “orthogonal” scenario – where all the
+vectors vx , for x ∈ X, are pairwise orthogonal. In such a
+case, there is a simple iterative algorithm: sample x ∈ X
+2
+with probability ∝ kvx k , then add x to S and remove x
+from X; repeat until |S| = k. It is intuitively clear, and
+not hard to prove, that the final probabilityQof obtaining a
+2
+given set S as a sample is proportional to x∈S kvx k =
+det(VS VS> ) and, hence, recovers the k-DPP exactly.
+In case of P -DPPs where all the vectors are pairwise orthogonal, and we need to sample ki vectors from partition Xi ,
+we can sample the required number of elements from each
+partition independently using the procedure in the previous
+paragraph. The orthogonality of the vectors and the disjointness of the parts implies that this sampling procedure gives
+the right probability distribution.
+
+Fair and Diverse DPP-Based Data Summarization
+
+Algorithm 1 Sample-And-Project
+1: Input: V, (X1 , .., Xp ), (k1 , .., kp )
+2: S ← ∅
+3: k ← k1 + k2 + · · · + kp
+4: Let wx := vx for all x ∈ X
+5: while |S| < k do
+6:
+Pick any2 i ∈ {1, . . . , p} such that |S ∩ Xi | < ki
+2
+7:
+Define q ∈ RXi by qx := kwx k for
+n x ∈ Xi o
+8:
+
+Sample x̃ ∈ Xi from distribution
+
+P qx
+
+y∈Xi
+
+qy
+
+x∈Xi
+
+9:
+S ← S ∪ {x̃}
+10:
+Let v := wx̃
+11:
+For all x ∈ X, set wx := Πv (wx )
+12: end while
+
+However, when the vectors vx are no longer pairwise orthogonal, the above heuristic can fail miserably. This is
+where we invoke Lemma 2. It suggests the following strategy: once we select a vector, then we should orthogonalize
+all the remaining vectors with respect to it before repeating
+the sampling procedure. For the case of k-DPPs, it can be
+shown that this heuristic outputs a set S with probability
+no more than k! times its desired probability (Deshpande
+& Vempala, 2006). The k! term is primarily because the
+k vectors can be chosen in any of the k! orders. Taking
+this simple heuristic as a starting point and incorporating an
+additional idea to deal with partition constraints, we arrive
+at our Sample and Project algorithm – see Algorithm 1.
+Given that we have made several simplifications and informal “jumps” when deriving the algorithm one cannot expect
+that the distribution over sets S produced by Algorithm 1 to
+be exactly the same as P -DPP. Later in this section we give
+evidence that in fact the distribution output by the “Sample
+and Project” heuristic can be formally related to the P -DPP
+distribution, and hence the constructed algorithm is provably
+an approximation to a P -DPP. However, we first note an
+attractive feature of this algorithm –P
+it is fast and practical.
+p
+For a V ∈ Rm×n matrix and k = i=1 ki , Algorithm 1
+can be implemented in O(mnk) time.
+Note that the size of the data for this problem is already
+Θ(mn), hence, the algorithm does only linear work per
+sampled point. For P -DPPs there is only one known exact
+algorithm which samples in time mO(p) , which is polynomial only when p = O(1) (Celis et al., 2017).
+Another possible approach for sampling from DPPs is the
+Markov Chain Monte Carlo method. It was proved in (Anari
+et al., 2016) that Markov Chains can be used to sample from
+4
+e
+k-DPPs in time roughly O(mk
++ mn2 ) given a “warm
+start”, i.e., a set S0 of significant probability. This approach does not extend to P -DPPs – indeed in (Anari et al.,
+2016) the underlying probability distribution is required to
+be Strongly Rayleigh, a property which holds for k-DPPs,
+but fails for P -DPPs whenever the number of parts is at least
+
+two. One can still formulate an analogous MCMC algorithm
+for the case of P -DPPs – it fails on specially crafted “bad
+instances” but seems to perform well on real world data.
+However, even ignoring the lack of provable guarantees for
+this algorithm, it does not seem possible to reduce its running time below O(mk 4 + mn2 ), which significantly limits
+its practical applicability.
+3.2. Provable Guarantees for Our Algorithm
+We now present a theorem which connects the output distribution of Algorithm 1 to the corresponding P -DPP. To
+establish such a guarantee we require the following assumption on the singular values of the matrices VXi .
+Definition 4 (β-balance). Let X be a set of m elements
+partitioned into p parts X1 , . . . , Xp and let V ∈ Rm×n be
+a matrix. Denote by σ1 ≥ · · · ≥ σn the singular values
+of V and for each i ∈ {1, 2, . . . , p}, let σi,1 ≥ · · · ≥ σi,n
+denote the singular values of VXi . For β ≥ 1, the partition
+X1 , . . . , Xp is called β-balanced with respect to V if for all
+i ∈ {1, . . . , p} and for all j ∈ {1, . . . , n}, σi,j ≥ β1 σj .
+The β-balance property informally requires that the diversity
+within each of the partitions VXi , relative to V , is significant.
+A more concrete geometric way to think about this condition
+is as follows: if one thinks of the positive semidefinite matrix
+V > V ∈ Rn×n as representing an ellipsoid in Rn whose
+axes are the singular values, then the β-balance condition
+essentially says that the ellipsoids corresponding to each of
+the partitions are a β-approximation to that of V (see Figure
+4 in the Supplementary File).
+Importantly, Algorithm 1 never outputs a set S ∈
+/ B, hence
+the only way its output distribution could significantly differ
+from the P -DPP would be if certain sets S ∈ B appeared
+in the output with larger probabilities than specified by the
+P -DPP. Our main theoretical result for Sample and Project
+is that for β-balanced instances we can control the scale at
+which such a violation can happen.
+Theorem 1 (Approximation Guarantee). Let X be a set of
+m elements partitioned into p parts X1 , . . . , Xp , a matrix
+V ∈ Rm×n and integers k1 , . . . , kp , such that X1P
+, . . . , Xp
+p
+is a β-balanced partition with respect to V and j=1 kj .
+X
+Let B ⊆ 2 denote the following family of sets
+B := {S ⊆ X : |S ∩ Xj | = kj for all j = 1, 2, . . . , p}
+Then Algorithm 1, with V , (X1 , . . . , Xp ) and (k1 , . . . , kp )
+as input, returns a subset S ∈ B with probability q̃(S) ≤
+Pp
+det(VS VS> )
+ηk · β 2k · qS? where qS? = P
+>) , k =
+j=1 kj
+det(V
+V
+T
+T ∈B
+T
+and ηk = k1 ! · k2 ! · · · kp !.
+The proof of the approximation guarantee uses techniques
+inspired by (Deshpande & Vempala, 2006) who prove a
+similar bound for k-DPP sampling.
+
+Fair and Diverse DPP-Based Data Summarization
+
+We use the following lemmas in the proof of the theorem.
+The proof of these lemmas appear in Appendix B.4 and
+Appendix B.5 in the Supplementary File.
+m×n
+
+Lemma 3. For any matrix V ∈ R
+with m ≥ n ≥ k,
+X
+X
+σi21 σi22 · · · σi2k =
+det(VS VS> )
+i1 <i2 <···<ik
+
+S:|S|=k
+
+where σ1 , σ2 , . . . , σn are the singular values of V and VS
+is the sub-matrix of V with rows corresponding to S.
+Lemma 4. Given a β-balanced partition, Algorithm 1 returns a set S such that det(VS VS> ) is non-zero with probability one.
+Proof of Theorem 1. Let π be the random variable representing the ordered output of the algorithm. Suppose that
+the algorithm outputs the set S = {x1 , . . . , xk }. Since the
+partition X1 , . . . , Xp is β-balanced with respect to V , by
+Lemma 4 the algorithm will always output a set which has
+non-zero determinant value, i.e, det(VS VS> ) 6= 0.
+Consider any ordering of the set S, say, τ := (x1 , . . . , xk ).
+Let Hj ⊆ Rn denote the linear subspace spanned by
+the vectors corresponding to the first j − 1 elements, i.e.,
+{vx1 , . . . , vxj−1 }. We also define a mapping f : X →
+{1, . . . , p} such that f (x) = i if x ∈ Xi .
+In the first iteration say we choose partition X1 . Then the
+algorithm will sample an element from X1 with probability
+proportional to the squared norm of the vector.
+After (j − 1) iterations wx will be the orthogonal projection of vx onto the subspace orthogonal to
+span{vx1 , vx2 , . . . , vxj−1 }. This is a consequence of the
+fact that (Πvx1 Πvx1 · · · Πvxj−1 ) = ΠHj .
+Hence in the (j − 1)-th iteration, wx = ΠHj (vx ) for all
+x ∈ X. Therefore, the probability that the sequence τ is the
+output of the algorithm is
+
+
+k
+ΠHj (vxj )2
+Y
+(1)
+P(π = τ ) =
+
+P 
+ΠH (vx )2 .
+j=1
+j
+
+x∈Xf (xj )
+
+Using above, the denominator of (1) becomes
+Dx1 ,...,xk ≥
+
+n
+k
+Y
+1 X 2
+1
+σt ≥ 2k
+2
+β t=j
+β
+j=1
+
+X
+
+σt21 · · · σt2k .
+
+t1 <···<tk
+
+By applying Lemma 3, it then follows
+1 X
+1 X
+Dx1 ,...,xk ≥ 2k
+det(VS VS> ) ≥ 2k
+det(VS VS> ).
+β
+β
+S∈B
+
+|S|=k
+
+det(V V > )
+
+S S
+Thus, P(π = τ ) ≤ β 2k P
+> . Since the order
+T ∈B det(VT VT )
+in which the partitions are considered by the algorithm is
+fixed, the vectors of each Xi in τ can be permuted amongst
+themselves and the output set will still be S. Correspondingly there are ηk = k1 ! · k2 ! · · · kp ! valid permutations of
+τ . Let TS be thePset of all valid permutations of elements of
+S, then q̃S =
+P(π = τ ) ≤ ηk · β 2k · qS? .
+
+τ ∈TS
+
+3.3. β-balanced property for random data
+For a given matrix V ∈ Rm×n , suppose we choose the
+partitions randomly. For each element x ∈ X, we put x in
+Xi with probability 1/p. Using the Matrix Chernoff bounds
+(Tropp, 2012), we prove the following theorem.
+Theorem 2. Assume that all the rows vj (for j ∈ X =
+{1, 2, . . . , m}) of V ∈ Rm×n satisfy vj> (V > V )−1 vj ≤
+δ2
+8p log(np) ,
+
+where δ ∈ (0, 1) is a constant. If X is randomly
+partitioned into X = X1 ∪ X2 ∪ . . . ∪ Xp then with probability at least 1e , the partition X1 , . . . , Xp is β-balanced
+p
+with respect to V , for β = (1 + δ)p.
+The proof of this theorem is given in Appendix B.6 in the
+Supplementary File. The quantity vj> (V > V )−1 vj is also
+called the statistical leverage score of vj with respect to
+V > V . For two partitions, the theorem states that if the
+leverage score of all rows is O( log1 n ), then the partitions are
+√
+β-balanced for β ≈ 2.
+
+4. Price of Fairness
+
+n
+n
+X 
+X
+
+1 X 2
+2
+ΠHj (vx )2 ≥
+σ
+σl,t ≥ 2
+β t=j t
+t=j
+
+In this section we present conditions under which the k-DPP
+and P -DPP distributions are close to each other. Note that
+the support of a P -DPP is a subset of the support of the
+corresponding k-DPP. Thus, a natural definition of the price
+of fairness is the KL-divergence between them.
+Definition 5 (Price of Fairness). Given a matrix V ∈
+Rm×n , partitions X1 , . . . , Xp and integers k1 , . . . , kp , let
+k = k1 + · · · + kp . Suppose q is the distribution defined
+by k-DPP over subsets of size k and q ? is the distribution
+defined by P -DPP over subsets with ki elements from each
+Xi . Then, the price of fairness is DKL (q ? ||q).
+
+where σl,t is the t-th singular value of VXl and second
+inequality is due to the β-balanced property of the partition.
+
+We define the following property for the input data and
+analyze its price of fairness.
+
+The numerator of (1) is det(VS VS> ) by Lemma 2. Let
+Dx1 ,...,xk denote the denominator. For each term in the
+
+
+
+P 
+ΠHj (vx )2 = VX − V 0 2 where
+denominator
+l
+Xl F
+x∈Xl
+
+k·kF denotes the Frobenius norm and VX0 l is the rank j − 1
+matrix with rows {vx0 }x∈Xl such that vx0 is the projection of
+vector vx on Hj . By a result on low rank approximations
+(see Theorem 1), we can bound the above quantity as
+
+x∈Xl
+
+Fair and Diverse DPP-Based Data Summarization
+-31.5
+
+1
+0.9
+
+P-DPP, ki-DPP
+
+0.8
+
+k-DPP
+Uniform
+
+0.7
+
+-32
+
+lg(G( ))
+
+D( )
+
+0.6
+0.5
+0.4
+
+-32.5
+
+-33
+
+0.3
+0.2
+
+P-DPP
+k-DPP
+ki-DPP
+
+-33.5
+
+0.1
+
+Uniform
+0
+
+-34
+10
+
+20
+
+30
+
+40
+
+50
+
+% Male in Dataset
+
+10
+
+20
+
+30
+
+40
+
+50
+
+% Male in Dataset
+
+Figure 1. The mean relative unfairness measure D(·) = Dun (·) with respect to the uniform distribution over 4 classes, and the logarithm
+of the geometric diversity lg(G(·)) are reported in the left and right figures respectively for n = 200 repetitions. Error bars represent the
+standard error of the mean.
+
+Definition 6 (δ-drop). For 0 ≤ δ ≤ 1, the partition
+X1 , . . . , Xp is called a δ-drop partition with respect to V
+and k1 , . . . , kp if for all i ∈ {1, . . . , p}, σi,ki +1 ≤ δσi,ki .
+Here σi,j is the j-th largest singular value of VXi .
+Roughly, this says that, if δ is small, then each of the matrices VXi is effectively a rank-ki matrix. Such a notion of
+low effective rank appears frequently in the machine learning literature (Roy & Vetterli, 2007; Drineas et al., 1999).
+We prove the following theorem that asserts that if the δdrop condition is satisfied, then we can be sure that most
+of the probability mass is concentrated on subsets which
+satisfy partition constraints. In such a case, sampling a k
+sized subset using any k-DPP algorithm will output a subset
+which satisfies partition constraints with high probability.
+The proof of the theorem is provided in the Appendix B.7
+in the Supplementary File.
+Theorem 3. Let ε ∈ (0, 1) and suppose that the partition
+X1 , . . . , Xp is δ-drop w.r.t. V and k1 , . . . , kp , with δ ≤
+√
+
+2
+k+p−1
+ε
+2k · σγn (with γ :=
+nN0 and N0 :=
+p−1 . If n ≥
+max{σi,1 }i , where σi,1 is the largest singular value of VXi
+and σn is the smallest non-zero singular value of V ) then
+1
+.
+the price of ensuring fairness is DKL (q ? ||q) ≤ log (1−ε)
+
+5. Empirical Results
+5.1. Algorithms and Baselines
+In each simulation, we compare several different probability distributions from which to select k samples from a
+dataset: As benchmarks we consider the (unconstrained)
+distributions, k-DPP (see Def 2), and UNIF, which selects a
+uniformly random subset of size k from the dataset X. We
+compare this against different methods which select from
+a fair family of allowed subsets, P -DPP (see Def 3), and
+ki -DPP (see Def 7 below).
+Definition 7. (ki -DPP) Given a dataset X, the corresponding feature vectors V ∈ Rm×n , a partition X =
+X1 ∪ · · · ∪ Xp into p parts, and numbers k1 , . . . , kp , ki DPP defines a distribution over k1 + · · · + kp -sized subsets
+S ⊆ X that is a product distribution: for each i, we obtain
+
+a sample Si ⊆ Xi of size ki independently
+with probability
+
+proportional to P[Si ] ∝ det VSi VS>i , and combine these
+samples to output S = S1 ∪ · · · ∪ Sp .
+Algorithms for ki -DPPs are simply obtained by independently using a k-DPP sampler with k = ki on each part
+Xi . For sampling from all the above listed distribution
+we use the Sample and Project algorithm as described in
+Section 3.1.
+Metrics. In each simulation, we report the geometric diversity G(·) (see Def 1) and the fairness as measured by
+the KL-divergence from the desired frequency over parts.
+Formally, given a probability distribution q over the p
+parts of the dataset, we define the relative unfairness measure of a set S ⊆ X as Dq (S) := DKL (q||s), where
+s = (s1 , . . . , sp ) denotes the vector of frequencies, i.e.,
+i ∩S|
+si = |X|S|
+for i = 1, 2, . . . , p. In particular, typically we
+want to have Dq (·) as small as possible – ideally equal to
+0. When qi = 1/p for all i, we refer to Dq as Dun . When
+qi = |Xi |/m, we refer to Dq as Dprop .
+5.2. Empirical Results on the Image Dataset
+Curated Dataset. We gathered a collection of images curated using Google image search as follows: Four search
+terms were used: (a) “Scientist Male”, (b) “Scientist Female”, (c) “Painter Male”, and (d) “Painter Female” (Imagedataset).
+Following (Kulesza & Taskar, 2011), each image was processed with the vlfeat toolbox to obtain sets of 128dimensional SIFT descriptors (Lowe, 1999; Vedaldi & Fulkerson, 2008). All such descriptors are collected in a single
+set and subsampled to roughly 10% of its total size. The
+resulting set of ≈ 104 descriptors was clustered using the
+k-means algorithm where k = 128 is the number of means.
+The feature vector for an image is the normalized histogram
+of the nearest clusters to the descriptors in the image.
+Empirical Results on the Biased Datasets. Our goal is to
+understand how the bias in the underlying dataset can affect
+the performance of the different sampling distributions with
+
+Fair and Diverse DPP-Based Data Summarization
+
+Sampling Method
+Unconstr.
+Equal
+
+Prop.
+
+UNIF
+k-DPP
+ki -UNIF
+ki -DPP
+P -DPP
+ki -UNIF
+ki -DPP
+P -DPP
+
+Dun (·)
+mean
+std
+
+Gender
+Dprop (·)
+mean
+std
+
+0.075
+0.027
+0
+0
+0
+0.074
+0.074
+0.074
+
+0.001
+0.011
+0.069
+0.069
+0.069
+0
+0
+0
+
+0.019
+0.009
+0
+0
+0
+0
+0
+0
+
+log G(·)
+mean std
+
+0.002
+0.005
+0
+0
+0
+0
+0
+0
+
+-67
+489
+-31
+410
+490
+-64
+409
+482
+
+41
+11
+35
+16
+11
+29
+17
+13
+
+Dun (·)
+mean
+std
+
+Ethnicity
+Dprop (·)
+mean
+std
+
+0.357
+0.268
+0
+0
+0
+0.358
+0.358
+0.358
+
+0.001
+0.005
+0.282
+0.282
+0.282
+0
+0
+0
+
+0.050
+0.038
+0
+0
+0
+0
+0
+0
+
+0.001
+0.004
+0
+0
+0
+0
+0
+0
+
+log G(·)
+mean std
+-67
+487
+16
+366
+476
+-65
+426
+488
+
+41
+12
+32
+16
+12
+35
+15
+12
+
+Table 1. We report the unfairness (Dun (·) with respect to the uniform distribution over parts, and Dprop (·) with respect to the “proportional”
+distribution, i.e. as in the whole dataset) and diversity (log G(·)) for the different sampling methods on the Adult dataset when (a) the
+sensitive attribute is Gender or (b) the sensitive attribute is Ethnicity. Sets of size 400 were selected, and 100 samples were taken for
+each. For the samplers that match fairness constraints, we consider both selecting subsets with equal representation and selecting subsets
+with proportional representation. We note that P -DPP has the highest diversity out of all constrained sampling methods regardless of the
+method of representation. Moreover, the diversity of P -DPP matches that of the unconstrained k-DPP for Gender under proportional
+representation and for Ethnicity under equal representation.
+
+respect to fairness and geometric diversity. We include all
+female (b and d) images, but vary how many of the male
+images (a and c) appear in the dataset in order to create
+biased sets that have between 10% to 50% male images.
+The male images are selected uniformly at random from the
+set of all male scientists and male artists for each repetition
+of the simulation. We sample 40 images from each biased
+dataset; roughly the number that fits on the first page of
+an image search result. We conduct 200 repetitions. We
+place fairness constraints so that P -DPP and ki -DPP select
+exactly 50% of their samples from the male (a and c) images
+and female (b and d) images, regardless of the bias in the
+underlying dataset. Note that we do not enforce constraints
+across scientist (a and b) images and artist (c and d) images,
+but measure the unfariness Dun (·) with respect to all four
+attributes.
+Results. With respect to Dun (·), P -DPP significantly
+outperforms k-DPP, and UNIF (paired one-sided t-tests,
+p < 0.05), see Figure 1. As expected, the bias in the underlying dataset can dramatically affect the fairness of UNIF
+and k-DPP as neither approach is designed to correct for
+such biases. However, P -DPP and ki -DPP both enforce
+fairness constraints; note that this is despite the fact that
+the sampling was only equal with respect to gender and not
+profession. The latter does not appear to affect the outcome
+here.
+With respect to the diversity G(·), P -DPP has significantly
+higher G(·) than UNIF and ki -DPP (paired one-sided ttests, p < 0.05). Moreover, P -DPP performs comparatively
+to k-DPP; the mean diversity of k-DPP is higher, but not
+significantly so. Thus, we observe that, when the underlying
+data is biased, there is a tradeoff between Dun (·) (for which
+P -DPP performs best) and G(·) (for which k-DPP performs
+best); however the differences in geometric diversity are
+negligible while differences in unfairness can be very large.
+
+5.3. Empirical Results on Real-World Dataset
+The Adult Dataset. The Adult income dataset (Blake &
+Merz, 1998) consists of roughly 45000 records of subjects
+each with 14 features such as age, ethnicity, education and a
+binary label indicating whether a subject’s incomes is above
+or below 50K USD.3 This dataset has been widely studied
+in the context of fairness (see, (Yang & Stoyanovich, 2017;
+Zafar et al., 2017; Zemel et al., 2013; Zadrozny, 2004)).
+In preprocessing the data we filter out incomplete entries,
+and from the remaining ones we pick a random subset of
+5000 records for our simulations. We vectorize the data as
+follows: Categorical fields (with a small number of possible
+values) we turn into sets of binary fields. As the dimension n
+of such feature vectors is quite small – 50 – the DPP framework allows sampling sets of cardinality at most k ≤ 50.
+For this reason we enrich the feature vectors in a standard
+way – by adding pairwise products of all existing features
+as separate ones – this, after removing redundant columns,
+yields feature vectors of dimension 992.
+Empirical Results on Equal and Proportional Representation. We conduct our simulations across either gender
+or ethnicity as the sensitive attribute. For the former, we
+use the gender categories provided in the dataset; all entries
+were labeled either male (68.3%) or female (31.7%). For
+the latter, we use the ethnicity categories provided in the
+dataset; we consider the partition Caucasian (85.7%) and
+non-Caucasian (14.3%).
+In addition to the algorithms mentioned above, we report the
+performance of an additional benchmark ki -UNIF, which
+selects a uniformly random subset of size ki from Xi . In our
+subsampling, we consider both equal representation, where
+3
+Data downloaded from https://archive.ics.uci.
+edu/ml/datasets/adult.
+
+Fair and Diverse DPP-Based Data Summarization
+
+Sampling Method
+Unconstrained
+
+Constrained
+
+UNIF
+k-DPP
+Scale-And-Sample
+ki -UNIF
+P -DPP
+
+Before Scaling
+Dun (·)
+log G(·)
+mean
+std mean std
+0.066
+0.063
+5.2 × 10−6
+0
+0
+
+0
+0
+0
+0
+0
+
+455.7
+457.3
+457.5
+455.7
+457.2
+
+1.4
+1.3
+1.1
+1.3
+1.1
+
+After scaling
+Dun (·)
+log G(·)
+mean
+std mean
+std
+0.064
+5.2 × 10−6
+0
+0
+
+0
+0
+0
+0
+
+228.6
+397.4
+226.5
+397.5
+
+215.8
+11.6
+20.8
+9.2
+
+Table 2. We report the unfairness (Dun (·) with respect to the uniform distribution over parts) and diversity for the different sampling
+methods on a random dataset before and after scaling the singular values by a factor of 1/n. In this simulation we have m = 200 vectors
+of dimension n = 150 divided into two partitions (partition 1 has m
+elements and partition 2 has 2m
+elements), and we want to sample
+3
+3
+50 elements from each partition (k = 100).
+
+each attribute makes up of 50% of the selected points, and
+proportional representation, where each attribute is represented with the same ratio as in the original population.
+Results. We observe that P -DPP has the highest diversity
+out of all constrained sampling methods regardless of the
+proportion of representation or sensitive attribute; see Table
+1. Surprisingly, the diversity of P -DPP matches that of
+the unconstrained k-DPP for Gender under proportional
+representation and for Ethnicity under equal representation.
+In the other two settings – Gender under equal representation
+and Ethnicity under proportional representation – the P DPP score is lower than that of k-DPP, but minimally so,
+and outperforms ki -DPP by several standard deviations.
+We note that ki -UNIF, although it has very poor geometric
+diversity as a whole, performs better under equal representation than it does under proportional representation. This
+fact suggests that there could be value in selecting sensitive
+attributes equally beyond the consideration of fairness.
+The fact that P -DPP performs so well, especially when
+significantly changing the distribution of sensitive attributes
+(e.g., for ethnicity, from 14.3% non-Caucasian to 50% nonCaucasian), is quite surprising. Overall, it appears that
+one can support very dramatic changes to the underlying
+distributions of attributes with minimal or even zero loss to
+geometric diversity by using our P -DPP algorithm.
+5.4. Empirical Results on the Price of Fairness
+We look at the effect of the scaling of singular values, suggested by Theorem 3, on the sampled subsets of our Algorithm. In this simulation we take an instance of random
+vectors and use different sampling methods to sample a
+subset from the dataset, and report the Dun (·) and log G(·)
+value of the sampled subset. Following this, we scale the
+tail singular values of the partition matrices by δ = O(1/n)
+and again report the Dun (·) and log G(·) values.
+We also present a heuristic approach, Scale-And-Sample, for
+constrained sampling which will use any k-DPP algorithm
+as a sub-routine. The algorithm is simple. For each VXi ,
+scale the P
+smallest (n − ki ) singular values by 1/n. Then
+p
+sample a i=1 ki sized subset using any k-DPP algorithm.
+
+Results. The results are presented in Table 2. It can be
+seen that after scaling the tail singular values of the partition matrices, the mean Dun (·) value for k-DPP is very
+low, and resembles closely the constrained sampling case.
+We also note that the Scale-And-Sample approach to constrained sampling suggested earlier performs very well. The
+mean relative unfairness measure Dun (·) is almost zero.
+Furthermore, the value of the geometric diversity parameter
+log G(·) is also similar to unscaled P -DPP.
+
+6. Conclusion and Future Work
+In this paper we initiated the study of fair and diverse DPPbased sampling for data summarization. We provide a novel
+and fast algorithm that can sample from a DPP that satisfy
+fairness constraints based on the desired proportion of samples with a given attribute. Our algorithm gives provably
+good guarantees when the data matrix satisfies a natural
+β-balance property. We prove that a large class of datasets
+satisfy the β-balance condition. We define a notion of price
+of fairness, the KL-divergence between the fairness constrained distribution and the unconstrained distribution and
+theoretically show that, when the data satisfies reasonable
+properties, this price would be low. We further show in
+silico that adding fairness constraints results in minimal loss
+to diversity, even when the underlying dataset is very biased,
+or when the proportion of attributes is changed significantly.
+Several challenging problems remain from a technical standpoint; naturally, a first question would be whether the theorems can be improved either by attaining better approximation guarantees, or by weakening the necessary conditions.
+Extending these results to arbitrary group structures (as opposed to partitions) would be very relevant, but appears to
+be significantly more challenging.
+From a practical point of view, it remains to be seen what
+effect de-biasing a sampler has on the end result of an ML
+algorithm (e.g., classification), both on its accuracy and on
+the output bias. Indeed, this P -DPP model can be used to
+pre-process the training data by taking a fair subsample;
+evaluating the performance of ML algorithms in this regard
+would be an interesting direction for future research.
+
+Fair and Diverse DPP-Based Data Summarization
+
+References
+Anari, N., Oveis Gharan, S., and Rezaei, A. Monte carlo
+markov chain algorithms for sampling strongly rayleigh
+distributions and determinantal point processes. In Proceedings of the 29th Conference on Learning Theory,
+COLT 2016, pp. 103–115, 2016.
+Barocas, S. and Selbst, A. D. Big Data’s Disparate Impact. SSRN eLibrary, 2015. URL https://books.
+google.co.in/books?id=oMNsrgEACAAJ.
+Blake, C. and Merz, C. UCI machine learning repository,
+1998. URL http://archive.ics.uci.edu/ml.
+Caliskan, A., Bryson, J. J., and Narayanan, A. Semantics derived automatically from language corpora contain
+human-like biases. Science, 356(6334):183–186, 2017.
+ISSN 0036-8075.
+
+Gong, B., Chao, W., Grauman, K., and Sha, F. Diverse
+sequential subset selection for supervised video summarization. In Advances in Neural Information Processing
+Systems 27: Annual Conference on Neural Information
+Processing Systems 2014, pp. 2069–2077, 2014.
+He, H. and Garcia, E. A. Learning from imbalanced data.
+IEEE Transactions on knowledge and data engineering,
+21(9):1263–1284, 2009.
+Hesabi, Z. R., Tari, Z., Goscinski, A., Fahad, A., Khalil,
+I., and Queiroz, C. Data Summarization Techniques for
+Big Data—A Survey, pp. 1109–1152. Springer New York,
+New York, NY, 2015. ISBN 978-1-4939-2092-1.
+Hough, J. B., Krishnapur, M., Peres, Y., Virág, B., et al.
+Determinantal processes and independence. Probability
+surveys, 3:206–229, 2006.
+Image-dataset. URL goo.gl/hNukfP.
+
+Celis, L. E. and Vishnoi, N. K. Fair personalization. Fairness, Accountability, and Transparency (FAT), 2017.
+
+Kamiran, F. and Calders, T. Data preprocessing techniques
+for classification without discrimination. Knowledge and
+Information Systems, 33(1):1–33, 2012.
+
+Celis, L. E., Deshpande, A., Kathuria, T., Straszak, D., and
+Vishnoi, N. K. On the complexity of constrained determinantal point processes. In Approximation, Randomization,
+and Combinatorial Optimization. Algorithms and Techniques, APPROX/RANDOM 2017, pp. 36:1–36:22, 2017.
+
+Kay, M., Matuszek, C., and Munson, S. A. Unequal representation and gender stereotypes in image search results
+for occupations. In Proceedings of the 33rd Annual ACM
+Conference on Human Factors in Computing Systems,
+CHI ’15, pp. 3819–3828. ACM, 2015. ISBN 978-1-45033145-6.
+
+Celis, L. E., Huang, L., and Vishnoi, N. K. Multiwinner
+voting with fairness constraints. International Joint Conference on Artificial Intelligence (IJCAI), 2018a.
+Celis, L. E., Straszak, D., and Vishnoi, N. K. Ranking
+with fairness constraints. In International Colloquium on
+Automata, Languages and Programming (ICALP), 2018b.
+Deshpande, A. and Vempala, S. Adaptive sampling and fast
+low-rank matrix approximation. In Approximation, Randomization, and Combinatorial Optimization. Algorithms
+and Techniques, 9th International Workshop on Approximation Algorithms for Combinatorial Optimization Problems, APPROX 2006 and 10th International Workshop
+on Randomization and Computation, RANDOM 2006, pp.
+292–303, 2006.
+
+Koriyama, Y., Macé, A., Treibich, R., and Laslier, J.-F.
+Optimal apportionment. Journal of Political Economy,
+121(3):584–608, 2013.
+Krause, A., Singh, A. P., and Guestrin, C. Near-optimal sensor placements in gaussian processes: Theory, efficient
+algorithms and empirical studies. Journal of Machine
+Learning Research, 9:235–284, 2008.
+Kulesza, A. and Taskar, B. k-dpps: Fixed-size determinantal
+point processes. In Proceedings of the 28th International
+Conference on Machine Learning, ICML 2011, pp. 1193–
+1200, 2011.
+Kulesza, A. and Taskar, B. Determinantal point processes
+for machine learning. Foundations and Trends in Machine
+Learning, 5(2-3):123–286, 2012.
+
+Drineas, P., Frieze, A. M., Kannan, R., Vempala, S., and
+Vinay, V. Clustering in large graphs and matrices. In
+ACM-SIAM Symposium on Discrete Algorithms, volume 99, pp. 291–299. Citeseer, 1999.
+
+Li, C., Jegelka, S., and Sra, S. Efficient sampling for kdeterminantal point processes. In Proceedings of the 19th
+International Conference on Artificial Intelligence and
+Statistics, AISTATS 2016, pp. 1328–1337, 2016.
+
+Dwork, C., Hardt, M., Pitassi, T., Reingold, O., and Zemel,
+R. Fairness through awareness. In Proceedings of the 3rd
+Innovations in Theoretical Computer Science Conference,
+ITCS ’12, pp. 214–226. ACM, 2012. ISBN 978-1-45031115-1.
+
+Lin, H. and Bilmes, J. A. Learning mixtures of submodular shells with application to document summarization.
+In Proceedings of the Twenty-Eighth Conference on Uncertainty in Artificial Intelligence (UAI), pp. 479–490,
+2012.
+
+Fair and Diverse DPP-Based Data Summarization
+
+Lowe, D. G. Object recognition from local scale-invariant
+features. In ICCV, pp. 1150–1157, 1999.
+
+ence on Scientific and Statistical Database Management,
+2017, pp. 22:1–22:6, 2017.
+
+O’Neil, C. Weapons of Math Destruction: How Big
+Data Increases Inequality and Threatens Democracy.
+Crown/Archetype, 2016. ISBN 9780553418828.
+
+Zadrozny, B. Learning and evaluating classifiers under
+sample selection bias. In Machine Learning, Proceedings
+of the Twenty-first International Conference (ICML 2004),
+2004.
+
+Rebeschini, P. and Karbasi, A. Fast mixing for discrete
+point processes. In Proceedings of The 28th Conference
+on Learning Theory, COLT 2015, pp. 1480–1500, 2015.
+Roy, O. and Vetterli, M. The effective rank: A measure
+of effective dimensionality. In 15th European Signal
+Processing Conference, 2007, pp. 606–610. IEEE, 2007.
+Tropp, J. A. User-friendly tail bounds for sums of random
+matrices. Foundations of computational mathematics, 12
+(4):389–434, 2012.
+Vedaldi, A. and Fulkerson, B. Vlfeat: An open and portable
+library of computer vision algorithms., 2008. URL http:
+//www.vlfeat.org/.
+Yang, K. and Stoyanovich, J. Measuring fairness in ranked
+outputs. In Proceedings of the 29th International Confer-
+
+Zafar, M. B., Valera, I., Gomez-Rodriguez, M., and Gummadi, K. P. Fairness constraints: Mechanisms for fair
+classification. In Proceedings of the 20th International
+Conference on Artificial Intelligence and Statistics, AISTATS 2017, pp. 962–970, 2017.
+Zemel, R. S., Wu, Y., Swersky, K., Pitassi, T., and Dwork, C.
+Learning fair representations. In Proceedings of the 30th
+International Conference on Machine Learning, ICML
+2013, pp. 325–333, 2013.
+Zhou, T., Kuscsik, Z., Liu, J.-G., Medo, M., Wakeling,
+J. R., and Zhang, Y.-C. Solving the apparent diversityaccuracy dilemma of recommender systems. Proceedings
+of the National Academy of Sciences, 107(10):4511–4515,
+2010.
+
+

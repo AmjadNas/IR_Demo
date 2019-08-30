@@ -1,0 +1,1858 @@
+Fairness in Reinforcement Learning
+
+arXiv:1611.03071v4 [cs.LG] 6 Aug 2017
+
+Shahin Jabbari, Matthew Joseph, Michael Kearns, Jamie Morgenstern, Aaron Roth
+Department of Computer and Information Science, University of Pennsylvania
+{jabbari, majos, mkearns, jamiemor, aaroth}@cis.upenn.edu
+
+Abstract
+We initiate the study of fairness in reinforcement learning, where the actions of a learning
+algorithm may affect its environment and future rewards. Our fairness constraint requires that
+an algorithm never prefers one action over another if the long-term (discounted) reward of
+choosing the latter action is higher. Our first result is negative: despite the fact that fairness
+is consistent with the optimal policy, any learning algorithm satisfying fairness must take time
+exponential in the number of states to achieve non-trivial approximation to the optimal policy.
+We then provide a provably fair polynomial time algorithm under an approximate notion of
+fairness, thus establishing an exponential gap between exact and approximate fairness.
+
+1
+
+Introduction
+
+The growing use of machine learning for automated decision-making has raised concerns about the
+potential for unfairness in learning algorithms and models. In settings as diverse as policing [22],
+hiring [19], lending [4], and criminal sentencing [2], mounting empirical evidence suggests these
+concerns are not merely hypothetical [1, 25].
+We initiate the study of fairness in reinforcement learning, where an algorithm’s choices may
+influence the state of the world and future rewards. In contrast, previous work on fair machine
+learning has focused on myopic settings where such influence is absent, e.g. in i.i.d. or no-regret
+models [5, 6, 9, 10]. The resulting fairness definitions therefore do not generalize well to a reinforcement learning setting, as they do not reason about the effects of short-term actions on long-term
+rewards. This is relevant for the settings where historical context can have a distinct influence on
+the future. For concreteness, we consider the specific example of hiring (though other settings such
+as college admission or lending decisions can be embedded into this framework). Consider a firm
+aiming to hire employees for a number of positions. The firm might consider a variety of hiring
+practices, ranging from targeting and hiring applicants from well-understood parts of the applicant
+pool (which might be a reasonable policy for short-term productivity of its workforce), to exploring
+a broader class of applicants whose backgrounds might differ from the current set of employees at
+the company (which might incur short-term productivity and learning costs but eventually lead to
+a richer and stronger overall applicant pool).
+We focus on the standard model of reinforcement learning, in which an algorithm seeks to
+maximize its discounted sum of rewards in a Markovian decision process (MDP). Throughout, the
+reader should interpret the actions available to a learning algorithm as corresponding to choices
+or policies affecting individuals (e.g. which applicants to target and hire). The reward for each
+action should be viewed as the short-term payoff of making the corresponding decision (e.g. the
+short-term influence on the firm’s productivity after hiring any particular candidate). The actions
+taken by the algorithm affect the underlying state of the system (e.g. the company’s demographics
+
+1
+
+as well as the available applicant pool) and therefore in turn will affect the actions and rewards
+available to the algorithm in the future.
+Informally, our definition of fairness requires that (with high probability) in state s, an algorithm
+never chooses an available action a with probability higher than another action a0 unless Q∗ (s, a) >
+Q∗ (s, a0 ), i.e. the long-term reward of a is greater than that of a0 . This definition, adapted
+from Joseph et al. [10], is weakly meritocratic: facing some set of actions, an algorithm must pick
+a distribution over actions with (weakly) heavier weight on the better actions (in terms of their
+discounted long-term reward). Correspondingly, a hiring process satisfying our fairness definition
+cannot probabilistically target one population over another if hiring from either population will
+have similar long-term benefit to the firm’s productivity.
+Unfortunately, our first result shows an exponential separation in expected performance between the best unfair algorithm and any algorithm satisfying fairness. This motivates our study
+of a natural relaxation of (exact) fairness, for which we provide a polynomial time learning algorithm, thus establishing an exponential separation between exact and approximately fair learning
+in MDPs.
+Our Results Throughout, we use (exact) fairness to refer to the adaptation of Joseph et al.
+[10]’s definition defining an action’s quality as its potential long-term discounted reward. We also
+consider two natural relaxations. The first, approximate-choice fairness, requires that an algorithm
+never chooses a worse action with probability substantially higher than better actions. The second,
+approximate-action fairness, requires that an algorithm never favors an action of substantially lower
+quality than that of a better action.
+The contributions of this paper can be divided into two parts. First, in Section 3, we give a
+lower bound on the time required for a learning algorithm to achieve near-optimality subject to
+(exact) fairness or approximate-choice fairness.
+Theorem (Informal statement of Theorems 3, 4, and 5). For constant , to achieve -optimality, (i)
+any fair or approximate-choice fair algorithm takes a number of rounds exponential in the number
+of MDP states and (ii) any approximate-action fair algorithm takes a number of rounds exponential
+in 1/(1 − γ), for discount factor γ.
+Second, we present an approximate-action fair algorithm (Fair-E3 ) in Section 4 and prove a
+polynomial upper bound on the time it requires to achieve near-optimality.
+Theorem (Informal statement of Theorem 6). For constant  and any MDP satisfying standard
+assumptions, Fair-E3 is an approximate-action fair algorithm achieving -optimality in a number
+of rounds that is (necessarily) exponential in 1/(1 − γ) and polynomial in other parameters.
+The exponential dependence of Fair-E3 on 1/(1 − γ) is tight: it matches our lower bound on
+the time complexity of any approximate-action fair algorithm. Furthermore, our results establish
+rigorous trade-offs between fairness and performance facing reinforcement learning algorithms.
+
+1.1
+
+Related Work
+
+The most relevant parts of the large body of literature on reinforcement learning focus on constructing learning algorithms with provable performance guarantees. E3 [13] was the first learning
+algorithm with a polynomial learning rate, and subsequent work improved this rate (see Szita and
+Szepesvári [26] and references within). The study of robust MDPs [16, 18, 20] examines MDPs
+with high parameter uncertainty but generally uses “optimistic” learning strategies that ignore
+(and often conflict with) fairness and so do not directly apply to this work.
+
+2
+
+Our work also belongs to a growing literature studying the problem of fairness in machine
+learning. Early work in data mining [8, 11, 12, 17, 21, 29] considered the question from a primarily
+empirical standpoint, often using statistical parity as a fairness goal. Dwork et al. [5] explicated
+several drawbacks of statistical parity and instead proposed one of the first broad definitions of
+algorithmic fairness, formalizing the idea that “similar individuals should be treated similarly”.
+Recent papers have proven several impossibility results for satisfying different fairness requirements
+simultaneously [7, 15]. More recently, Hardt et al. [9] proposed new notions of fairness and
+showed how to achieve these notions via post-processing of a black-box classifier. Woodworth et al.
+[27] and Zafar et al. [28] further studied these notion theoretically and empirically.
+
+1.2
+
+Strengths and Limitations of Our Models
+
+In recognition of the duration and consequence of choices made by a learning algorithm during its
+learning process – e.g. job applicants not hired – our work departs from previous work and aims
+to guarantee the fairness of the learning process itself. To this end, we adapt the fairness definition
+of Joseph et al. [10], who studied fairness in the bandit framework and defined fairness with respect
+to one-step rewards. To capture the desired interaction and evolution of the reinforcement learning
+setting, we modify this myopic definition and define fairness with respect to long-term rewards: a
+fair learning algorithm may only choose action a over action a0 if a has true long-term reward at
+least as high as a0 . Our contributions thus depart from previous work in reinforcement learning by
+incorporating a fairness requirement (ruling out existing algorithms which commonly make heavy
+use of “optimistic” strategies that violates fairness) and depart from previous work in fair learning
+by requiring “online” fairness in a previously unconsidered reinforcement learning context.
+First note that our definition is weakly meritocratic: an algorithm satisfying our fairness definition can never probabilistically favor a worse option but is not required to favor a better option.
+This confers both strengths and limitations. Our fairness notion still permits a type of “conditional
+discrimination” in which a fair algorithm favors group A over group B by selecting choices from A
+when they are superior and randomizing between A and B when choices from B are superior. In
+this sense, our fairness requirement is relatively minimal, encoding a necessary variant of fairness
+rather than a sufficient one. This makes our lower bounds and impossibility results (Section 3)
+relatively stronger and upper bounds (Section 4) relatively weaker.
+Next, our fairness requirement holds (with high probability) across all decisions that a fair algorithm makes. We view this strong constraint as worthy of serious consideration, since “forgiving”
+unfairness during the learning may badly mistreat the training population, especially if the learning process is lengthy or even continual. Additionally, it is unclear how to relax this requirement,
+even for a small fraction of the algorithm’s decisions, without enabling discrimination against a
+correspondingly small population.
+Instead, aiming to preserve the “minimal” spirit of our definition, we consider a relaxation
+that only prevents an algorithm from favoring a significantly worse option over a better option
+(Section 2.1). Hence, approximate-action fairness should be viewed as a weaker constraint: rather
+than safeguarding against every violation of “fairness”, it instead restricts how egregious these
+violations can be. We discuss further relaxations of our definition in Section 5.
+
+2
+
+Preliminaries
+
+In this paper we study reinforcement learning in Markov Decision Processes (MDPs). An MDP is
+a tuple M = (SM , AM , PM , RM , T, γ) where SM is a set of n states, AM is a set of k actions, T
+is a horizon of a (possibly infinite) number of rounds of activity in M , and γ is a discount factor.
+3
+
+PM : SM × AM → SM and RM : SM → [0, 1] denote the transition probability distribution and
+reward distribution, respectively. We use R̄M to denote the mean of RM .1 A policy π is a mapping
+from a history h (the sequence of triples (state, action, reward) observed so far) to a distribution
+over actions. The discounted state and state-action value functions are denoted by V π and Qπ ,
+and V π (s, T ) represents expected discounted reward of following π from s for T steps. The highest
+values functions are achieved by the optimal policy π ∗ and are denoted by V ∗ and Q∗ [24]. We
+use µπ to denote the stationary distribution of π. Throughout we make the following assumption.
+Assumption 1 (Unichain Assumption). The stationary distribution of any policy in M is independent of its start state.
+We denote the -mixing time of π by Tπ . Lemma 1 relates the -mixing time of any policy π to
+π values of the visited states by π are close to the expected V π
+the number of rounds until the VM
+M
+values (under the stationary distribution µπ ). We defer all the omitted proofs to the Appendix.
+Lemma 1. Fix  > 0. For any state s, following π for T ≥ Tπ steps from s satisfies
+#
+" T
+X
+π
+π
+
+,
+VM
+(st ) ≤ 1−γ
+Es∼µπ [VM
+(s)] − E T1
+t=1
+
+where st is the state visited at time t when following π from s and the expectation in the second
+term is over the transition function and the randomization of π.2
+The horizon time Hγ := log ((1 − γ)) / log(γ) of an MDP captures the number of steps an
+approximately optimal policy must optimize over. The expected discounted reward of any policy
+after Hγ steps approaches the expected asymptotic discounted reward (Kearns and Singh [13],
+Lemma 2). A learning algorithm L is a non-stationary policy that at each round takes the entire
+history and outputs a distribution over actions. We now define a performance measure for learning
+algorithms.
+Definition 1 (-optimality). Let  > 0 and δ ∈ (0, 1/2). L achieves -optimality in T steps if for
+any T ≥ T
+"
+#
+T
+1X ∗
+2
+∗
+Es∼µ∗ [VM (s)] − E
+VM (st ) ≤
+,
+(1)
+T
+1−γ
+t=1
+
+with probability at least 1 − δ, for st the state L reaches at time t, where the expectation is taken
+over the transitions and the randomization of L, for any MDP M .
+We thus ask that a learning algorithm, after sufficiently many steps, visits states whose values are
+arbitrarily close to the values of the states visited by the optimal policy. Note that this is stronger
+than the “hand-raising” notion in Kearns and Singh [13],3 which only asked that the learning
+algorithm stop in a state from which discounted return is near-optimal, permitting termination in
+a state from which the optimal discounted return is poor. In Definition 1, if there are states with
+poor optimal discounted reward that the optimal policy eventually leaves for better states, so must
+π values of states
+our algorithms. We also note the following connection between the average VM
+visited under the stationary distribution of π (and in particular an optimal policy) and the average
+undiscounted rewards achieved under the stationary distribution of that policy.
+1
+
+Note that R̄M ≤ 1 and Var(RM ) ≤ 1 for all states. The bounded reward assumption can be relaxed (see e.g. [13]).
+Also assuming rewards in [0, 1] can be made w.l.o.g. up to scaling.
+2
+Lemma 1 can be stated for a weaker notion of mixing time called the -reward mixing time which is always
+linearly bounded by the -mixing time but can be much smaller in certain cases (see Kearns and Singh [13] for a
+discussion).
+3
+We suspect unfair E3 also satisfies this stronger notion.
+
+4
+
+Lemma 2 (Singh [23]). Let R̄M be the vector of mean rewards in states of M and VπM the vector
+of discounted rewards in states under π. Then µπ · R̄M = (1 − γ)µπ · VπM .
+We design an algorithm which quickly achieves -optimality and we bound the number of steps
+T before this happens by a polynomial in the parameters of M .
+
+2.1
+
+Notions of Fairness
+
+We now turn to formal notions of fairness. Translated to our setting, Joseph et al. [10] define
+action a’s quality as the expected immediate reward for choosing a from state s and then require
+that an algorithm not probabilistically favor a over a0 if a has lower expected immediate reward.
+However, this naive translation does not adequately capture the structural differences between
+bandit and MDP settings since present rewards may depend on past choices in MDPs. In particular,
+defining fairness in terms of immediate rewards would prohibit any policy sacrificing short-term
+rewards in favor of long-term rewards. This is undesirable, since it is the long-term rewards that
+matter in reinforcement learning, and optimizing for long-term rewards often necessitates shortterm sacrifices. Moreover, the long-term impact of a decision should be considered when arguing
+about its relative fairness. We will therefore define fairness using the state-action value function
+Q∗M .
+Definition 2 (Fairness). L is fair if for all input δ > 0, all M , all rounds t, all states s and all
+actions a, a0
+Q∗M (s, a) ≥ Q∗M (s, a0 ) ⇒ L(s, a, ht−1 ) ≥ L(s, a0 , ht−1 )
+with probability at least 1 − δ over histories ht−1 .
+
+4
+
+Fairness requires that an algorithm never probabilistically favors an action with lower long-term
+reward over an action with higher long-term reward. In hiring, this means that an algorithm cannot
+target one applicant population over another unless the targeted population has a higher quality.
+In Section 3, we show that fairness can be extremely restrictive. Intuitively, L must play
+uniformly at random until it has high confidence about the Q∗M values, in some cases taking
+exponential time to achieve near-optimality. This motivates relaxing Definition 2. We first relax
+the probabilistic requirement and require only that an algorithm not substantially favor a worse
+action over a better one.
+Definition 3 (Approximate-choice Fairness). L is α-choice fair if for all inputs δ > 0 and α > 0:
+for all M , all rounds t, all states s and actions a, a0 :
+Q∗M (s, a) ≥ Q∗M (s, a0 ) ⇒ L(s, a, ht−1 ) ≥ L(s, a0 , ht−1 ) − α,
+with probability of at least 1 − δ over histories ht−1 . If L is α-choice fair for any input α > 0, we
+call L approximate-choice fair.
+A slight modification of the lower bound for (exact) fairness shows that algorithms satisfying approximate-choice fairness can also require exponential time to achieve near-optimality. We
+therefore propose an alternative relaxation, where we relax the quality requirement. As described
+in Section 1.1, the resulting notion of approximate-action fairness is in some sense the most fitting
+relaxation of fairness, and is a particularly attractive one because it allows us to give algorithms
+circumventing the exponential hardness proved for fairness and approximate-choice fairness.
+4
+
+L(s, a, h) denotes the probability L chooses a from s given history h.
+
+5
+
+Definition 4 (Approximate-action Fairness). L is α-action fair if for all inputs δ > 0 and α > 0,
+for all M , all rounds t, all states s and actions a, a0 :
+Q∗M (s, a) > Q∗M (s, a0 ) + α ⇒ L(s, a, ht−1 ) ≥ L(s, a0 ht−1 )
+with probability of at least 1 − δ over histories ht−1 . If L is α-action fair for any input α > 0, we
+call L approximate-action fair.
+Approximate-choice fairness prevents equally good actions from being chosen at very different
+rates, while approximate-action fairness prevents substantially worse actions from being chosen
+over better ones. In hiring, an approximately-action fair firm can only (probabilistically) target one
+population over another if the targeted population is not substantially worse. While this is a weaker
+guarantee, it at least forces an approximately-action fair algorithm to learn different populations to
+statistical confidence. This is a step forward from current practices, in which companies have much
+higher degrees of uncertainty about the quality (and impact) of hiring individuals from underrepresented populations. For this reason and the computational benefits mentioned above, our
+upper bounds will primarily focus on approximate-action fairness.
+We now state several useful observations regarding fairness. We defer all the formal statements
+and their proofs to the Appendix. We note that there always exists a (possibly randomized) optimal
+policy which is fair (Observation 1); moreover, any optimal policy (deterministic or randomized)
+is approximate-action fair (Observation 2), as is the uniformly random policy (Observation 3).
+Finally, we consider a restriction of the actions in an MDP M to nearly-optimal actions (as
+measured by Q∗M values).
+Definition 5 (Restricted MDP). The α-restricted MDP of M , denoted by M α , is identical to
+M except that in each state s, the set of available actions are restricted to {a : Q∗M (s, a) ≥
+maxa0 ∈AM Q∗M (s, a0 ) − α | a ∈ AM }.
+M α has the following two properties: (i) any policy in M α is α-action fair in M (Observation 4)
+and (ii) the optimal policy in M α is also optimal in M (Observation 5). Observations 4 and 5 aid
+our design of an approximate-action fair algorithm: we construct M α from estimates of the Q∗M
+values (see Section 4.3 for more details).
+
+3
+
+Lower Bounds
+
+We now demonstrate a stark separation between the performance of learning algorithms with and
+without fairness. First, we show that neither fair nor approximate-choice fair algorithms achieve
+near-optimality unless the number of time steps T is at least Ω(k n ), exponential in the size of the
+state space. We then show that any approximate-action fair algorithm requires a number of time
+1
+
+steps T that is at least Ω(k 1−γ ) to achieve near-optimality. We start by proving a lower bound for
+fair algorithms.
+Theorem 3. If δ < 41 , γ >
+
+1
+2
+
+and  < 18 , no fair algorithm can be -optimal in T = O(k n ) steps.5
+
+Standard reinforcement learning algorithms (absent a fairness constraint) learn an -optimal
+policy in a number of steps polynomial in n and 1 ; Theorem 3 therefore shows a steep cost of
+imposing fairness. We outline the idea for proof of Theorem 3. For intuition, first consider the
+special case when the number of actions k = 2. We introduce the MDPs witnessing the claim in
+Theorem 3 for this case.
+5
+
+We have not optimized the constants upper-bounding parameters in the statement of Theorems 3, 4 and 5. The
+values presented here are only chosen for convenience.
+
+6
+
+Definition 6 (Lower Bound Example). For AM = {L, R}, let M (x) = (SM , AM , PM , RM , T, γ, x)
+be an MDP with
+• for all i ∈ [n], PM (si , L, s1 ) = PM (si , R, sj ) = 1 where j = min{i + 1, n} and is 0 otherwise.
+• for i ∈ [n − 1], RM (si ) = 0.5, and RM (sn ) = x.
+
+Figure 1: MDP(x): Circles represent states (labels denote the state name and deterministic reward). Arrows represent
+actions.
+
+Figure 1 illustrates the MDP from Definition 6. All the transitions and rewards in M are
+deterministic, but the reward at state sn can be either 1 or 12 , and so no algorithm (fair or otherwise)
+can determine whether the Q∗M values of all the states are the same or not until it reaches sn and
+observes its reward. Until then, fairness requires that the algorithm play all the actions uniformly
+at random (if the reward at sn is 21 , any fair algorithm must play uniformly at random forever).
+Thus, any fair algorithm will take exponential time in the number of states to reach sn . This can
+be easily modified for k > 2: from each state si , k −1 of the actions from state si (deterministically)
+return to state s1 and only one action (deterministically) reaches any other state smin{i+1,n} . It
+will take k n steps before any fair algorithm reaches sn and can stop playing uniformly at random
+(which is necessary for near-optimality). The same example, with a slightly modified analysis, also
+provides a lower bound of Ω((k/(1 + kα))n ) time steps for approximate-choice fair algorithms as
+stated in Theorem 4.
+Theorem 4. If δ < 14 , α <
+k
+T = O(( 1+kα
+)n ) steps.
+
+1
+4, γ
+
+>
+
+1
+2
+
+and  <
+
+1
+8,
+
+no α-choice fair algorithm is -optimal for
+
+Fairness and approximate-choice fairness are both extremely costly, ruling out polynomial time
+learning rates. Hence, we focus on approximate-action fairness. Before moving to positive results,
+we mention that the time complexity of approximate-action fair algorithms will still suffer from an
+1
+.
+exponential dependence on 1−γ
+Theorem 5. For δ <
+
+1
+4,
+
+α <
+
+algorithm is -optimal for T =
+
+1
+8,
+
+γ > max(0.9, c), c ∈ ( 21 , 1) and  <
+
+1
+O((k 1−γ )c )
+
+1−ec−1
+16 ,
+
+no α-action fair
+
+steps.
+
+The MDP in Figure 1 also witnesses the claim of Theorem 5 when n = d log(1/(2α))
+e. The discount
+1−γ
+1
+factor γ is generally taken as a constant, so in most interesting cases 1−γ  n: this lower bound
+is substantially less stringent than the lower bounds proven for fairness and approximate-choice
+fairness. Hence, from now on, we focus on designing algorithms satisfying approximate-action
+1
+, and with tight dependence on
+fairness with learning rates polynomial in every parameter but 1−γ
+1
+1−γ .
+7
+
+4
+
+A Fair and Efficient Learning Algorithm
+
+We now present an approximate-action fair algorithm, Fair-E3 with the performance guarantees
+stated below.
+
+Theorem 6. Given  > 0, α > 0, δ ∈ 0, 21 and γ ∈ [0, 1) as inputs, Fair-E3 is an α-action fair
+algorithm which achieves -optimality after
+!
+1
++5
+n5 T∗ k 1−γ
+(2)
+T = Õ
+min{α4 , 4 }2 (1 − γ)12
+steps where Õ hides poly-logarithmic terms.
+The running time of Fair-E3 (which we have not attempted to optimize) is polynomial in all
+1
+the parameters of the MDP except 1−γ
+; Theorem 5 implies that this exponential dependence on
+1
+1−γ is necessary.
+Several more recent algorithms (e.g. R-MAX [3]) have improved upon the performance of
+3
+E . We adapted E3 primarily for its simplicity. While the machinery required to properly balance
+fairness and performance is somewhat involved, the basic ideas of our adaptation are intuitive. We
+further note that subsequent algorithms improving on E3 tend to heavily leverage the principle of
+“optimism in face of uncertainty”: such behavior often violates fairness, which generally requires
+uniformity in the face of uncertainty. Thus, adapting these algorithms to satisfy fairness is more
+difficult. This in particular suggests E3 as an apt starting point for designing a fair planning
+algorithm.
+The remainder of this section will explain Fair-E3 , beginning with a high-level description
+in Section 4.1. We then define the “known” states Fair-E3 uses to plan in Section 4.2, explain
+this planning process in Section 4.3, and bring this all together to prove Fair-E3 ’s fairness and
+performance guarantees in Section 4.4.
+
+4.1
+
+Informal Description of Fair-E3
+
+Fair-E3 relies on the notion of “known” states. A state s is defined to be known after all actions have
+been chosen from s enough times to confidently estimate relevant reward distributions, transition
+probabilities, and QπM values for each action. At each time t, Fair-E3 then uses known states to
+reason about the MDP as follows:
+• If in an unknown state, take a uniformly random trajectory of length Hγ .
+• If in a known state, compute (i) an exploration policy which escapes to an unknown state
+quickly and p, the probability that this policy reaches an unknown state within 2T∗ steps,
+and (ii) an exploitation policy which is near-optimal in the known states of M .
+– If p is large enough, follow the exploration policy; otherwise, follow the exploitation
+policy.
+Fair-E3 thus relies on known states to balance exploration and exploitation in a reliable way.
+While Fair-E3 and E3 share this general idea, fairness forces Fair-E3 to more delicately balance
+exploration and exploitation. For example, while both algorithms explore until states become
+“known”, the definition of a known state must be much stronger in Fair-E3 than in E3 because
+Fair-E3 additionally requires accurate estimates of actions’ QπM values in order to make decisions
+8
+
+without violating fairness. For this reason, Fair-E3 replaces the deterministic exploratory actions
+of E3 with random trajectories of actions from unknown states. These random trajectories are
+then used to estimate the necessary QπM values.
+In a similar vein, Fair-E3 requires particular care in computing exploration and exploitation
+policies, and must restrict the set of such policies to fair exploration and fair exploitation policies.
+Correctly formulating this restriction process to balance fairness and performance relies heavily on
+the observations about the relationship between fairness and performance provided in Section 2.1.
+
+4.2
+
+Known States in Fair-E3
+
+We now formally define the notion of known states for Fair-E3 . We say a state s becomes known
+when one can compute good estimates of (i) RM (s) and PM (s, a) for all a, and (ii) Q∗M (s, a) for
+all a.
+Definition 7 (Known State). Let
+m1 = O k
+
+Hγ +3
+
+
+n
+
+1
+(1 − γ) α
+
+2
+
+ !
+
+4
+ !
+k
+n
+1
+and m2 = O
+.
+log
+Hγ 8 log
+δ
+min{, α}
+δ
+
+A state s becomes known after taking
+mQ := k · max{m1 , m2 }
+
+(3)
+
+length-Hγ random trajectories from s.
+It remains to show that motivating conditions (i) and (ii) indeed hold for our formal definition
+of a known state. Informally, m1 random trajectories suffice to ensure that we have accurate
+estimates of all Q∗M (s, a) values, and m2 random trajectories suffice to ensure accurate estimates
+of the transition probabilities and rewards.
+To formalize condition (i), we rely on Theorem 7, connecting the number of random trajectories
+π estimates.
+taken from s to the accuracy of the empirical VM
+Theorem 7 (Theorem 5.5, Kearns et al. [14]). For any state s and α > 0, after
+
+2
+
+!
+γ
+1
+|Π|
+m = O k H +3
+log
+(1 − γ) α
+δ
+random trajectories of length Hγ from s, with probability of at least 1 − δ, we can compute estimates
+π such that |V π (s) − V̂ π (s) | ≤ α, simultaneously for all π ∈ Π.
+V̂M
+M
+M
+Theorem 7 enables us to translate between the number of trajectories taken from a state and
+π values for all policies (including π ∗ and hence V ∗ ). Since |Π| = k n ,
+the uncertainty about its VM
+M
+∗ (s) values we increase
+we substitute log (|Π|) = n log (k). To estimate Q∗M (s, a) values using the VM
+the number of necessary length-Hγ random trajectories by a factor of k.
+For condition (ii), we adapt the analysis of E3 [13], which states that if each action in a state s is
+taken m2 times, then the transition probabilities and reward in state s can be estimated accurately
+(see Section 4.4).
+
+9
+
+Figure 2: Left: An MDP M with two actions (L and R) and deterministic transition functions and rewards. Green
+denotes the set of known states Γ. Middle: MΓ . Right: M[n]\Γ .
+
+4.3
+
+Planning in Fair-E3
+
+We now formalize the planning steps in Fair-E3 from known states. For the remainder of our
+exposition, we make Assumption 2 for convenience (and show how to remove this assumption in
+the Appendix).
+Assumption 2. T∗ is known.
+Fair-E3 constructs two ancillary MDPs for planning: MΓ is the exploitation MDP, in which
+the unknown states of M are condensed into a single absorbing state s0 with no reward. In the
+known states Γ, transitions are kept intact and the rewards are deterministically set to their mean
+value. MΓ thus incentivizes exploitation by giving reward only for staying within known states. In
+contrast, M[n]\Γ is the exploration MDP, identical to MΓ except for the rewards. The rewards in
+the known states Γ are set to 0 and the reward in s0 is set to 1. M[n]\Γ then incentivizes exploration
+by giving reward only for escaping to unknown states. See the middle (right) panel of Figure 2 for
+an illustration of MΓ (M[n]\Γ ), and Appendix for formal definitions.
+Fair-E3 uses these constructed MDPs to plan according to the following natural idea: when in
+a known state, Fair-E3 constructs M̂Γ and M̂[n]\Γ based on the estimated transition and rewards
+observed so far (see the Appendix for formal definitions), and then uses these to compute additional
+α
+for approximate-action fairness. Fair-E3 then uses these restricted
+restricted MDPs M̂Γα and M̂[n]\Γ
+MDPs to choose between exploration and exploitation.
+α
+More formally, if the optimal policy in M̂[n]\Γ
+escapes to the absorbing state of MΓ with high
+∗
+enough probability within 2T steps, then Fair-E3 explores by following that policy. Otherwise,
+Fair-E3 exploits by following the optimal policy in M̂Γα for T∗ steps. While following either of
+these policies, whenever Fair-E3 encounters an unknown state, it stops following the policy and
+proceeds by taking a length-Hγ random trajectory.
+
+4.4
+
+Analysis of Fair-E3
+
+In this section we formally analyze Fair-E3 and prove Theorem 6. We begin by proving that MΓα
+is useful in the following sense: MΓα has at least one of an exploitation policy achieving high reward
+or an exploration policy that quickly reaches an unknown state in M .
+Lemma 8 (Exploit or Explore Lemma). For any state s ∈ Γ, β ∈ (0, 1) and any T > 0 at least
+one of the statements below holds:
+• there exists an exploitation policy π in MΓα such that
+max E
+π̄∈Π
+
+T
+X
+
+T
+X
+
+
+π̄
+π
+VM
+π̄ t (s), T − E
+VM
+π t (s), T ≤ βT
+Γ
+
+t=1
+
+t=1
+
+10
+
+where the random variables π t (s) and π̄ t (s) denote the states reached from s after following
+π and π̄ for t steps, respectively.
+• there exists an exploration policy π in MΓα such that the probability that a walk of 2T steps
+from s following π will terminate in s0 exceeds β/T .
+We can use this fact to reason about exploration as follows. First, since Observation 2 tells us
+that the optimal policy in M is approximate-action fair, if the optimal policy stays in the set of M ’s
+known states MΓ , then following the optimal policy in MΓα is both optimal and approximate-action
+fair.
+However, if instead the optimal policy in M quickly escapes to an unknown state in M , the
+optimal policy in MΓα may not be able to compete with the optimal policy in M . Ignoring fairness, one natural way of computing an escape policy to “keep up” with the optimal policy is
+to compute the optimal policy in M[n]\Γ . Unfortunately, following this escape policy might violate approximate-action fairness – high-quality actions might be ignored in lieu of low-quality
+exploratory actions that quickly reach the unknown states of M . Instead, we compute an escape
+α
+policy in M[n]\Γ
+and show that if no near-optimal exploitation policy exists in MΓ , then the optimal
+α
+policy in M[n]\Γ (which is fair by construction) quickly escapes to the unknown states of M .
+α
+Next, in order for Fair-E3 to check whether the optimal policy in M[n]\Γ
+quickly reaches the
+3
+absorbing state of MΓ with significant probability, Fair-E simulates the execution of the optimal
+α
+policy of M[n]\Γ
+for 2T∗ steps from the known state s in MΓα several times, counting the ratio of
+the runs ending in s0 , and applying a Chernoff bound; this is where Assumption 2 is used.
+Having discussed exploration, it remains to show that the exploitation policy described in
+Lemma 8 satisfies -optimality as defined in Definition 1. By setting T ≥ T∗ in Lemma 8 and
+applying Lemmas 1 and 10, we can prove Corollary 9 regarding this exploitation policy.
+Corollary 9. For any state s ∈ Γ and T ≥ T∗ if there exists an exploitation policy π in MΓα then
+
+
+T
+1 X
+
+
+
+
+
+π
+∗
+VM
+π t (s), T − Es∼µ∗ VM
+(s) ≤
+.
+ E
+T
+ 1−γ
+t=1
+
+Finally, we have so far elided the fact that Fair-E3 only has access to the empirically estimated
+α
+(see the Appendix for formal definitions). We remedy this issue by showing
+MDPs M̂Γα and M̂[n]\Γ
+α
+that the behavior of any policy π in M̂Γα (and M̂[n]\Γ
+) is similar to the behavior of π in MΓα (and
+α
+M[n]\Γ
+). To do so, we prove a stronger claim: the behavior of any π in M̂Γ (and M̂[n]\Γ ) is similar
+to the behavior of π in MΓ (and M[n]\Γ ).
+
+Lemma 10. Let Γ be the set of known states and M̂Γ the approximation to MΓ . Then for any
+state s ∈ Γ, any action a and any policy π, with probability at least 1 − δ:
+π (s) − min{α/2, } ≤ V π (s) ≤ V π (s) + min{α/2, },
+1. VM
+MΓ
+Γ
+Mˆ
+Γ
+
+2. QπMΓ (s, a) − min{α/2, } ≤ QπMˆ (s, a) ≤ QπMΓ (s, a) + min{α/2, }.
+Γ
+
+We now have the necessary results to prove Theorem 6.
+Proof of Theorem 6. We divide the analysis into separate parts: the performance guarantee of
+Fair-E3 and its approximate-action fairness. We defer the analysis of the probability of failure of
+Fair-E3 to the Appendix.
+11
+
+We start with the performance guarantee and show that when Fair-E3 follows the exploitation
+∗ values of the visited states is close to E
+∗
+policy the average VM
+s∼µ∗ VM (s). However, when following
+∗ values can be small. To
+an exploration policy or taking random trajectories, visited states’ VM
+3
+bound the performance of Fair-E , we bound the number of these exploratory steps by the MDP
+parameters so they only have a small effect on overall performance.
+∗
+Note that in each T∗ -step exploitation phase of Fair-E3 , the expectation of the average VM
+∗ (s)−/(1−γ)−/2 by Lemmas 1, 8 and Observation 5.
+values of the visited states is at least Es∼µ∗ VM
+∗ values of the visited states is less
+By a Chernoff bound, the probability that the actual average VM
+∗ (s) − /(1 − γ) − 3/4 is less than δ/4 if there are at least
+than Es∼µ∗ VM
+We now bound the total number of exploratory steps of Fair-E3 by
+
+ n 
+T∗
+γ
+T1 = O nmQ H + nmQ
+log
+,
+
+δ
+
+1
+log( δ )
+2
+
+exploitation phases.
+
+where mQ is defined in Equation 3 of Definition 7. The two components of this term bound the
+number of rounds in which Fair-E3 plays non-exploitatively: the first bounds the number of steps
+taken when Fair-E3 follows random trajectories, and the second bounds how many steps are taken
+following explicit exploration policies. The former bound follows from the facts that each random
+trajectory has length Hγ ; that in each state, mQ trajectories are sufficient for the state to become
+known; and that random trajectories are taken only before all n states are known. The latter bound
+follows from the fact that Fair-E3 follows an exploration policy for 2T∗ steps; and an exploration
+∗
+policy needs to be followed only O( T log( nδ )) times before reaching an unknown state (since any
+exploration policy will end up in an unknown state with probability of at least T∗ according to
+
+Lemma 8, and applying a Chernoff bound); that an unknown state becomes known after it is visited
+mQ times; and that exploration policies are only followed before all states are known.
+Finally, to make up for the potentially poor performance in exploration, the number of 2T∗
+steps exploitation phases needed is at least
+
+
+T1 (1 − γ)
+T2 = O
+.
+
+Therefore, after T = T1 + T2 steps we have
+T
+
+∗
+Es∼µ∗ VM
+(s) −
+
+1 X ∗
+2
+E
+VM (st ) ≤
+,
+T
+1−γ
+t=1
+
+3
+
+2
+
+as claimed in Equation 2. The running time of Fair-E3 is O( nT ): the additional nT factor comes
+α
+from offline computation of the optimal policies in M̂Γα and M̂[n]\Γ
+.
+3
+We wrap up by proving Fair-E satisfies approximate-action fairness in every round. The
+actions taken during random trajectories are fair (and hence approximate-action fair) by Observaα
+tion 3. Moreover, Fair-E3 computes policies in M̂Γα and M̂[n]\Γ
+. By Lemma 10 with probability at
+α
+least 1 − δ any Q∗ or V ∗ value estimated in M̂Γα or M̂[n]\Γ
+is within α/2 of its corresponding true
+α
+α
+value in MΓα or M[n]\Γ
+. As a result, M̂Γα and M̂[n]\Γ
+(i) contain all the optimal policies and (ii) only
+∗
+contain actions with Q values within α of the optimal actions. It follows that any policy followed
+α
+in M̂Γα and M̂[n]\Γ
+is α-action fair, so both the exploration and exploitation policies followed by
+3
+Fair-E satisfy α-action fairness, and Fair-E3 is therefore α-action fair.
+
+12
+
+5
+
+Discussion and Future Work
+
+Our work leaves open several interesting questions. For example, we give an algorithm that has an
+undesirable exponential dependence on 1/(1 − γ), but we show that this dependence is unavoidable
+for any approximate-action fair algorithm. Without fairness, near-optimality in learning can be
+achieved in time that is polynomial in all of the parameters of the underlying MDP. So, we can
+ask: does there exist a meaningful fairness notion that enables reinforcement learning in time
+polynomial in all parameters?
+Moreover, our fairness definitions remain open to further modulation. It remains unclear
+whether one can strengthen our fairness guarantee to bind across time rather than simply across
+actions available at the moment without large performance tradeoffs. Similarly, it is not obvious
+whether one can gain performance by relaxing the every-step nature of our fairness guarantee in
+a way that still forbids discrimination. These and other considerations suggest many questions
+for further study; we therefore position our work as a first cut for incorporating fairness into a
+reinforcement learning setting.
+
+References
+[1] Julia Angwin, Jeff Larson, Surya Mattu, and Lauren Kirchner. Machine bias. Propublica,
+2016.
+[2] Anna Barry-Jester, Ben Casselman, and Dana Goldstein. The new science of sentencing. The
+Marshall Project, August 8 2015. URL https://www.themarshallproject.org/2015/08/04/
+the-new-science-of-sentencing/. Retrieved 4/28/2016.
+[3] Ronen Brafman and Moshe Tennenholtz. R-MAX - A general polynomial time algorithm for
+near-optimal reinforcement learning. Journal of Machine Learning Research, 3:213–231, 2002.
+[4] Nanette Byrnes. Artificial intolerance. MIT Technology Review, March 28 2016. URL https:
+//www.technologyreview.com/s/600996/artificial-intolerance/. Retrieved 4/28/2016.
+[5] Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer Reingold, and Richard Zemel. Fairness
+through awareness. In Proceedings of the 3rd Innovations in Theoretical Computer Science,
+pages 214–226, 2012.
+[6] Michael Feldman, Sorelle Friedler, John Moeller, Carlos Scheidegger, and Suresh Venkatasubramanian. Certifying and removing disparate impact. In Proceedings of the 21th ACM
+SIGKDD International Conference on Knowledge Discovery and Data Mining, pages 259–268,
+2015.
+[7] Sorelle Friedler, Carlos Scheidegger, and Suresh Venkatasubramanian. On the (im)possibility
+of fairness. CoRR, abs/1609.07236, 2016.
+[8] Sara Hajian and Josep Domingo-Ferrer. A methodology for direct and indirect discrimination
+prevention in data mining. IEEE Transactions on Knowledge and Data Engineering, 25(7):
+1445–1459, 2013.
+[9] Moritz Hardt, Eric Price, and Nathan Srebro. Equality of opportunity in supervised learning.
+In Proceedings of the 30th Annual Conference on Neural Information Processing Systems, pages
+3315–3323, 2016.
+
+13
+
+[10] Matthew Joseph, Michael Kearns, Jamie Morgenstern, and Aaron Roth. Fairness in learning:
+Classic and contextual bandits. In Proceedings of the 30th Annual Conference on Neural
+Information Processing Systems, pages 325–333, 2016.
+[11] Faisal Kamiran, Asim Karim, and Xiangliang Zhang. Decision theory for discrimination-aware
+classification. In Proceedings of the 12th IEEE International Conference on Data Mining, pages
+924–929, 2012.
+[12] Toshihiro Kamishima, Shotaro Akaho, Hideki Asoh, and Jun Sakuma. Fairness-aware classifier
+with prejudice remover regularizer. In Proceedings of the European Conference on Machine
+Learning and Knowledge Discovery in Databases, pages 35–50, 2012.
+[13] Michael Kearns and Satinder Singh. Near-optimal reinforcement learning in polynomial time.
+Machine Learning, 49(2-3):209–232, 2002.
+[14] Michael Kearns, Yishay Mansour, and Andrew Ng. Approximate planning in large POMDPs
+via reusable trajectories. In Proceedings of the 13th Annual Conference on Neural Information
+Processing Systems, pages 1001–1007, 2000.
+[15] Jon Kleinberg, Sendhil Mullainathan, and Manish Raghavan. Inherent trade-offs in the fair
+determination of risk scores. In Proceedings of the 7th Conference on Innovations in Theoretical
+Computer Science, 2017.
+[16] Shiau Hong Lim, Huan Xu, and Shie Mannor. Reinforcement learning in robust markov decision processes. In Proceedings of the 27th Annual Conference on Neural Information Processing
+Systems, pages 701–709, 2013.
+[17] Binh Thanh Luong, Salvatore Ruggieri, and Franco Turini. k-NN as an implementation of
+situation testing for discrimination discovery and prevention. In Proceedings of the 17th ACM
+SIGKDD International Conference on Knowledge Discovery and Data Mining, pages 502–510,
+2011.
+[18] Shie Mannor, Ofir Mebel, and Huan Xu. Lightning does not strike twice: Robust MDPs with
+coupled uncertainty. In Proceedings of the 29th International Conference on Machine Learning,
+2012.
+[19] Clair Miller.
+Can an algorithm hire better than a human?
+The New York
+Times, June 25 2015.
+URL http : / / www . nytimes . com / 2015 / 06 / 26 / upshot /
+can-an-algorithm-hire-better-than-a-human.html/. Retrieved 4/28/2016.
+[20] Jun Morimoto and Kenji Doya. Robust reinforcement learning. Neural computation, 17(2):
+335–359, 2005.
+[21] Dino Pedreshi, Salvatore Ruggieri, and Franco Turini. Discrimination-aware data mining. In
+Proceedings of the 14th ACM SIGKDD international conference on Knowledge discovery and
+data mining, pages 560–568. ACM, 2008.
+[22] Cynthia Rudin.
+Predictive policing using machine learning to detect patterns of
+crime.
+Wired Magazine, August 2013.
+URL http : / / www . wired . com / insights /
+2013/08/predictive-policing-using-machine-learning-to-detect-patterns-of-crime/. Retrieved
+4/28/2016.
+[23] Satinder Singh. Personal Communication, June 2016.
+14
+
+[24] Richard Sutton and Andrew Barto. Introduction to Reinforcement Learning. MIT Press,
+Cambridge, MA, USA, 1st edition, 1998.
+[25] Latanya Sweeney. Discrimination in online ad delivery. Communications of the ACM, 56(5):
+44–54, 2013.
+[26] Istv’an Szita and Csaba Szepesvári. Model-based reinforcement learning with nearly tight exploration complexity bounds. In Proceedings of the 27th International Conference on Machine
+Learning, pages 1031–1038, 2010.
+[27] Blake Woodworth, Suriya Gunasekar, Mesrob Ohannessian, and Nathan Srebro. Learning
+non-discriminatory predictors. In Proceedings of the 30th Conference on Learning Theory,
+2017.
+[28] Muhammad Bilal Zafar, Isabel Valera, Gomez-Rodriguez Manuel, and Krishna P. Gummadi.
+Fairness beyond disparate treatment and disparate impact: Learning classification without
+disparate mistreatment. In Proceedings of the 26th International World Wide Web Conference,
+2017.
+[29] Rich Zemel, Yu Wu, Kevin Swersky, Toni Pitassi, and Cynthia Dwork. Learning fair representations. In Proceedings of the 30th International Conference on Machine Learning, pages
+325–333, 2013.
+
+A
+
+Omitted Proofs
+
+A.1
+
+Omitted Proofs for Section 2
+
+Proof of Lemma 1. Let µ̂πT denote the distribution of π on states of M after following π for T steps
+starting from s. Then we know
+π
+Es∼µπ VM
+(s) −
+
+≤
+
+T
+
+n
+
+t=1
+
+i=1
+
+X
+1 X π
+π
+E
+VM (st ) =
+(µπ (si ) − µ̂πT (si )) VM
+(si )
+T
+
+n
+X
+
+π
+|µπ (si ) − µ̂πT (si )| VM
+(si ) ≤
+
+i=1
+
+
+.
+1−γ
+
+π (s ) ≤ 1 as rewards are in [0, 1]
+The last inequality is due to the following observations: (i) VM
+i
+1−γ
+n
+π
+π
+and (ii) Σi=1 |µ (si ) − µ̂T (si )| ≤  since T is at least the -mixing time of π.
+
+A.2
+
+Omitted Proofs for Section 3
+
+We first state the following useful Lemma about M .
+∗ (s ) <
+Lemma 11. Let M be the MDP in Definition 6. Then for any i ∈ {1, . . . , n}, VM
+i
+
+1+2γ n−i+1
+2(1−γ) .
+
+Proof.
+∗
+VM
+(si ) = discounted reward before reaching state n + discounted reward from staying at state n
+"n−i−1 #
+ 
+
+X γt
+γ n−i+1
+1
+1
+γ n−i
+γ n−i+1
+1 − γ n−i γ n−i+1
++
+=
+−
+=
++
+<
++
+2
+1−γ
+2 1−γ 1−γ
+1−γ
+2(1 − γ)
+1−γ
+t=1
+
+1 + γ n−i (2γ − 1)
+1 + 2γ n−i+1
+=
+<
+,
+2(1 − γ)
+2(1 − γ)
+15
+
+via two applications of the summation formula for geometric series.
+Proof of Theorem 3. We prove Theorem 3 for the special case of k = 2 first. Consider coupling the
+run of a fair algorithm L on both M (0.5) and M (1). To achieve this, we can fix the randomness of
+L up front, and use the same randomness on both MDPs. The set of observations and hence the
+actions taken on both MDPs are identical until L reaches state sn . Until then, with probability
+at least 1 − δ, L must play L and R with equal probability in order to satisfy fairness (since, for
+M (0.5), the only fair policy is to play both actions with equal probability at each time step). We
+will upper-bound the optimality of uniform play and lower-bound the number of rounds before
+which sn is visited by uniformly random play.
+n−2fγ for n ≥ 100(f )2 . First observe that the probability of
+Let fγ = d 1−1√
+γ
+3 γ e and T = 2
+reaching a fixed state si for any i ≥ n − fγ from a random walk of length T is upper bounded by
+the probability that the random walk takes i ≥ n − fγ consecutive steps to the right in the first T
+steps. This probability is at most p = 2n−2fγ ( 12 )n−fγ = 2−fγ for any fixed i. Since reaching any
+state i > i0 requires reaching state i0 , the probability that the T step random walk arrives in any
+state si for i ≥ n − fγ is also upper bounded by p.
+∗ (s ) is a nondecreasing function of i for both MDPs. Then the
+Next, we observe that VM
+i
+∗
+average VM values of the visited states of any fair policy can be broken into two pieces: the average
+conditioned on (the probability at least 1 − δ event) that the algorithm plays uniformly at random
+before reaching state sn and never reaching a state beyond sn−fγ , and the average conditioned on
+(the probability at most δ event) that the algorithm does not make uniformly random choices or
+the uniform random walk of length T reaches a state beyond sn−fγ . So, we have that
+T
+
+1 X ∗
+1
+∗
+E
+VM (st ) ≤ (1 − p − δ) VM
+(sn−fγ ) + (p + δ)
+T
+1−γ
+t=1
+
+≤ (1 − p − δ)
+
+1 + 2γ fγ +1
+1
++ (p + δ)
+.
+2(1 − γ)
+1−γ
+
+∗ (s ) ≤ 1 for all i, and the second from
+The first inequality follows from the fact that VM
+i
+1−γ
+∗ values being nondecreasing in i. Putting it all together,
+Lemma 11 along with VM
+∗
+Es∼µ∗ VM
+(s)
+
+
+
+T
+1 X ∗
+1
+1 + 2γ fγ +1
+1
+− E
+VM (st ) ≥
+− (1 − p − δ)
++ (p + δ)
+T
+1−γ
+2(1 − γ)
+1−γ
+t=1
+
+
+1−p−δ
+1 + 2γ fγ +1
+=
+1−
+.
+1−γ
+2
+
+So -optimality requires
+
+
+2
+1−p−δ
+1 + 2γ fγ +1
+≥
+1−
+.
+1−γ
+1−γ
+2
+However, if  <
+
+1
+8
+
+(4)
+
+we get
+
+
+
+
+
+2
+1 − 0.04 − 1/4
+1 + 2 × e−3
+1 − 2−fγ − δ
+1 + 2γ fγ +1
+<
+1−
+<
+1−
+,
+1−γ
+1−γ
+2
+1−γ
+2
+where the third inequality follows when δ < 14 and γ > 21 . This means  < 18 makes -optimality
+impossible, as desired.
+Throughout we considered the special case of k = 2 and proved a lower bound of Ω(2n ) time
+steps for any fair algorithm satisfying the -optimality condition. However, it is easy to see that
+16
+
+MDP M in Definition 6 can be easily modified in a way that k − 1 of the actions from state si
+reach state s1 and only one action in each state si reaches states smin{i+1,n} . Hence, a lower bound
+of Ω(k n ) time steps can be similarly proved.
+Proof of Theorem 4. We mimic the argument used to prove Theorem 3 with the difference that,
+until visiting sn , L may not play R with probability more than 12 +α (as opposed to 12 in Theorem 3).
+2
+n−2fγ for n ≥ 100(f )2 . By a similar process as in Theorem 3,
+Let fγ = d 1−1√
+γ
+3 γ e and T = ( 1+2α )
+the probability of reaching state si for any i ≥ n − fγ from a random walk of length T is bounded
+2
+)−fγ , and so the probability that the T steps random walk arrives in any state si for
+by p = ( 1+2α
+i ≥ n − fγ is bounded by p. Carrying out the same process used to prove Theorem 3 then once
+more implies that -optimality requires Equation 4 to hold when δ < 41 , α < 14 and γ > 12 . Hence,
+ < 81 violates this condition as desired.
+Finally, throughout we considered the special case of k = 2. The same trick as in the proof of
+k
+Theorem 3 can be used to prove the lower bound of Ω(( 1+kα
+)n ) time steps for any fair algorithm
+satisfying the -optimality condition.
+Proof of Theorem 5. We also prove Theorem 5 for the special case of k = 2 first, again considering
+log(
+
+1
+
+)
+
+2α e. Then given the
+the MDP in Definition 6. We set the size of the state space in M to be n = d 1−γ
+∗
+∗
+parameter ranges, for any i, QM (si , R)−QM (si , L) > α in M(1). Therefore, any approximate-action
+fair algorithm should play actions R and L with equal probability.
+Let T = 2cn = Ω((21/(1−γ) )c ). First observe that the probability of reaching a fixed state si
+for any i ≥ (c + 1)n/2 from a random walk of length T is upper bounded by the probability that
+the random walk takes i ≥ (c + 1)n/2 consecutive steps to the right in the first T steps. This
+probability is at most p = 2cn 2−(c+1)n/2 = 2(c−1)n/2 for any fixed i. Then the probability that the
+T steps random walk arrives in any state si for i ≥ (c + 1)n/2 is also upper bounded by p.
+∗ (s ) is a nondecreasing function of i, for both MDPs. Then the
+Next, we observe that VM
+i
+∗
+average VM values of the visited states of any fair policy can be broken into two pieces: the average
+conditioned on the 1 − δ fairness and never reaching a state beyond s(c+1)n/2 , and the average
+when fairness might be violated or the uniform random walk of length T reaches a state beyond
+s(c+1)n/2 . So, we have that
+T
+
+1 X ∗
+1
+∗
+E
+VM (st ) ≤ (1 − p − δ) VM
+(s(c+1)n/2 ) + (p + δ)
+T
+1−γ
+t=1
+
+1 + (2γ − 1)γ
+≤ (1 − p − δ)
+2(1 − γ)
+
+(1−c)n
+2
+
+= (p + δ)
+
+1
+.
+1−γ
+
+∗ (s ) ≤ 1 for all i, and the second from (the
+The first inequality follows from the fact that VM
+i
+1−γ
+∗
+line before the last in) Lemma 11 along with VM values being nondecreasing in i. Putting it all
+together,
+(1−c)n
+
+T
+
+1 X ∗
+1
+1 + (2γ − 1)γ 2
+1
+− E
+VM (st ) ≥
+− (1 − p − δ)
+− (p + δ)
+T
+1−γ
+2(1 − γ)
+1−γ
+t=1
+"
+#
+"
+#
+(1−c)n
+(1−c)n
+1 + (2γ − 1)γ 2
+1 − p − δ 1 (2γ − 1)γ 2
+1−p−δ
+=
+1−
+=
+−
+.
+1−γ
+2
+1−γ
+2
+2
+
+∗
+Es∼µ∗ VM
+(s)
+
+17
+
+So -optimality requires
+2
+1−p−δ
+≥
+1−γ
+1−γ
+
+"
+
+1 (2γ − 1)γ
+−
+2
+2
+
+(1−c)n
+2
+
+#
+.
+
+Rearranging and using δ < 41 , we get that -optimality requires
+ih
+i
+h
+(1−c)n
+(c−1)n
+1 − (2γ − 1)γ 2
+4 ≥ 0.75 − 2 2
+and expand n to get
+"
+# "
+#
+1 )
+1 )
+(c−1) log( 2α
+(1−c) log( 2α
+1
+xy
+≥
+0.75 − 2 2(1−γ)
+× 1 − (2γ − 1)γ 2(1−γ)
+≡
+.
+4
+4
+Noting that x is minimized when
+when
+
+1
+log( 2α
+)
+2(1−γ)
+
+1
+(c−1) log( 2α
+)
+2(1−γ)
+2
+
+is maximized, and that this quantity is maximized
+
+is minimized (as c − 1 is negative), we get that -optimality requires
+i
+h
+c−1
+0.75 − 2 1−γ y
+≥
+4
+
+from α < 81 . Similarly, α <
+
+1
+8
+
+implies that -optimality requires
+ih
+i
+h
+1−c
+c−1
+0.75 − 2 1−γ 1 − (2γ − 1)γ 1−γ
+.
+≥
+4
+
+c−1
+
+Note that 0.75 − 2 1−γ is minimized when γ is small, so γ > c implies that -optimality requires
+i
+
+h
+1−c
+0.75 − 2−1 1 − (2γ − 1)γ 1−γ
+1−c i
+1 h
+≥
+≥
+1 − (2γ − 1)γ 2(1−γ) .
+4
+16
+1−c
+
+Conversely, 1 − (2γ − 1)γ 1−γ is minimized when γ is large, so as
+1−c
+
+lim (2γ − 1) γ 1−γ = ec−1
+
+γ→1
+
+we get that -optimality requires
+
+1
+1 − ec−1 .
+16
+Finally, the same trick as in the proof of Theorem 3 can be used to prove the Ω((k 1/(1−γ) )c )
+lower bound for k > 2 actions.
+≥
+
+A.3
+
+Omitted Proofs for Section 4
+
+Proof of Lemma 8. We first show that either
+• there exists an exploitation policy π in MΓ such that
+T
+
+T
+
+X
+ 1 X π
+
+1
+π̄
+π̄ t (s), T − E
+VMΓ π t (s), T ≤ β
+max E
+VM
+T π̄∈Π
+T
+t=1
+
+π t (s)
+
+where the random variables
+and
+π and π̄ for t steps, respectively, or
+
+t=1
+
+π̄ t (s)
+
+18
+
+denote the states reached from s after following
+
+• there exists an exploration policy π in MΓ such that the probability that a walk of 2T steps
+from s following π will terminate in s0 exceeds Tβ .
+Let π be a policy in M satisfying
+T
+
+T
+
+t=1
+
+t=1
+
+X 0
+1 X π t
+1
+π
+E
+VM (π (s), T ) = max E
+VM
+(π̄ t (s), T ) := Ṽ .
+T
+T π̄∈Π
+For any state s0 , let p(s0 ) denote all the paths of length T in M that start in s0 , q(s0 ) denote all the
+paths of length T in M that start in s0 such that all the states in every path of length T in q(s0 )
+are in Γ and r(s0 ) all the paths of length T in M that start in s0 such that at least one state in
+every path of length T in r(s0 ) is not in Γ. Suppose
+T
+
+1 X π
+E
+VMΓ (π t (s)) < Ṽ − β.
+T
+t=1
+
+Otherwise, π already witnesses the claim. We show that a walk of 2T steps from s following π will
+terminate in s0 with probability of at least Tβ . First,
+E
+
+T
+X
+
+π
+VM
+(π t (s), T )
+
+=E
+
+T
+X
+X
+
+P[p(π t (s))]VM (p(π t (s)))
+
+t=1 p(π t (s))
+
+t=1
+
+=E
+
+T
+X
+X
+
+t
+
+t
+
+P[q(π (s))]VM (q(π (s))) + E
+
+t=1 q(π t (s))
+
+T
+X
+X
+
+P[r(π t (s))]VM (r(π t (s)))
+
+t=1 r(π t (s))
+
+since p(π t (s)) = q(π t (s)) ∪ r(π t (s)), which is a disjoint union. Next,
+
+E
+
+T
+X
+X
+
+t
+
+t
+
+P[q(π (s))]VM (q(π (s))) = E
+
+t=1 q(π t (s))
+
+T
+X
+X
+
+PπMΓ [q(π t (s))]VMΓ (q(π t (s)))
+
+t=1 q(π t (s))
+
+≤E
+
+T
+X
+
+π
+VM
+(π t (s), T ),
+Γ
+
+t=1
+
+where the equality is due to Definition 9 and the definition of q, and the inequality follows
+π (π t (s), T ) is the sum over all the T -paths in M , not just those that avoid the absorbing
+because VM
+Γ
+Γ
+state s0 . Therefore by our original assumption on π,
+E
+
+T
+X
+X
+
+t
+
+t
+
+P[q(π (s))]VM (q(π (s))) ≤ E
+
+t=1 q(π t (s))
+
+T
+X
+
+π
+VM
+(π t (s), T ) < T Ṽ − T β.
+Γ
+
+t=1
+
+This implies
+E
+
+T
+X
+X
+t=1 r(π t (s))
+
+P[r(π t (s))]VM (r(π t (s))) = E
+
+T
+X
+
+π
+VM
+(π t (s), T ) − E
+
+P[q(π t (s))]VM (q(π t (s)))
+
+t=1 q(π t (s))
+
+t=1
+
+= T Ṽ − E
+
+T
+X
+X
+
+T
+X
+X
+t=1 q(π t (s))
+
+19
+
+P[q(π t (s))]VM (q(π t (s))) ≥ T β,
+
+where the last step is the result of applying the previous inequality. However,
+E
+
+T
+X
+X
+
+P[r(π t (s))]VM (r(π t (s))) ≤ T E
+
+t=1 r(π t (s))
+
+T
+X
+X
+
+P[r(π t (s))],
+
+t=1 r(π t (s))
+
+P P
+because it is immediate that VM (r(π t (s))) ≤ T for all π t (s). So T β ≤ T E Tt=1 r(πt (s)) P[r(π t (s))].
+Finally, if we let Pπ2T denote the probability that a walk of 2T steps following π terminates in s0 ,
+i.e.P the probability that π escapes to an unknown state within 2T steps, then for each t ∈ [T ],
+E r(πt (s)) ≤ T Pπ2T . It follows that
+T β ≤ T 2 Pπ2T
+and rearranging yields Pπ2T ≥ Tβ as desired.
+Next, note that the exploitation policy (if it exists) can be derived by computing the optimal
+policy in MΓ . Moreover, the exploration policy (if it exists) in the exploitation MDP MΓ can
+indeed be derived by computing the optimal policy in the exploration MDP M[n]\Γ as observed
+α
+by [13]. Finally, by Observation 5, any optimal policy in M̂Γα (M̂[n]\Γ
+) is an optimal policy in M̂Γ
+(M̂[n]\Γ )
+To prove Lemma 10, we need some useful background adapted from Kearns and Singh [13].
+Definition 8 (Definition 7, Kearns and Singh [13]). Let M and M̂ be two MDPs with the same
+set of states and actions. We say M̂ is a β-approximation of M if
+• For any state s,
+R̄M (s) − β ≤ R̄M̂ (s) ≤ R̄M (s) + β.
+• For any states s and s0 and action a,
+PM (s, a, s0 ) − β ≤ PM̂ (s, a, s0 ) ≤ PM (s, a, s0 ) + β.
+Lemma 12 (Lemma 5, Kearns and Singh [13]). Let M be an MDP and Γ the set of known states of
+M . For any s, s0 ∈ Γ and action a ∈ A, let P̂M (s, a, s0 ) denote the empirical probability transition
+¯
+estimates obtained from the visits to s. Moreover, for any state s ∈ Γ let R̂(s) denote the empirical
+estimates of the average reward obtained from visits to s. Then with probability at least 1 − δ,
+
+
+min{, α}2
+|P̂M (s, a, s0 ) − PM (s, a, s0 )| = O
+,
+4
+n2 Hγ
+and
+¯
+|R̂M (s) − R̄M (s)| = O
+
+
+
+min{, α}2
+n2 Hγ
+
+4
+
+
+.
+
+2
+
+Lemma 12 shows that M̂Γ and M̂[n]\Γ are O( min{,α}
+4 )-approximation MDPs for MΓ and M[n]\Γ ,
+n2 Hγ
+respectively.
+2
+
+Lemma 13 (Lemma 4, Kearns and Singh [13]). Let M be an MDP and M̂ its O( min{,α}
+4 )n2 Hγ
+approximation. Then for any policy π ∈ Π and any state s and action a
+α
+π
+π
+π
+VM
+(s) − min{, α} ≤ VM̂
+(s) ≤ VM
+(s) + min{, },
+4
+and
+α
+α
+QπM (s, a) − min{ , } ≤ QπM̂ (s, a) ≤ QπM (s, a) + min{ , }.
+4
+4
+20
+
+2
+
+Proof of Lemma 10. By Definition 7 and Lemma 12, M̂Γ is a O( min{,α}
+4 )-approximation of MΓ .
+n2 Hγ
+Then the statement directly follows by applying Lemma 13.
+Rest of the Proof of Theorem 6. The only remaining part of the proof of Theorem 6 is the analysis
+of the probability of failure of Fair-E3 . To do so, we break down the probability of failure of
+Fair-E3 by considering the following (exhaustive) list of possible failures:
+1. At some known state the algorithm has a poor approximation of the next step, causing M̂Γ
+2
+to not be a O( min{,α}
+)-approximation of MΓ .
+2 γ4
+n H
+
+2. At some known state the algorithm has a poor approximation of the Q∗M values for one of
+the actions.
+3. Following the exploration policy for 2T∗ steps fails to yield enough visits to unknown states.
+4. At some known state, the approximation value of that state in M̂Γ is not an accurate estimate
+for the value of the state in MΓ .
+We allocate
+
+δ
+4
+
+1. Set δ 0 =
+
+δ
+4n
+
+2. Set δ 0 =
+
+δ
+4nk
+
+of our total probability of failure to each of these sources:
+in Lemma 10.
+in Theorem 7.
+
+3. By Lemma 8, each attempted exploration is a Bernoulli trial with probability of success of
+at least 4T ∗ . In the worst case we might need to make every state known before exploiting,
+
+leading to the nmQ trajectories (mQ as Equation 3 in Definition 7) of length Hγ . Therefore,
+the probability of taking fewer than nmQ trajectories of length Hγ would be bounded by 4δ
+if the number of 2T∗ steps explorations is at least
+ ∗
+ n 
+T nmQ
+mexp = O
+log
+.
+(5)
+
+δ
+4. Set δ 0 = 4mδexp (mexp as defined in Equation 5) in Lemma 10, as Fair-E3 might make 2T∗
+steps explorations up to mexp times.
+
+A.4
+
+Relaxing Assumption 2
+
+Throughout Sections 4.3 and 4.4 we assumed that T∗ , the -mixing time of the optimal policy π ∗ ,
+was known (see Assumption 2). Although Fair-E3 uses the knowledge of T∗ to decide whether
+to follow the exploration or exploitation policy, Lemma 8 continues to hold even without this
+assumption. Note that Fair-E3 is parameterized by T∗ and for any input T∗ runs in time poly(T∗ ).
+Thus if T∗ is unknown, we can simply run Fair-E3 for T∗ = 1, 2, . . . sequentially and the running
+time and sample complexity will still be poly(T∗ ). Similar to the analysis of Fair-E3 when T∗ is
+∗
+known we have to run the new algorithm for sufficiently many steps so that the possibly low VM
+∗
+values of the visited states in the early stages are dominated by the near-optimal VM values of the
+visited states for large enough guessed values of T∗ .
+
+21
+
+B
+
+Observations on Optimality and Fairness
+
+Observation 1. For any MDP M , there exists an optimal policy π ∗ such that π ∗ is fair.
+Proof. In time t, let state st denote the state from which π chooses an action. Let a∗ = argmaxa Q∗M (st , a)
+and A∗ (st ) = {a ∈ A | Q∗M (st , a) = Q∗M (st , a∗ )}. The policy of playing an action uniformly at random from A∗ (st ) in state st for all t, is fair and optimal.
+Approximate-action fairness, conversely, can be satisfied by any optimal policy, even a deterministic one.
+Observation 2. Let π ∗ be an optimal policy in MDP M . Then π ∗ is approximate-action fair.
+Proof. Assume that π ∗ is not approximate-action fair. Given state s, the action that π ∗ takes from
+s is uniquely determined since π ∗ is deterministic we may denote it by a∗ . Then there exists a time
+step in which π ∗ is in state s and chooses action a∗ (s) such that there exists another action a with
+Q∗M (s, a) > Q∗M (s, a∗ (s)) + α,
+a contradiction of the optimality of π ∗ .
+Observations 1 and 2 state that policies with optimal performance are fair; we now state that
+playing an action uniformly at random is also fair.
+Observation 3. An algorithm that, in every state, plays each action uniformly at random (regardless of the history) is fair.
+Proof. Let L denote an algorithm that in every state plays uniformly at random between all available actions. Then L(s, ht−1 )a = L(s, ht−1 )a0 regardless of state s, (available) action a, or history
+ht−1 . Q∗M (s, a) > Q∗M (s, a0 ) + α ⇒ L(s, ht−1 )a ≥ L(s, ht−1 )a0 then follows immediately, which
+guarantees both fairness and approximate-action fairness.
+Observation 4. Let M be an MDP and M α the α-restricted MDP of M . Let π be a policy in M α .
+Then π is α-action fair.
+Proof. Assume π is not α-action fair. Then there must exist round t, state s, and action a such
+that Q∗M (s, a) > Q∗M (s, a0 ) + α and L(s, ht−1 )a < L(s, ht−1 )a0 . Therefore L(s, ht−1 )a0 > 0, so M α
+must include action a0 from state s. But this is a contradiction, as in state s M α only includes
+actions a0 such that Q∗M (s, a0 ) + α ≥ Q∗M (s, a). π is therefore α-action fair.
+Observation 5. Let M be an MDP and M α the α-restricted MDP of M . Let π ∗ be an optimal
+policy in M α . Then π ∗ is also optimal in M .
+Proof. If π ∗ is not optimal in M , then there exists a state s and action a such that Q∗M (s, a) >
+Ea∗ (s)∼π∗ (s) Q∗M (s, a∗ (s)) where a∗ (s) is drawn from π ∗ (s) and the expectation is taken over choices
+of a∗ (s). This is a contradiction because action a is available from state s in M α by Definition 5.
+
+22
+
+C
+
+Omitted Details of Fair-E3
+
+We first formally define the exploitation MDP MΓ and the exploration MDP M[n]\Γ :
+Definition 9 (Definition 9, Kearns and Singh [13]). Let M = (SM , AM , PM , RM , T, γ) be an MDP
+with state space SM and let Γ ⊂ SM . We define the exploration MDP MΓ = (SMΓ , AM , PMΓ , RMΓ , T, γ)
+on Γ where
+• SMΓ = Γ ∪ {s0 }.
+• For any state s ∈ Γ, R̄MΓ (s) = R̄M (s), rewards in MΓ are deterministic, and R̄MΓ (s0 ) = 0.
+• For any action a, PMΓ (s0 , a, s0 ) = 1. Hence, s0 is an absorbing state.
+• For any states s1 , s2 ∈ Γ and any action a, PMΓ (s1 , a, s2 ) = PM (s1 , a, s2 ), i.e. transitions
+between states in Γ are preserved in MΓ .
+• For any state s1 ∈ Γ and any action a, PMΓ (s1 , a, s0 ) = Σs2 ∈Γ
+/ PM (s1 , a, s2 ). Therefore, all
+the transitions between a state in Γ and states not in Γ are directed to s0 in MΓ .
+Definition 10 (Implicit, Kearns and Singh [13]). Given MDP M and set of known states Γ,
+the exploration MDP M[n]\Γ on Γ is identical to the exploitation MDP MΓ except for its reward
+function. Specifically, rewards in M[n]\Γ are deterministic as in MΓ , but for any state s ∈ Γ,
+R̄M[n]\Γ (s) = 0, and R̄M[n]\Γ (s0 ) = 1.
+We next define the approximation MDPs M̂Γ and M̂[n]\Γ which are defined over the same set
+of states and actions as in MΓ and M[n]\Γ , respectively.
+Let M be an MDP and Γ the set of known states of M . For any s, s0 ∈ Γ and action a ∈ A,
+let P̂MΓ (s, a, s0 ) denote the empirical probability transition estimates obtained from the visits to
+¯
+s. Moreover, for any state s ∈ Γ let R̂MΓ (s) denote the empirical estimates of the average reward
+obtained from visits to s. Then M̂Γ is identical to MΓ except that:
+¯
+• in any known state s ∈ Γ, R̂M̂Γ (s) = R̂MΓ (s).
+• for any s, s0 ∈ Γ and action a ∈ A, PM̂Γ (s, a, s0 ) = P̂MΓ (s, a, s0 ).
+Also M̂[n]\Γ is identical to M[n]\Γ except that:
+• for any s, s0 ∈ Γ and action a ∈ A, PM̂
+
+[n]\Γ
+
+(s, a, s0 ) = P̂M[n]\Γ (s, a, s0 ).
+
+23
+
+

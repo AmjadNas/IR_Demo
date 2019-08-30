@@ -1,0 +1,744 @@
+J Inf Process Syst, Vol.9, No.4, pp.538-547, December 2013
+http://dx.doi.org/10.3745/JIPS.2013.9.4.538
+
+pISSN 1976-913X
+eISSN 2092-805X
+
+Opinion Bias Detection Based on Social Opinions for
+Twitter
+A-Rong Kwon* and Kyung-Soon Lee*
+
+Abstract—In this paper, we propose a bias detection method that is based on personal and
+social opinions that express contrasting views on competing topics on Twitter. We used
+unsupervised polarity classification is conducted for learning social opinions on targets. The
+tf∙idf algorithm is applied to extract targets to reflect sentiments and features of tweets. Our
+method addresses there being a lack of a sentiment lexicon when learning social opinions. To
+evaluate the effectiveness of our method, experiments were conducted on four issues using
+Twitter test collection. The proposed method achieved significant improvements over the
+baselines.
+Keywords—Social opinion, Personal opinion, Bias detection, Sentiment, Target
+
+1. INTRODUCTION
+In recent years, social media has become an attractive source for up-to-date information and a
+great medium for exploring the types of developments that most matter to a broad audience [1].
+With the advancement of information technology, social media has become an increasingly
+important communication channel for consumers and firms [2]. In the social network, the
+opinion held by one individual is not static, and can be influenced by others [3]. Twitter is an
+efficient conduit of information for millions of users around the world. Its ability to quickly
+spread information to a large number of people makes it an efficient way to shape information
+and, hence, to shape public opinion [4]. Opinionated social media, such as product reviews, are
+now widely used by customers for decision making process [5]. Consumer feedback on a
+company ’ s product is essential to recognize the consumer tendency and to implement
+appropriate marketing measures [6]. Opinions play a primary role in decision-making processes.
+Whenever people need to make a choice, they are naturally inclined to listen to the opinions of
+others. In particular, when the decision involves consuming valuable resources, such as time
+and/or money, people strongly rely on their peers’ past experiences [7].
+An important part of our information-gathering behavior has always been to find out what
+※ This work was supported by the Basic Science Research Program through the National Research Foundation
+of Korea (NRF), which is funded by the Ministry of Education, Science, and Technology (MEST)
+(2012R1A1A2044811).
+This research was financially supported by the Ministry of Education, Science, and Technology (MEST) and
+the Korea Industrial Technology Foundation (KOTEF) though the Human Resource Training Project for
+Regional Innovation. It was also supported by the second stage of Brain Korea 21.
+Manuscript received November 13, 2012; accepted May 12, 2013.
+Corresponding Author: Kyung-Soon Lee (selfsolee@chonbuk.ac.kr)
+* Dept. of Computer Science & Engineering, CAIIT, Chonbuk National University, Jeonju, 561-756, Korea
+(lifecorrect@naver.com, selfsolee@chonbuk.ac.kr)
+
+538
+
+Copyrightⓒ
+ⓒ2005
+2013KIPS
+KIPS
+ISSN 1738-8899
+2013
+
+A-Rong Kwon and Kyung-Soon Lee
+
+other people think. With the growing availability and popularity of opinion-rich resources, such
+as social network services and personal blogs, challenges have arisen since people can and do
+actively use information technologies to seek out and understand the opinions of others.
+There has been recent work done on opinion mining for event detection and debate-side
+classification. In this paper, we propose a bias detection method based on personal and social
+opinions that have been learned from tweets.
+Twitter users state opinions on certain issues that can be expressed as sentiments about various
+targets. The following statement is an example of an expressed opinion on an issue. For example,
+X is better than Y. The X and Y are competing trends in the market and each is an example of a
+competing topic. The word better is a positive sentiment word that is being used to express an
+opinion about X. As in the above-example, users can express their opinion regarding a topic by
+employing a sentiment word. Such personal opinions are not necessarily reflected by social users.
+Even Twitter users express their opinion via a target. The following Tweet is an example of
+expressing an opinion on competing trends in the market through a target. For example, X is my
+
+favorite one. After trying them you will notice the difference in photo quality and price between
+X and Y. Here, X and Y are the topics, while “picture quality” and “price” are the targets of the
+associated topics, even though a sentiment word is not used and both targets are supporting X.
+The above example could be interpreted as a positive Tweet about X. In addition, targets
+supporting certain topics in the above example reflect people's preferences. This aspect can be
+an important feature in detecting bias in a user’s opinion.
+In this paper, we propose a novel bias detection method based on social preferences of targets
+learned automatically from Twitter data for the competing topics. Specifically, we are proposing
+a bias detection method that uses personal opinions regarding a topic and social opinions
+pertaining to the target. The contribution of this research is as listed below.
+▪ Unsupervised polarity classification of tweets to automatically learn social opinions of targets.
+▪ Target extraction based on the Term Frequency-Inverse Document Frequency (tf ∙ idf)
+algorithm by considering the targets, sentiment words, and Tweet features.
+▪ A target without a sentiment word can be addressed with our model. This is important
+when a sentiment lexicon or context analysis is lacking. By using this feature, we can build
+a probability table about social opinion.
+▪ A bias detection method by considering social opinions (i.e., one’s general preference
+about a target in social media data), as well as a Tweeter’s personal opinion that is not
+necessarily reflected by social users, is developed.
+The remainder of this paper is organized as follows: related work is described in Section 2.
+The unsupervised training process is introduced in Section 3. The bias detection method is
+presented in Section 4 and the experimental results are given in Section 5. Finally, conclusions
+and areas for future work are detailed in Section 6.
+
+2. RELATED WORK
+Our research is related to previous work on opinion mining, specifically constructing opinion
+corpus, extracting targets, summarizing opinions on targets, and learning social opinions.
+Pak et al. [8] reported on a method that automatically collected a corpus for sentiment analysis
+and opinion mining purposes. The researchers performed a linguistic analysis of the collected
+
+539
+
+Opinion Bias Detection Based on Social Opinions for Twitter
+
+corpus and explained the phenomena that they discovered. Using the corpus, a sentiment
+classifier that was able to determine positive, negative, and neutral sentiments for a document
+was built. Popescu et al. [9] also studied the automatic detection of events involving known
+entities from Twitter and sought an understanding of both the events as well as the audience’s
+reaction to them. Jindal et al. [10] proposed the mining of comparative sentences and relations
+using gradable comparatives.
+Several studies have been conducted on sentiment analysis and target extraction using a HITS
+graph by Li [11]. Some research on target extraction has been carried out by Hu et al. [12] in
+order to extract the target by reviewing an issue using sentiment features. Qui et al. [13]
+employed syntactic relations for target extraction, while Jakob et al. [14] used Anaphora
+Resolution to improve opinion target identification in movie reviews.
+Zhang et al. [15] proposed a target extraction method based on the HITS algorithm. Zhao et al.
+[16] proposed the extraction of topical key phrases as a way to summarize Twitter. The researchers
+proposed a context-sensitive topical PageRank method for keyword ranking and a probabilistic
+scoring function that considers both the relevance and interestingness of key phrases for ranking
+them. Target-dependent syntactic features are incorporated for sentiment classification, which
+generated using words syntactically connected with the given target in the tweet by Jiang et al. [17].
+Somasundaran et al. [18] presented an unsupervised opinion analysis method for debate-side
+classification. The authors used syntactic properties and sentiment words for target extraction on
+a specific issue. The difference between the approach outlined in Ref. [19] and our proposed
+method is that we deal with a personal opinion, which is not necessarily reflected by social
+opinion, and that is mentioned without a sentiment word for the target since there are a lack of
+insufficient lexical resources or context analysis.
+
+3. THE LEARNING PROCESS FOR BIAS DETECTION
+In order to detect a bias, we need to identify targets and learn social opinions as a general
+preference of the target. We revised the tf∙idf algorithm to extract targets. Pattern-based polarity
+classification is conducted for each tweet in training the Twitter for learning social opinions.
+The collection of Tweets used for unsupervised learning is shown in Table 1. We collected
+tweets using the Korean Twitter Search API. Here, a tweet mentions only one of the two topics.
+The Tweet is classified as positive and/or negative for the topic. We excluded a Tweet that
+mentions the two topics, in order to get a high accuracy of training data.
+For the Galaxy Tab vs. iPad pair in Table 1, topici refers to a Tweet that only mentioned the
+topic Galaxy Tab, while topicj refers to a Tweet that only mentioned the topic iPad.
+Using the above data, target extraction is conducted based on the tf∙idf algorithm and the
+probabilities of for social opinions on each target are learned by using specific patterns.
+Table 1. Collection of Korean Tweets for learning social opinions
+Topici
+
+Topicj
+
+Total
+
+GalaxyTab vs. iPad
+
+10,814
+
+26,760
+
+37,574
+
+Nikon vs. Canon
+
+13,089
+
+20,565
+
+33,654
+
+Windows vs. Mac
+
+49,844
+
+1,861
+
+51,705
+
+540
+
+A-Rong Kwon and Kyung-Soon Lee
+
+3.1 Unsupervised polarity classification
+In order to extract social opinion, tweets are classified as positive or negative based on their
+specific patterns. There are two types of patterns -- explicit and contextual. An explicit pattern
+reflects opinions about the topic explicitly, while a contextual pattern needs to reflect the context
+of the sentiment.
+The explicit pattern, which a sentiment word comes next to the topic word is described as
+below. Here, a sentiment can be one of words in the sentiment lexicon.
+
+<topic> <sentiment>
+When a sentiment word follows a topic word within a distance of 10 words, Tweets are
+classified as positive or negative according to the polarity of the sentiment word.
+For example, consider the Tweet, The weight and portability of X are good. In this sentence,
+the positive word good follows the topic X. Thus, this Tweet is classified as a positive tweet.
+The contextual pattern is used to consider the context such as a comparative, negative, or
+interrogative word.
+
+<topic> <comparative word> <sentiment>
+<topic> <negative word> <sentiment>
+<topic> <question word > <sentiment>
+When a sentiment word is followed by a comparison word or a negative word within a
+distance of 1 word, the polarity of the sentiment word is applied to the opposition. When a
+sentiment word is followed by a question word within a distance of 1 word, the polarity of the
+sentiment word is not applied.
+To evaluate our pattern-based polarity classification method, 400 Tweets were randomly
+selected and judged by two human assessors. The Tweets in the above patterns are classified as
+being in a positive, negative, or neutral class. The evaluation result shows 75% precision. Due to
+the simple pattern classification scheme, little noise is observed.
+
+3.2 Target extraction
+A target is frequently mentioned with a topic. The target of the topic isn't mentioned to a target
+for another topic that often. By applying these features, we can extract the targets.
+In this paper, the proposed weight of the target is as follows:
+(1)
+Where i is the topic, j is another topic, and t is the target candidate. Ni corresponds to the Tweet
+number for topici, tfi(t) corresponds to the term frequency of target candidate t for topici. The
+parameter α is set to 0.001. This parameter can be controlled to extract a better target. Weight(t)
+is the high score of target t when it is frequently mentioned with the topic and when it is not
+frequently mentioned with another topic.
+The pattern for calculation of tfi(t) is described as follows:
+
+<topic> <target> <verb>
+In the above pattern, a target between a topic and a verb is extracted within 2 words distance in
+front of a verb. This distance can be controlled to clearly extract the target.
+Because the number of word of Sentiment lexicon's[20] is too lack to express our thoughts
+
+541
+
+Opinion Bias Detection Based on Social Opinions for Twitter
+
+precisely, we use verbs instead of using sentiment words. The result of the morphological
+analysis is applied to the distance calculation. Pronouns, adverbs, and conjunctions are ignored.
+For example, Galaxy Tab's resolution and speed are good. The words resolution and speed are
+appear in front of the verb word are. Both resolution and speed are 2 words distance in front of
+a verb are.
+The top 50 targets are extracted from among the target candidates by the authority scores, A(t).
+The results of the target extraction are shown in Table 2.
+In Table 2, GalaxyTab vs. iPad represents a collection of tweets for either Galaxy Tab or iPad.
+The targets such as iPhone, application, and skill are extracted and contained in the
+specifications of the product. But, the targets such as use, launch, and price are extracted since
+Twitter users frequently mention these even though they are not contained in the specifications
+about the product. The word recommendation is noise. The accuracy of this target extraction
+was above 90%.
+Table 2. Targets that were extracted using the tf∙idf weighting
+Rank
+
+GalaxyTab vs. iPad
+
+1
+
+iPhone
+
+2
+3
+4
+
+launch
+
+5
+
+skill
+
+6
+
+price
+
+7
+
+Samsung
+
+8
+9
+10
+
+screen
+
+Nikon vs. Canon
+
+Windows vs. Mac
+
+Samsung vs. Apple
+
+lens
+
+install
+
+product
+
+use
+
+camera
+
+Windows7
+
+iPhone
+
+application
+
+bag
+
+use
+
+businesses
+
+DSLR
+
+computer
+
+price
+
+use
+
+mobile
+
+sale
+
+price
+
+format
+
+use
+
+NikonD
+
+android
+
+Korea
+
+phone
+
+secondhand
+
+support
+
+service
+
+charge
+
+recommendation
+
+file
+
+money
+
+sony
+
+program
+
+company
+
+3.3 Building Probabilities of social opinions
+Social users' general preferences on a target for a topic are calculated by conditional
+probabilities in the automatically classified tweets.
+Twitter users express emotion about the competing topics via the target as a means of stating
+their opinion. In addition, a simple mentioning of the target without the expression of any
+feelings may also be used to express an opinion.
+In observing social behaviors, we defined that there are two types of patterns, a polarity
+pattern and a neutral pattern, for extracting social opinions. A polarity pattern includes a positive
+or negative sentiment about a target. In a neutral pattern, any sentiment word is not mentioned
+for a target or it is not detected due to a lack of lexicons. Here, the neutral pattern plays an
+important role, especially when there is an insufficient amount of sentiment lexicons and when it
+is difficult to analyze the contexts.
+The polarity pattern for a target is described as follows:
+
+<topic> <sentiment> <target> <sentiment>
+±
+
+±
+
+Where, the frequency of targetk is counted for the topicp depending on if the sentiment is
+positive or negative. This is used for calculating the polarity probability of a target for a topic,
+542
+
+A-Rong Kwon and Kyung-Soon Lee
+
+P(topicp± | targetk±).
+The neutral pattern for a target is described as follows:
+
+<topic > <sentiment> <target>
+0
+
+±
+
+Where, the frequency of targetk is counted for the topicp depending on if the sentiment is
+positive or negative. This is used for calculating the neutral probability of a target for a topic,
+
+P(topicp± | targetk0).
+The equation for extracting social probabilities for targets with the polarity pattern is as follows:
+
+P(topici | targetk±) = P(topici+ | targetk±) + P(topicj-|targetk±)
++
+
+(2)
+
+-
+
+Where, the topici denotes a positive tweet on topici. The topicj of represents a negative tweet
+±
+on topicj, which can be considered to be positive opinion for the targetk on the competing topic
++
+±
+±
+topici. P(topici | targetk ) is the probability that targetk prefers topici. The probability P(topicj-|
+targetk±) allows for the competing topic to be considered. As such, positive or negative opinions
+on a topic will result in equivalent values.
+The equation for extracting social probabilities for targets with the neutral pattern is as follows:
+
+P(topici | targetk0) = P(topici+| targetk0) + P(topicj-| targetk0)
++
+
+0
+
+(3)
+0
+
+Where, P(topici | targetk ) is the probability that targetk prefers topici. The targetk means that
+any sentiment word is not detected for the target.
+The social probabilities for each target on the topics are shown in Table 3.
++
+As shown by the target weight in Table 3, users’ preferences were generally more biased
+towards GalaxyTab when compared to iPad.
+Table 3. Social probabilities on the target of the topic
+targetk
+
+P(GalaxyTab |targetk )
+
+P(iPad | targetk )
+
+weight+
+
+0.2635
+
+0.125
+
+weight -
+
+0.1666
+
+0.1666
+
+weight 0
+
+0.1999
+
+0.0908
+
++
+
+application
+
+0.1178
+
+0.2256
+
+application -
+
+0.2042
+
+0.1239
+
+application 0
+
+0.1339
+
+0.1592
+
+phone+
+
+0.111
+
+0.0694
+
+-
+
+phone
+
+0.1151
+
+0.1211
+
+phone0
+
+0.1001
+
+0.1152
+
+4. OPINION BIAS DETECTION
+When our system is given a tweet to conduct opinion analysis on, it conducts bias detection or
+polarity detection depending on the topics being dealt with in the tweet.
+When a Tweet deals with two competing topics, our system detects the bias. If P(topici) >
+P(topicj), the opinion of the tweet is biased toward topici; otherwise, it is biased toward topicj.
+When the difference of the two probabilities is below the threshold, it is classified as neutral.
+543
+
+Opinion Bias Detection Based on Social Opinions for Twitter
+
+When a tweet only mentions one topic, topici, then our system conducts a polarity
+classification on the topic. If P(topici) > P(topicj), topici will be classified as positive; otherwise
+topici will be classified as negative.
+The probability of there being bias about a topic for each tweet is calculated as follows: it is
+combined with the value of a Tweeter’s personal probability on the topic in a tweet and with the
+social probabilities for targets on the competing topics.
+
+P(topici) = (1- α)∙ P(topici±) + α∙ (P(topici | targetk±) +P(topici | targetk0))
+
+(4)
+
+Where, the parameter α is set to 0.5 by training in our experiments. This parameter can be
+±
+controlled to give higher weight to social or personal opinions. P(topici | targetk ) and P(topici |
+0
+targetk ) denote the probability of the social opinion on targetk, which is calculated from social
+±
+media data that has been written by other users. P(topici ) denotes the probability of a Tweeter’s
+±
+personal opinion on topici in the Tweet. Note that P(topici ) is not extracted from the training
+data, but this is directly calculated from the tweet to detect the bias.
+Twitter users express their opinion directly on a topic by using sentiment words without
+mentioning targets. Thus, the probability of the topici is calculated in a tweet. For example,
++
+suppose there is a tweet that states X and Y are good, but X’s lens is better. Then, P(X ) = 2/3
++
+and P(Y ) = 1/3, where two positive sentiment words such as good and better are expressed for
+X, and one positive sentiment word is expressed for Y.
+Our method is reflects a Tweeter’s personal opinion on the tweet and on the social opinions
+for targets with or without sentiments.
+
+5. EXPERIMENTS
+5.1 Korean Twitter test collection
+To see the effectiveness of the proposed method, we evaluated it using a test collection of
+Korean Tweets. Four competing issues were chosen and tweets for the issues were collected by
+the Korean Twitter Search API (all issues and tweets were written in Korean).
+The numbers of tweets related to each issue are shown in Table 4. The answer sets of the test
+collection were judged by two human assessors.
+Words that were nouns, verbs, and sentiments were extracted by a Korean morphological
+analysis for tweets. The sentiment lexicon from Opinion Finder [20] contains 8,221 words with
+their polarity and strength. These English words are automatically translated to Korean using the
+Google translator and manually inspected the translations and removed the words that are not
+clearly either positive or negative in the Korean context. As a result, we selected 1,192 strong
+positive and strong negative words, for our Korean sentiment lexicon.
+Table 4. A test collection of Korean tweets
+Issues
+GalaxyTab vs. iPad
+Nikon vs. Canon
+Windows vs. Mac
+Samsung vs. Apple
+
+Topici
+
+Topicj
+
+Topici & Topicj
+
+Total
+
+100
+100
+100
+100
+
+100
+100
+100
+100
+
+300
+300
+300
+300
+
+500
+500
+500
+500
+
+544
+
+A-Rong Kwon and Kyung-Soon Lee
+
+5.2 Comparative methods
+In order to prove the effectiveness of our proposed method, comparative experiments are
+conducted against OpTarget and OpTopic.
+▪ OpTarget: This method considers the social opinion about the target as being that of either a
+±
+positive or negative sentiment. Here, P(topici) is calculated as P(topici | targetk ) by
+Somasundaran et al.[18].
+▪ OpTopic: This method considers personal opinion that is directly expressed about the topic.
+±
+Here, P(topici) is calculated as P(topici ).
+s
+▪ OpTopic & OpTarget : This is our proposed method based on a Tweeter’s personal and
+social opinions on targets with or without sentiments given by (8).
+
+5.3 Experimental Results
+Performance is measured using the following metrics: Accuracy (C/N), Precision (C/S), Recall
+(C/R), and F1 measure (2∙Precision∙Recall / (Precision+Recall)). Where N is the total number of
+Tweets in the collection of test Tweets. C is the number of relevant tweets detected by the
+system for a topic, S is the number of tweets detected to the topic by the system, and R is the
+number of relevant Tweets.
+The experimental results for the four competing issues are shown in Tables 5. From the results,
+the OpTopic method exhibits better performance than OpTarget. This was expected because
+Tweets are short in length. In other words, OpTopic is useful for Twitter data because users are
+more straightforward.
+But, OpTopic only considers the personal opinion without the social opinion. Because
+OpTopic & OpTargets consider both the personal and social opinion, the proposed method
+OpTopic & OpTargets showed significant improvements over the baselines. It achieved a 22.9%
+improvement in accuracy over the OpTarget, which uses social opinion as the target with
+sentiment words.
+This result shows that a Twitter user’s straightforward opinion on a topic and targets without
+sentiment words are useful.
+Table 5. Results from the collection of test Tweets
+OpTarget
+Accuracy
+Precision
+Recall
+F1
+
+0.492
+0.36
+0.418
+0.388
+
+OpTopic
+
+(-)
+(-)
+(-)
+(-)
+
+0.550
+0.406
+0.471
+0.436
+
+(+11.7%)
+(+12.7%)
+(+12.6%)
+(+12.3%)
+
+OpTopic & OpTargets
+0.617
+0.432
+0.525
+0.474
+
+(+25.4%)
+(+20.0%)
+(+25.5%)
+(+22.1%)
+
+6. CONCLUSION
+In this paper, we presented the bias detection method that uses personal opinion and social
+opinion from data derived from Twitter.
+Targets for the competing topics are extracted based on the revised tf∙idf algorithm using
+targets, Tweets, and sentiment features for considering the strong opinion of a tweet. Targets that
+
+545
+
+Opinion Bias Detection Based on Social Opinions for Twitter
+
+are not the property of a topic could be extracted according to the behavior of users. The
+polarity of a Tweet is classified as positive, negative, or neutral based on the patterns for training
+Tweets to learn what the social probabilities for a target are.
+Our bias detection method reflects the personal opinion of the Tweet and social opinions on
+targets with a polar or neutral opinion. The experimental results from a collection of Korean
+Tweets shows that a Tweeter’s straightforward opinion is effective, which is seen from the results
+of OpTopic. It also showed that the social opinion about targets without the use of sentiment
+words is helpful.
+The occurrence of an event may affect social opinion on a target. In future research, we plan
+to consider time-evolving features for a bias detection.
+
+REFERENCES
+[1]
+[2]
+[3]
+[4]
+[5]
+[6]
+[7]
+[8]
+[9]
+[10]
+[11]
+
+A-M. Popescu, and M. Pennacchiotti, “Detecting Controversial Events from Twitter,” The 19th ACM
+international conference on Information and knowledge management, 2010, pp. 1873-1876.
+Z. Zhang, Z. Li, and Y. Chen, “Deciphering Word-of-Mouth in Social Media: Text-Based Metrics of
+Consumer Reviews,” ACM Transactions on Management Information Systems, vol. 3, no. 5, 2012.
+D. Gao, “Opinion Influence and Diffusion in Social Network,” The 35th International ACM SIGIR
+conference on Research and development in information retrieval, 2012, pp. 997-997.
+C. Lumezanu, N. Feamster, and H. Klein, “#bias: Measuring the Tweeting Behavior of Propagandists,”
+The AAAI International Conference on Weblogs and Social Media, 2012, pp. 210-217.
+A. Mukherjee, B. Liu, and N. Glance, “Spotting Fake Reviewer Groups in Consumer Reviews,” The
+21st International conference on World Wide Web, 2012, pp. 191-200.
+F. Bodendorf, and C. Kaiser, “Detecting Opinion Leaders and Trends in Online Social Networks,” The
+2nd ACM workshop on Social Web Search and Mining, 2009, pp. 65-68.
+IEEE Intelligent Systems, http://www.computer.org/portal/web/computingnow/iscfp2.
+A. Pak, and P. Paroubek, “Twitter as a Corpus for Sentiment Analysis and Opinion Mining,” The 7th
+conference on International Language Resources and Evaluation, 2010, pp. 1320-1326.
+A.-M. Popescu, M. Pennacchiotti, and D. Paranjpe, “Extracting events and event descriptions from
+Twitter,” The 20th International conference World Wide Web, 2011, pp. 105-106.
+N. Jindal, and B. Liu, “Mining Comparative Sentences and Relations,” The 21st national conference on
+Artificial intelligence, 2006, pp. 1331-1336.
+B. Li, L. Zhou, S. Feng, and K. Wong, “A Unified Graph Model for Sentence-based Opinion Retrieval,”
+
+The 48th Annual Meeting of the Association for Computational Linguistics, 2010, pp. 1367–1375.
+[12] M. Hu, and B. Liu, “Mining Opinion Features in Customer Reviews,” The 19th National conference on
+Artificial Intelligence, 2004, pp. 755-760.
+[13] G. Qui, B. Liu, J. Bu, and C. Chen, “Opinion Word Expansion and Target Extraction through Double
+propagation,” Computational Linguistics, 2011, pp. 9-27.
+[14] N. Jakob, and I. Gurevych, “Using Anaphora Resolution to Improve Opinion Target Identification in
+Movie Reviews”, The 48th Annual Meeting of the Association for Computational Linguistics, 2010, pp.
+263-268.
+[15] L. Zhang, B. Liu, S-H. Lim, and E. O’Brien-Strain, “Extracting and Ranking Product Features in Opinion
+Documents,” The 23rd International conference on Computational Linguistics, 2010, pp. 1462-1470.
+
+546
+
+A-Rong Kwon and Kyung-Soon Lee
+
+[16] W. Zhao, J. Jiang, J. He, Y. Song, P.Achananuparp, E-P. Lim, and X. Li, “Topical Keyphrase Extraction
+from Twitter,” The 49th Annual Meeting of the Association for Computational Linguistics, 2011, pp.
+379-388.
+[17] L. Jiang, M. Yu, M. Zhou, X. Liu, and T. Zhao, “Target-dependent Twitter Sentiment Classification,”
+The 49th Annual Meeting of the Association for Computational Linguistics, 2011, pp. 151-160.
+[18] S. Somasundaran, and J. Wiebe, “Recognizing Stances in Online Debates,” The 47th Annual Meeting of
+the Association for Computational Linguistics, 2009, pp. 226-234.
+[19] J. Kleinberg, "Authoritative sources in a hyperlinked environment," Journal of the ACM vol. 46, 1999,
+pp. 604–632.
+[20] T. Wilson, J. Wiebe, and P. Hoffmann, “Recognizing contextual polarity in phrase-level sentiment
+
+analysis,” The conference on Human Language Technology and Empirical Methods in Natural
+Language Processing, 2005, pp. 347-354.
+
+A-Rong Kwon
+He is currently working toward the MS degree in the Department of Computer Science and Engineering, Chonbuk National University. His research interests include
+information retrieval and natural language understanding.
+
+Kyung-Soon Lee
+She received the PhD degree in computer science from Korea Advanced Institute of
+Science and Technology (KAIST) in 2001. She has been an associate professor in the
+Department of Computer Science and Engineering, Chonbuk National University
+since 2004. Her research interests include information retrieval, natural language understanding and social information mining in computer science.
+
+547
+
+

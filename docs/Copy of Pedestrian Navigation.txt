@@ -1,0 +1,742 @@
+16th International Conference on Artificial Reality and Telexistence (ICAT2006), pp.1310-1321 (2006)
+
+Indoor/Outdoor Pedestrian Navigation with an
+Embedded GPS/RFID/Self-contained Sensor
+System
+Masakatsu Kourogi1, Nobuchika Sakata12 , Takashi Okuma1 , and
+Takeshi Kurata12
+1
+
+National Institute of Advanced Industrial Science and Technology (AIST),
+Umezono 1–1–1, Central 2, Tsukuba, Ibaraki, 305–8568, Japan
+m.kourogi@aist.go.jp,
+WWW home page: http://itri.aist.go.jp/rwig/ari/
+2
+Tsukuba University, Tenodai 1–1–1, Tsukuba, Ibaraki, 305–0006, Japan
+
+Abstract. This paper describes an embedded pedestrian navigation system composed of a self-contained sensors, the Global Positioning System
+(GPS) and an active Radio Frequency Identiﬁcation (RFID) tag system.
+We use self-contained sensors (accelerometers, gyrosensors and magnetometers) to estimate relative displacement by analyzing human walking
+locomotion. The GPS is used outdoors to adjust errors in position and
+direction accumulated by the dead-reckoning. In indoor environments,
+we use an active RFID tag system sparsely placed in key spot areas. The
+tag system obviously has limited availability and thus dead-reckoning is
+used to cover the environment. We propose a method of complementary
+compensation algorithm for the GPS/RFID localization and the selfcontained navigation represented by simple equations in a Kalman ﬁlter
+framework. Experimental results using the proposed method reveals that
+integration of GPS/RFID/dead-reckoning improve positioning accuracy
+in both indoor and outdoor environments. The pedestrian positioning is
+realized as a software module with the web-based APIs so that crossplatform development can easily be achieved. A pedestrian navigation
+system is implemented on an embedded wearable system and is proven
+to be useful even for unexperienced users.
+
+1
+
+Introduction
+
+Wearable computing systems can be highly useful if the position and direction of
+the users are provided, which are one of the most essential pieces of contextual
+information. This paper aims at gaining the position and direction of pedestrians
+and providing personal navigation services.
+In outdoor environments, the GPS is the most promising technology to acquire the position. However, the precision of the position can be degraded by
+several conditions and is sometimes unavailable since the GPS signals can be
+easily blocked by structures such as buildings. It is also diﬃcult for the GPS
+
+to achieve stride level precision for wearable systems which has strict limitation in size and weight of the hardware. We use a method of dead-reckoning [1]
+to complement precision and availability of the GPS. Dead-reckoning measures
+and analyzes human walking locomotion by self-contained sensors to estimate
+relative displacement.
+In indoor environments where the GPS is unavailable, RFID technology is
+used to locate persons equipped with the active RFID tags. RFID tag readers
+are placed in key spots such as entrances and hallways so that the reader can
+acquire the position of each wearable system by detecting the ID signal from the
+tag. The wearable system will be notiﬁed of the position via wireless network.
+And combinational method of active RFID tag localization and dead-reckoning
+is described.
+Ladetto et. al. proposed dead-reckoning method combining the GPS, digital
+magnetic compass and gyrosensors [3]. However, the method assumes that azimuth computed by diﬀerentiating two GPS results are available if needed. The
+GPS will easily become unavailable even in outdoor environments, especially on
+urban area where high-rise buildings block the signals from the satellites. The
+method also assumes that the earth magnetic ﬁeld can be acquired at relatively
+high accuracy. However, if the user is equipped with many electronic devices
+that cause magnetic disturbance locally and dynamically, the magnetic compass
+will not give a good estimation of the user’s azimuth. Schwartz et. al. proposed
+an indoor localization system based on an active RFID tag system and infrared
+beacons [4]. Although the proposed system works well in indoor environments,
+many IR beacons and RFID tags are required to cover the environments. Lee
+et. al. proposed a dead-reckoning method based on wearable inertial sensors [5].
+The method, however, requires ﬁne tuning for several thresholds most of which
+are experimentally acquired by repetitive trails, and thus has diﬃculty to exploit
+multiple external sources of information to be theoretically integrated.
+We implement the proposed method as an embedded system to output position and azimuth of a user. A pedestrian navigation system for indoor/outdoor
+environments is constructed by coordination with the embedded system and
+external navigation applications. The ﬁrst key contribution of this work is to
+propose a method to integrate estimation of position and direction by deadreckoning, the GPS and the RFID tag system with a Kalman ﬁlter framework
+so that the method can be combined with other source of information as for
+user’s position and direction. The second is to provide implementation of the
+method which realizes pedestrian navigation system usable both indoors and
+outdoors with an wearable embedded computing system. The implementation is
+built from software modules connected with each other by the web-based APIs
+and thus easily to be cooperated with other web-based applications.
+
+2
+
+Pedestrian positioning in a Kalman filter framework
+
+The pedestrian positioning can be achieved by detection and measurement of
+human walking locomotion characterized by its stride and azimuth, and updating
+
+the current position incrementally. We proposed a method of dead-reckoning in
+the Kalman ﬁlter framework [1]. In this method, the state vector st is written
+in the equation below:
+(1)
+st = [xt , yt , vxt , vyt ]T ,
+where (xt , yt ) is the position of a user at discrete time t and (vxt , vyt ) is its
+time derivative, that is the velocity vector. By analyzing acceleration vector
+(ax , ay , az ) and angular velocity vector (ωx , ωy , ωz ) observed near the center of
+gravity of human body, its walking locomotion can be detected and measured.
+We proposed the method to detect walking locomotion and estimate the walking
+stride lt [1]. Walking direction (azimuth) θt can be estimated by time integration
+of the angular velocity (ωx , ωy , ωz ) with adjustment of its cumulative errors by
+sensing the earth magnetic vector (mx , my , mz ). We proposed the method in our
+past research [2].
+It is supposed that the position and the velocity of the state vector can be
+observed, we obtain Kalman ﬁlter equations by the following:
+st+1|t = st + Kt (Ot − st )
+−1
+
+Kt = Pt (Pt + Rt )
+Pt+1|t = Pt − Kt Pt
+
+(2)
+(3)
+(4)
+
+where Kt is a Kalman gain, Ot is an observation vector, Pt is the error
+covariance matrix for the state vector, and Rt is the error covariance matrix
+for Ot . While no observation is acquired, the state vector st and its covariance
+matrix Pt are projected by the equations below:
+⎡
+⎤
+1 0 Δt 0
+⎢ 0 1 0 Δt ⎥
+⎥
+st+1 = F(Δt)st ,
+(5)
+F(Δt) = ⎢
+⎣ 0 0 1 0 ⎦ , (7)
+Pt+1 = F(Δt)Pt F(Δt)T + Q, (6)
+00 0 1
+and Q is the error covariance matrix for the projection in the equation (5), and
+Δt is a discrete time interval between t and t + 1.
+If the observation vector Ot and its error covariance matrix ROt are obtained, these observation can be integrated into the estimation in the Kalman
+ﬁlter equations represented by (2), (3) and (4). In this paper, we will use deadreckoning, the GPS and an active RFID tag system as sources of positioning
+information. Section 3 describes error model of the GPS and dead-reckoning
+and how these models are used to fuse the GPS into the proposed positioning
+method. In the section 4, we will introduce an error model of positioning by
+the active RFID tag system and describe how to use the positioning results in
+updating estimation in the proposed framework.
+
+3
+
+Error models of the GPS and dead-reckoning
+
+To construct error models for the GPS and dead-reckoning, we ﬁrst categorize
+the positioning error in the GPS by the causes and then construct an error model
+
+for each source of error. Meanwhile, estimation error of relative displacement by
+dead-reckoning is modeled separately into direction and stride error.
+3.1
+
+Error of the GPS positioning
+
+Positioning error in the GPS is mainly caused by three factors: (A) error caused
+by multipath eﬀect, (B) biased error caused by signal propagation delay, (C)
+unbiased random error [6][7]. GPS signals are degraded by multipath eﬀect such
+as signal reﬂection and diﬀraction. Since the multipath eﬀect has very localized
+cause it is diﬃcult to construct a generalized model.
+We determine if a positioning result of the GPS is degraded by multipath
+eﬀect so as to be able to discard such degraded results. The determination of
+multipath eﬀect is realized in combination with the dead-reckoning as described
+in section 3.3.
+GPS signals are delayed when passing through ionosphere and convection
+sphere. Delayed signals increase pseudorange and thus cause biased error. The
+biased error is known to be constant locally if measured by the same set of
+satellites. Thus, any GPS positioning results can be compensated by observing
+the biased error at ﬁxed known point where all of GPS satellites in the sky can
+be monitored. DGPS is bias monitoring and broadcasting service to provide the
+bias error and thus achieves more accurate positioning.
+The remaining error can be considered as unbiased random error, which is
+white noise. Error variance σr2 can be determined by the Horizontal Dilution of
+Precision (HDOP) value on geometrical arrangement of the satellites.
+Therefore, a GPS positioning result pgps (t) free of multipath error can be
+described as follows:
+pgps (t) = p(t) + eb (t) + er (t),
+(8)
+where p(t) is the true position, eb (t) is the biased error, and er (t) is the unbiased
+random error. Since eb (t) can be estimated at the ﬁxed observation point, pgps (t)
+is handled using the Kalman ﬁlter framework.
+3.2
+
+Error of dead-reckoning
+
+The dead-reckoning detects and measures relative displacement stepwise by analyzing human walking locomotion using self-contained sensors (accelerometers,
+gyrosensors and magnetometers). The process is shown below:
+1. Estimate the moving vector di and the walking stride li .
+2. Compute the i-th relative displacement vector mi = li di .
+By accumulating the relative displacement vector, the current relative position
+from the basis point can be computed.
+To fuse the observation into the Kalman ﬁlter framework, the observation
+as for the position and the velocity are required. If user’s walking locomotion is
+detected and its stride lt , its time interval T required for walking and walking
+
+azimuth θt are obtained, we update the state vector and its covariance matrix
+by setting the observation Ot = [x̂t , yˆt , vˆxt , vˆyt ]T is shown below:
+Ot = [xt + lt cos θt , yt + lt sin θt ,
+
+lt cos θ lt sin θ T
+,
+] .
+T
+T
+
+(9)
+
+If no walking locomotion is detected within a ﬁxed length of time, an observation that no movement has been made is obtained. Thus, the observation
+vector Ot can be written in the following equation:
+Ot = [xt , yt , 0, 0]T .
+
+(10)
+
+The estimated position has two types of error caused by dead-reckoning: error
+in estimation of moving direction di and error in stride li . The error model of
+positioning result in dead-reckoning is constructed in the following section.
+We use a method of estimating the walking stride li and the moving direction
+di [1]. The error of li is known to have the normal distribution and the variance
+is proportional to the stride. The error of directional angle of di similarly is
+Gaussian and the variance σd2 has already been determined by the repetitive
+experiments using the attitude reference system with high accuracy.
+Distribution for azimuth T i
+
+GPS data excluded
+
+approximation
+
+Distribution for stride
+
+Gaussian
+distribution
+
+li
+
+Previous position
+
+95% confidence area
+estimated by dead-reckoning
+
+GPS data out of 95% area
+is excluded for computation
+GPS data included
+
+The previous GPS data
+free of multipath effect.
+
+Fig. 1. Error distribution and its ap- Fig. 2. Sorting out GPS data with
+proximation by the normal distribution dead-reckoning
+
+Considering the i-th walking step, the position after movement pi has complex distribution as shown in Fig. 1. Since the standard deviation σd of moving
+direction is known to be 0.2–0.4 [deg], the arc region generated by the error of
+direction can be approximated to the tangent line. Therefore, the composition of
+the two types of error can be approximated by the Gaussian distribution whose
+axes are the tangent line and the radial line.
+Suppose the i-th position (xi , yi ) has the normal distribution whose mean
+vector is mi and the covariance matrix is Ci , and the i-th moving unit vector
+(dxi , dyi ) have Gaussian distribution whose mean direction is θi and variance is
+σθ2i . The error of moving direction ei can be approximated as Gaussian distribution along with the tangent line when the variance of direction σθ2i is small
+enough. This is equivalent to the approximation shown in Fig. 1. The mean vector of moving displacement vector (dxi , dyi ) is (cos θi , sin θi ), and the error of
+
+direction ei can be regarded as Gaussian whose mean vector is zero and variance
+is (li tan σθi )2 .
+The i + 1-th position (xi+1 , yi+1 ) can be written as a linear combination of
+these variables as shown below:
+⎡ ⎤
+xi
+	 
+	
+
+⎢ yi ⎥
+xi + li cos θi − ei sin θi
+xi+1
+⎥
+(11)
+=
+= Ai ⎢
+⎣ li ⎦ ,
+yi+1
+yi + li sin θi + ei cos θi
+ei
+
+
+	
+1 0 cos θi − sin θi
+.
+where Ai =
+0 1 sin θi cos θi
+If (xi , yi , li , ei ) is considered to have the normal distribution, the i + 1-th
+position (xi+1 , yi+1 ) is also Gaussian whose mean vector mi+1 and the covariance
+matrix Ci+1 are expressed as the following equations:
+mi+1 = mi + li di ,
+Ci+1 =
+
+Ai Ri ATi ,
+
+(12)
+(13)
+
+
+
+T
+where Ri is the covariance matrix of xi yi li ei . Since (xi , yi ), li and ei
+are independent with each other, the covariance between each variable is zero
+and Ri can be expressed as follows:
+⎤
+⎡
+0
+Ci 0
+⎦.
+0
+Ri = ⎣ 0 σl2i
+(14)
+2
+0 0 (li tan σθi )
+Therefore the estimated position (xi , yi ) by dead-reckoning has Gaussian
+distribution whose mean vector mi and its covariance matrix Ci are expressed
+in Equations (12)(13).
+As for estimated velocity, the proposed method [1] gives Gaussian uncertainty
+of each estimation by the standard deviation σv on statistical basis. The error
+covariance matrix RDR in equation (3) can be written in the following equation:
+⎤
+⎡
+0
+0
+Ci
+⎦
+0
+RDR = ⎣ 0 (σv cos θi )2
+(15)
+0
+0
+(σv sin θi )2
+3.3
+
+Integration of the GPS and dead-reckoning
+
+GPS estimation free of multipath eﬀect shown in Equation (8) is Gaussian, and
+relative displacement estimated by dead-reckoning is Gaussian with Equations
+(12) and (13). Therefore, estimation by the GPS and dead-reckoning can be
+fused together in the Kalman ﬁlter framework.
+As described earlier, GPS estimation degraded by multipath eﬀect is not
+Gaussian. We therefore exclude GPS data out of the 95% conﬁdence region
+
+estimated by dead-reckoning as outliers to reduce inﬂuence caused by multipath
+eﬀect shown in Fig. 2.
+The GPS estimation can be used in two ways: single positioning mode and
+diﬀerentiating mode of two positioning results (two positions and its elapsed
+time), which are required to be included in the 95% conﬁdence region. In the
+former mode, a single GPS estimation is used to update the position by observation vector OGS = [xgps , ygps , 0, 0]T , but not used to update the velocity. The
+variance of position σGS is determined by HDOP (Horizontal Dilution of Position) value of the estimation. We therefore obtain the error covariance matrix
+RGS by the following equation:
+⎤
+⎡ 2
+σGS 0 0 0
+⎢ 0 σ2 0 0 ⎥
+GS
+⎥.
+RGS = ⎢
+(16)
+2
+⎣ 0
+0 σ∞
+0 ⎦
+2
+0
+0 0 σ∞
+The latter mode does not give absolute position but its moving direction θG and
+the speed vG with lesser inﬂuence of biased error of the GPS than the former
+mode. The observation vector can be written below:
+OGD = [(xt + vG cos θG ), (yt + vG sin θG ), vG cos θG , vG sin θG ]T .
+
+(17)
+
+Error of diﬀerentiation of two positioning results has same error characteristics as
+unbiased random noise explained in Section 3.1 since the diﬀerentiation cancels
+the biased error. Since error of moving direction θG is assume to be small,
+⎤
+⎡
+0
+0
+0
+(σGD cos θG )2
+⎥
+⎢
+0
+(σGD sin θG )2
+0
+0
+⎥,
+RGD = ⎢
+(18)
+⎦
+⎣
+0
+0
+0
+c(σGD cos θ)2
+2
+0
+0
+0
+c(σGD sin θ)
+where c is constant representing uncertainty of measurement of time T . However, it is noticed that two positioning results are required to be not so far to
+accurately estimate its velocity since it assumes linear movement of a user during
+the measurement.
+
+4
+
+Positioning by active RFID tag system
+
+In indoor environments where the GPS is not available, we deploy an active
+RFID tag system of which each tag is held by user and RFID readers are placed
+on ﬁxed position so that user’s location can be determined by detecting the ID
+signal from the tag. A design for reachable distance of ID signals is especially
+important since the distance determines the ability to narrow down the range of
+location.
+We assume the active RFID tag is attached at hip height (around 0.6m) and
+RFID tags and readers are designed to be detected within 1.5m. This design
+allows the RFID location system to acquire the position to a precision of 1.3m.
+
+Preliminary experiments reveal positioning error of the RFID location system
+has the normal distribution with standard deviation σtag = 0.4 [m].
+Since the implementation of the RFID tag system allows the ID signals to
+reach too far to accurately estimate velocity of the user. Thus the observation
+vector Ot does not specify the velocity of a user but its position only. Then,
+the observation vector is provided if the ID signal is received by the reader
+placed at ﬁxed position (xtag , ytag ) and is written in the following equation:
+⎡
+
+⎤
+2
+σtag
+0 0 0
+2
+⎢
+⎥
+(19) Rtag = ⎢ 0 σtag 0 0 ⎥ (20)
+Ot = [xtag , ytag , 0, 0]T ,
+⎣ 0
+0 σ∞ 0 ⎦
+0
+0 0 σ∞
+and the error covariance matrix Rtag is given by experimentally measured deviation σtag of reachable location.
+
+5
+5.1
+
+Experiments
+Implementation
+
+We implemented the proposed method on an embedded computing system composed of a GPS module, self-contained sensors and a RFID tag as for sensory
+parts. The system outputs estimation of position and azimuth in the standard
+format called NMEA-0183 used by many of GPS receivers so that commercial
+navigation software can work with the output immediately. We use Google Earth
+for this purpose.
+An outlook of our navigation system is shown in Fig. 3, and the schematic
+diagram of the system in shown in Fig. 4. We use ViewRanger (OS: NetBSD)
+from Japan SGI as an embedded computing system whose size is 95mm x 65mm
+x 33mm and weight of 130g. The GPS module in the system is a standard
+receiver using the L1 band and C/A coding by stand alone positioning with
+12 channels. We use active RFID tags and readers (which use 303.2MHz band
+and provide 2400bps communication link) from Y-matic Inc, and 3DM-GX1 (3axes accelerometers, gyrosensors and magnetometers) from MicroStrain Inc for
+self-contained sensors.
+Our implementation is composed of software modules which are connected
+with each other by the web-based APIs so that cross-platform development can
+be easy to be achieved.
+5.2
+
+Experimental results
+
+We have conducted experiments on ﬁve users collecting sensory data from the
+self-contained sensors, the GPS receiver and the detecting log of the ID signal
+from the user’s tag by the active RFID tag readers placed in the building where
+the users are passing through. In this experiment, each user equipped with the
+system walked outdoors and then went into the building, took an elevator from
+
+Orientation Tracker
+HMD
+
+Camera
+
+Camera
+Orientation Tracker
+
+HMD user
+
+Handheld PC
+Browsing system (SONY VAIO type U)
+Attitude tracker
+CCD camera
+Equipped with
+browsing PC
+
+Google Earth
+(Navigation application)
+
+Data distribution
+engine
+
+From/To
+the control server
+Position/direction
+of other users
+
+JPEG image
+
+GPS
+RFID Tag
+
+Estimation results of position and direction
+(in NMEA0183 or CSV format)
+
+Self-contained sensors
+
+Embedded
+Computer
+
+Handheld display user
+
+Self-contained
+sensors
+
+Dead-reckoning
+
+GPS module
+
+GPS positioning
+
+RFID tag
+
+RFID positioning
+
+Equipped with
+user’s hip
+
+PP module
+
+Adjustment
+request
+
+(via Wireless network)
+From
+the RFID tag system
+
+Embedded computing system (via Wireless network)
+
+Fig. 3. Outlook of the pedestrian nav- Fig. 4. Diagram of the pedestrian navigaigation system
+tion system
+
+ground to the 3rd ﬂoor and entered to a room which is the destination. Total
+distance of walking path is 368.1 meter (outdoor: 247.2 meter, indoor: 120.9
+meter). Two RFID readers are placed at the entrance (a windbreak room) to
+the building and the elevator hallway at the ground ﬂoor.
+First, overall trajectories generated by the dead-reckoning only, GPS only and
+the proposed method (GPS/RFID/dead-reckoning integrated) and the ground
+truth data on one of the users are shown in Fig. 5.
+In this run of experiment, the GPS ﬁrstly gives stable positioning results with
+constant oﬀset errors. Then dead-reckoning was severely degraded in the middle
+of experiments because of drift errors in gyrosensors. However, diﬀerentiation of
+GPS estimation fairly adjusted the bias and prevented the estimated position
+from far more deviation. The GPS signal has been useless at the half of walking
+distance outdoors because of multipath eﬀect caused by the high-rise building.
+After the signal was lost, dead-reckoning and the RFID tag system adjusted and
+updated estimation of the position and the direction. Fig. 7 shows two positions
+where the RFID readers are placed and estimated position is appropriately adjusted by the RFID tag system. The trajectories in the 3rd ﬂoor is depicted in
+Fig. 8.
+Averaged error of distance across the ﬁve users estimated by dead-reckoning
+(DR) only, GPS only and the proposed method are shown in Fig. 6. It is noticed
+that in outdoor environments GPS estimation improved positioning accuracy
+although the stand-alone GPS positioning has given less accurate positioning
+results since diﬀerentiation of GPS results were used to adjust errors in position
+and direction. In indoor environments, the RFID positioning pinpointed each
+user’s location and drastically reduced errors in positions.
+
+Ou
+
+rm
+eth
+od
+Gro
+und
+truth
+
+DR
+
+onl
+y
+
+Due to drift errors in
+gyrosensors, the result of
+dead-reckoning deviates.
+Gro
+und
+tru
+
+DR only
+GPS only
+
+th
+
+Our method
+Differentiation of GPS results
+adjusted the error in direction.
+
+25m
+
+GPS only
+
+Start here
+
+Fig. 5. Overall trajectories and surrounding environments
+
+5.3
+
+Practical usage of the system in an openhouse situation
+
+We have constructed the pedestrian navigation system for multiple users and a
+control center system which acts as a data exchange server for each user’s location/direction. On the control center side, the real-time location of participants
+can be monitored and be intervened for adjustment if necessary. We deployed our
+system in a practical situation of the laboratory’s openhouse with which many
+children participated. They were provided with our wearable systems with no
+prior experiences and very few adjustment (User’s height is the only parameter
+provided to the system). There were 23 participants (most of them are aged under 12 years) for this trial. Even with this situation, our systems have provided
+fair estimation (2–6m of error in position) of their location and direction. In this
+run of practice with some trouble of wireless network, our systems were forced
+to work in dead-reckoning-only mode. But good estimation has been obtained
+mainly because each participants has experienced with the system for limited
+span of time. Fig. 9 shows appearance of kids playing with our system.
+The participants were interviewed shortly after the experiences and asked
+for comments on our system. Most of them noticed slight deviation from the
+
+㪊㪇
+
+Outdoor
+
+Indoor
+
+㪞㪧㪪㩷㫆㫅㫃㫐
+㪛㪩㩷㫆㫅㫃㫐
+㪦㫌㫉㩷㫄㪼㫋㪿㫆㪻
+
+㪘㫍㪼㫉㪸㪾㪼㪻㩷㪼㫉㫉㫆㫉㩷㩿㫄㪀
+
+㪉㪌
+
+GPS results are used to
+adjust errors in
+direction/position
+
+㪉㪇
+㪈㪌
+
+RFID adjustments
+㪈㪇
+
+Elevator detection
+adjustment
+
+㪌
+
+GPS results are
+discarded
+
+㪇
+
+㪇
+
+㪌㪇
+
+㪈㪇㪇
+
+㪈㪌㪇
+
+㪉㪇㪇
+
+㪉㪌㪇
+
+㪊㪇㪇
+
+㪊㪌㪇
+
+㪋㪇㪇
+
+㪮㪸㫃㫂㫀㫅㪾㩷㪻㫀㫊㫋㪸㫅㪺㪼㩷㩿㫄㪀
+
+Fig. 6. Averaged errors across the ﬁve subjects in distance
+
+RFID reader #2
+
+RFID reader #1
+
+4m
+
+4m
+
+Fig. 7. Trajectories adjusted by the RFID tag system
+
+ground truth since the detailed CG within the buildings were provided to comparison, but also commented that the deviation were not fatal for navigation.
+They also reported that the map heading-up function made their location easy
+to be recognized.
+
+6
+
+Conclusion
+
+This paper describes the pedestrian positioning method to fuse dead-reckoning,
+GPS and RFID positioning within the Kalman ﬁlter framework. Error models
+of each positioning method are described in the simple equations that can be
+applicable to other sources of information as for location and direction to be
+integrated. The proposed method is implemented as software module with the
+web-based APIs on an embedded (and wearable) computing system. Experi-
+
+Estimated goal
+Destination
+on the 3rd floor
+
+Elevator
+
+11m
+
+Fig. 8. The trajectories in the 3rd ﬂoor
+
+Fig. 9. Kids playing with our pedestrian navigation system in the openhouse
+
+mental results show that GPS and the active RFID tag system seamlessly and
+eﬀectively adjust estimation errors in dead-reckoning. The pedestrian navigation
+and control system are realized for multiple users and used in relatively practical situations where kids can play by the system without prior experience or
+complicated calibration.
+
+References
+1. M. Kourogi and T. Kurata, “Personal positioning based on walking locomotion analysis with self-contained sensors and a wearable camera,” in Proc. of ISMAR2003,
+pp. 103–112, 2003.
+2. M. Kourogi and T. Kurata, “A method of personal positioning based on sensor data
+fusion of wearable camera and self-contained sensors,” in Proc. IEEE Conference on
+Multisensor Fusion and Integration for Intelligent Systems (MFI2003), pp. 287–292,
+2003.
+3. Q. Ladetto et. al, “Two Diﬀerent Approaches for Augmented GPS Pedestrian Navigation,” in LOCELLUS2001, 2001.
+4. T. Schwartz, B. Brandherm and D. Heckmann, “Calculation of the User-Direction
+in an Always Best Positioned Mobile Localization System,” in Proc. AIMS2005.
+5. S. W. Lee and K. Mase, “Activity and Location Recognition Using Wearable Sensors,” in IEEE Pervasive Computing, Vol. 1, No. 3, pp. 24–32, 2002.
+6. B. W. Parkinson and J. J. Spilker, “Global Positioning System: Theory and Applications,” American Institute of Aeronautics and Astronautics, Inc., 1996.
+7. B. H. Wellenhof and H. Lichtenegger and J. Collins, “Global Positioning System,
+5th edition,” Springer-Verlag, 1992.
+
+

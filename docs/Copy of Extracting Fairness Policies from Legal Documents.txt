@@ -1,0 +1,831 @@
+arXiv:1809.04262v1 [cs.LG] 12 Sep 2018
+
+Extracting Fairness Policies from Legal Documents
+Rashmi Nagpal
+
+Chetna Wadhwa
+
+Mallika Gupta
+
+IIIT Delhi
+rashmi14085@iiitd.ac.in
+
+IIIT Delhi
+chetna17009@iiitd.ac.in
+
+IIIT Delhi
+mallika17024@iiitd.ac.in
+
+Samiulla Shaikh
+
+Sameep Mehta
+
+Vikram Goyal
+
+IBM Research
+samiullas@in.ibm.com
+
+IBM Research
+sameepmehta@in.ibm.com
+
+IIIT Delhi
+vikram@iiitd.ac.in
+
+ABSTRACT
+Machine Learning community is recently exploring the implications of bias and fairness with respect to the AI applications. The
+definition of fairness for such applications varies based on their domain of application. The policies governing the use of such machine
+learning system in a given context are defined by the constitutional
+laws of nations and regulatory policies enforced by the organizations that are involved in the usage. Fairness related laws and policies are often spread across the large documents like constitution,
+agreements, and organizational regulations. These legal documents
+have long complex sentences in order to achieve rigorousness and
+robustness. Automatic extraction of fairness policies, or in general,
+any specific kind of policies from large legal corpus can be very
+useful for the study of bias and fairness in the context of AI applications.
+We attempted to automatically extract fairness policies from publicly available law documents using two approaches based on semantic relatedness. The experiments reveal how classical Wordnetbased similarity and vector-based similarity differ in addressing this
+task. We have shown that similarity based on word vectors beats the
+classical approach with a large margin, whereas other vector representations of senses and sentences fail to even match the classical
+baseline. Further, we have presented thorough error analysis and
+reasoning to explain the results with appropriate examples from the
+dataset for deeper insights.
+
+1
+
+INTRODUCTION
+
+In the recent years, a considerable amount of work has been done
+towards ethical aspects of AI [5, 28]. Majority of such efforts focus
+on identifying and removing bias from the datasets, training process
+and the trained models [3, 9]. This literature assumes that the information about the sensitive features [27] and implications of biased
+decisions are known in advance.
+But in general setting, all the implications of abiding laws are not
+known up-front and detailed manual study of the large set of legal
+documents applicable for the domain is needed before attempting
+to de-bias the machine learning system as per the legal constraints.
+This situation demands a system or algorithm that can analyze all
+relevant legal documents to identify sentences or policies that are
+pertaining specifically to concepts like fairness, bias and discrimination. Typically, legal-domain sentences are long and complex e.g.,
+consider the following sentence taken from US code1 :
+
+1 https://www.law.cornell.edu/uscode/text/42/2000e-2
+
+“It shall be an unlawful employment practice for an
+employment agency to fail or refuse to refer for employment, or otherwise to discriminate against, any
+individual because of his race, color, religion, sex, or
+national origin, or to classify or refer for employment
+any individual on the basis of his race, color, religion,
+sex, or national origin.”
+These legal documents are written in rigorous fashion in order to
+achieve robustness and to remove chances of ambiguity. As a sideeffect, often, these sentences tend to become complex and hard to
+interpret even for most humans, especially those who do not have
+enough background knowledge of legal domain. A recent proposition by [22] highlighted the importance of approaches for analyzing such complex documents for ensuring fairness as part of a high
+level end-to-end system architecture, but they did not mention any
+specific method that could address this issue.
+Most obvious first step for automatically interpreting or understanding any sentence is to parse the sentence and identify dependencies among the syntactic components. But unfortunately, parsing long and formal sentences is cumbersome as well as time consuming and needs a lot of memory [4, 10] even for the best parsers.
+Hence we decided to address the problem with alternative means
+viz., Wordnet [6] based semantic relatedness [18] and vector representations of words [15] and sentences [11, 16]. The reason for
+choosing these two categories of techniques is to study the relative
+effectiveness of classical NLP based techniques and the recent vector representation based techniques.
+On the classical side, we populated a set of seed senses from
+Wordnet that are related to concepts like fairness, bias, discrimination etc. We computed Wordnet based similarity of each word in the
+candidate sentences with the seed senses. If the maximum similarity
+is above threshold, we marked the candidate sentence as a fairness
+policy. We used this as a classical baseline for evaluating the family
+of vector based approaches.
+Even though many recent experiments have shown that vector
+based approaches show promising results for various tasks, directly
+using them for applications relying heavily on semantic relatedness without any added computations may not work in all cases
+due to various reasons including but not limited to weaker adaptability across domains and the coarse grained nature of relatedness
+captured by them. We have shown through our experiments that
+the baseline of Wordnet similarity based classical approach is hard
+to beat for many kinds of vector representation based approaches
+which work on word and sentence level of granularity. We have
+finely analyzed the error cases for each approach to point out the
+
+but the key difference lies in the granularity of the semantic categories used. ‘Fairness policies’ is a very narrow and specific semantic category as compared to the categories considered by the above
+approaches. Thus very targeted relatedness computation is needed
+to establish belongingness to the class of ‘Fairness Policies’.
+As discussed in the above paragraph, the task of ‘fairness policy
+extraction’ can also be looked at as a classification problem where
+the two classes would be ‘fairness policies’ and ‘non-fairness policies’. It is tough to train a fully supervised classifier due to lack of
+labeled domain-specific training data for this task. Hence our best
+bet for now is to go for semi-supervised approaches motivated from
+bootstrapping [26]. The key idea in bootstrapping is to start with
+a small seed set of labeled examples and tag the large untagged
+dataset by finding the similarity of each data point with the seed set
+representing each class. In our case, sentences are the data-points
+and there are various ways in which we can capture the similarity
+or relatedness among sentences.
+broadly speaking, the methods of computing sentence similarity
+methods can be categorized into two major categories viz., classical
+NLP approaches and vector representation based approaches. classical approaches rely mainly on semantic dictionaries like Wordnet
+[6] or the distributional similarity [13], whereas more recent vector representation based approaches rely on capturing the contextual features to learn the fixed length representations of words [15],
+senses [24] and even larger compositions like phrases, sentences
+paragraph or even full documents [11, 16]. The notion of similarity captured by different methods mentioned above greatly varies
+and must be understood before using them for specific applications.
+We have tested their effectiveness for solving our problem statement of policy extraction. Our experiments show what aspects of
+candidate sentences are captured by these techniques and provide a
+hint towards further improving these techniques for solving similar
+problems more effectively.
+
+strengths and weaknesses of all the difference approaches that we
+have tried.
+Once such potentially relevant fairness policies are extracted, it
+becomes much easier to study their compliance for the target machine learning systems. We have studied this task of fairness-policy
+extraction from two independent perspectives viz., classical NLP
+approaches and vector based approach. Further, we performed error
+analysis on the results which reveals strengths and weaknesses of
+both the approaches with respect to the task of sentence extraction
+of a given semantic category.
+Rest of the paper is organized as follows, section 2 compiles the
+various kinds of approaches proposed in the past for solving similar and related problems. Even though we could not find any direct
+approach for extracting fairness policies, there are efforts targeting
+related problems like sentence similarity. Section 5 gives a detailed
+description including the implementation details for the classical
+NLP based approach. The next section, (section 6) describes the
+vector based approaches along with their experimental setup and
+work flows. Section 7 describes the collection and usage of the
+dataset that we have used for this task. This is followed by section 8,
+that covers the results obtained for each of the approaches. Section
+9 provides a deep insight into the outcomes obtained for different
+parameter values in order to analyze them better. Section 10 provides a comparative analysis of both the approaches, followed by a
+conclusion and possible future directions covered in section 11.
+
+2
+
+RELATED WORK
+
+Strictly speaking about extraction of fairness policies from the legal domain corpora, not much has been explored in the literature
+towards the exact task that we are attempting. In fact, [21] argues
+against such practices due to possible real-life impact it can have
+due to errors introduced in the automated extractor. Nevertheless,
+we can find similar efforts of policy extraction in legal domain with
+some assumptions which can be considered for solving the problem
+statement that we established in section 1, which are covered in the
+next paragraph.
+[29] proposed a method to represent the rules in weakly structured English in the structured form for automated decision making.
+The approach proposed by [17] targets legal domain text but aims
+at extracting temporal events for reasoning. Even for extracting the
+events, authors did not propose any custom novel method and instead suggested a combination of existing tools that could perform
+the annotations on the source text for further reasoning.
+With a slight relaxation on the legal domain and extraction of
+fairness policies, we have many good generic approached which try
+to classify or rank the sentences for a particular objective based on
+semantic interpretation of the sentences.
+In the medical domain, [1] worked towards classifying medical
+domain sentences into various rhetorical categories like introduction, method, results and discussion. Similarly [14] performed sentence classification on medical corpus targeting only two categories
+viz.,. structured and unstructured abstracts. This particular kind of
+sentence classification looks similar to policy extraction in terms of
+identifying sentences belonging to a particular semantic category
+
+3 BACKGROUND
+As established in the previous section, semantic relatedness of words,
+senses and sentences is the key idea we need to rely on for extracting the fairness policies. Let us take a quick dive into different approaches of semantic similarity mentioned in the related work.
+
+3.1 Classical approaches of Semantic similarity
+This category includes many popular measures which mainly rely
+on Wordnet gloss, information content, path based measures or their
+combinations. Some well known approaches from each sub-category
+are briefly enumerated below.
+3.1.1 Path based similarity. These approaches rely on the discovered relationships among concepts based on either the shortest
+path or a path following some specific constraints of directed edges
+and depth from the root of the is-a hierarchy. [12] computes the similarity by finding the shortest path between the two concepts and
+normalizing it with the longest possible path in the whole hierarchy
+of the Wordnet. Whereas, [25] computes the similarity by checking
+how far are the candidate concepts from their lowest common ancestor in the hierarchy. The similarity is computed by finding the
+depth of the lowest common ancestor and normalizing them with
+the average depth of each candidate concepts.
+2
+
+3.1.2 Similarity based on information content: This category
+of approaches use both Wordnet hierarchy and a large corpus to
+figure out the similarity between two concepts. All the approaches
+of this kind primarily rely on the information content of lowest
+common ancestor of the candidate concepts. If the lowest common
+ancestor is highly specific, the similarity among the concept will
+be higher and vice versa. The pioneering work of this kind was
+put forth by Resnik [20] where he showed that information content based similarity computed using brown corpus outperforms the
+baseline of simple probability based similarity and path based similarity.
+In general, if we talk about relatedness among the concepts (not
+restricted by the part-of-speech categories) instead of mere similarity, there are many other good approaches worth mentioning like
+adapted Lesk [2], but with our problem statement into mind, those
+generic relationships may not be very useful to us.
+
+3.2
+
+task.
+3.2.3 Vector representation of phrases:
+Another drawback of the word-centric representation is that they
+cannot represent the joint meaning of multi-word expressions. [16]
+addressed this issue by identifying common phrases using co-occurrence
+based technique and replacing them by a unique token throughout
+the corpus before training.
+3.2.4 Vector representation of sentences, paragraphs and
+documents:
+Le and Mikolov [11] extended the framework of Word2Vec [15]
+by introducing ‘document id/paragraph id/sentence id’ as yet another input to the CBOW and skip-gram networks of Word2Vec.
+The weight matrix of the newly added input trained in the process
+of learning acts as a set of sentence/paragraph/document vectors
+for the input text. They evaluated the sentences vectors on sentiment analysis task and showed that it performed better than stateof-the-art methods. Sentiments are very coarse grained categories
+compared to the category of ‘fairness policies’ in our problem statement in our problem statement, but it will be worthwhile to try out
+this approach for our task.
+
+Vector representation based approaches to
+semantic similarity
+
+Starting with Word2Vec [15], there are innumerable successful approaches which can represent components of natural language text
+in the form of fixed length vectors. We can find plenty of approaches
+that can represent words [15, 19], senses [24], phrases [16], sentences, paragraph and documents [11]. One common and useful
+thing about all these approaches is that the similarity among the
+vector representation gives a good estimation about the semantic relatedness of the original text components.
+
+4 TASK DESCRIPTION AND MOTIVATION
+Before looking into possible solutions and the experiments, it is essential to establish a crisp problem statement that we are trying to
+address. Shaikh et al., [22] highlighted the need of an end-to-end
+machine learning platform that ensures fairness. They proposed a
+high-level architecture that can interpret the relevant legal documents to ensure that underlying machine learning flows are compliant with the fairness policies from the legal documents. But they
+did not provide any methods or concrete solutions to realize each individual component of their system, which also include interpreting
+the fairness constraints from legal policy documents. Identifying the
+exact subset of fairness policies from such documents can greatly
+speedup the entire process of ensuring fairness in both automatic
+and manual settings.
+With this motivation in mind, we now formally define our problem statement as:
+
+3.2.1 Vector representation of words:
+One of the most noteworthy approach for representation of words
+is Word2Vec [15]. They learn neural network with a single hidden
+layer that can predict the context given the word (skip-gram model)
+and word given the context (CBOW) model. The corresponding
+rows hidden layer of these networks are the vector representations
+of the words. These representations depict an interesting property
+that words occurring in the similar contexts have similar vector representations. This is a very useful property that we can leverage for
+our problem statement.
+Glove (Global Vectors) [19] is another interesting approach of
+this kind. They demonstrated that their representation outperformed
+both the formulations of Word2Vec in the word analogy task despite
+being more efficient in terms of time complexity. Instead of relying
+on the ability to predict the context words or the missing words as
+in Word2Vec, Glove generates their representation directly by analyzing the n*n matrix of co-occurrence probabilities.
+
+“Given a set of legal documents, automatically identifying all the sentences or policies that are meant to
+enforce fairness among various protected groups in a
+particular context”.
+Here, every sentences from the input legal documents is considered as a potential fairness policy and evaluated for filtering. For
+simplifying the solutions, we are assuming that all the sentences
+are independent of each other. This may not be the case always, but
+should be fine as far as our problem statement is concerned. Even
+if the extracted fairness policy is linked to other sentences, after filtering we can always go back to the source document to complete
+it’s meaning. But we believe that given the formal nature of legal
+documents, such occurrences would be rare.
+The most natural way to address this problem could be to learn a
+supervised classification for sentences. But as discussed earlier, we
+
+3.2.2 Vector representation of senses:
+One common drawback of the approaches that represent a words
+with unique vectors is that they cannot distinguish among the multiple senses that a word could take in different contexts. [24] addressed this issue by proposing a modified representation that can
+disambiguate the sense of the word and return the representation for
+that specific sense. On the face at least, it looks promising for our
+3
+
+do not have any publicly available large dataset in the legal domain
+that has explicitly tagged fairness policies. Thus we are left with
+the choice of semi-supervised approach motivated by [26] where
+we start with a small set of manually tagged examples and grow
+the tagged set progressively by finding similarity of the untagged
+candidate sentences with the seed set. With this principle in mind,
+we have tried with various ways of computing similarity among
+the candidate sentences and the seed words/senses/sentences and
+compared their effectiveness backed by the thorough error analysis.
+
+weaknesses, they largely perform in a very similar manner in context of our problem statements. Thus we decided to experiment with
+only path based similarity [25] among two categories as a representative of classical approaches. We performed POS-tagging on the
+sentences before computing the similarities in order to reduce the
+number of candidate senses that a word can take.
+
+5
+
+Recently emerging family of approaches that represent the components of text (like words, senses, phrases, sentences, paragraphs or
+even documents) in the form of fixed length vectors are gaining
+rapid popularity due to their versatile applicability to many problems in NLP. Most of these approaches look promising for our problem statement.
+
+6 VECTOR REPRESENTATION BASED
+APPROACHES
+
+CLASSICAL APPROACH
+
+In the section 3, we discussed about two categories of classical approaches for computing semantic similarity among two senses. We
+can use these similarity metrics to determine if a given sentence in
+indeed a fairness policy.
+
+5.1
+
+Creating the set of seed senses
+6.1 Similarity of Word Vectors
+
+To represent the class of fairness policies, we manually created a
+seed set of Wordnet senses which can be used as a reference for
+similarity. This seed set is created as follows:
+
+On a very broader note, two very well knows approaches for vector
+representation of words viz., GloVe [19] and Word2Vec [15] estimate the representation of words based on the context in which a
+particular word occurs. There are, of-course, differences in the way
+they capture the contextual clues. GloVe relies on the co-occurrence
+probabilities of words whereas Word2Vec relies on the ability to
+predict the context from the word or vice-versa for coming up with
+the vector representation.
+GloVe claims a slight advantage over Word2Vec in terms of time
+and space complexity. Given the similarities and differences among
+these two approaches of same category, we have chosen to try out
+GloVe for attempting our task.
+We have chosen 5 seed words for applying GLoVe viz., discriminate, fairness, discrimination, justice and bias. The vector representations of these words are used as a seed set for testifying the
+sentences. Since word vectors do not differentiate between multiple
+senses a word can take, we can only specify words in the seed set
+and not their relevant senses.
+Similar to the classical approach, we have considered the candidate sentences as a bag of words, and marked it as a fairness policy
+if at least one of the word vector return high similarity with any of
+the seed vector.
+A pre-trained model named ‘en_core_web_sm’ shipped with SpaCy
+[8] was used to get the vectors for words. This model is trained on
+web data including blogs, news, and comments.
+
+(1) Start with the small set of words which when appear in any
+sentence strongly endorse the belongingness to the class of
+‘fairness policies’. E.g., fair, discriminate, preferential, bias
+etc.
+(2) Manually identify the correct sense of each word in the set
+that we created in the previous step.
+(3) Grow the set of senses from the previous step by finding all
+the senses that have very high similarity with the original set
+of senses. The threshold of the similarity is maintained high
+in order to restrict the number of seed senses below 30. We
+noticed that after 30, a slight topic drift was happening.
+With this set of seed senses defining the sentence type that we
+want to search, we are good to go ahead and score the candidate
+sentences.
+
+5.2
+
+Method details
+
+In this approach, we classify a sentence as fairness policy only if
+at least one of the words in the sentence is strongly related to the
+fairness. In other words, if at least one word from a given sentence
+has a high similarity score with any of the seed sense, we mark the
+sentence as a fairness policy.
+We compute the similarity of a word wi with a seed sense s j as
+follows:
+sim(wi , s j ) =
+
+max
+sk ∈senses(w i )
+
+6.2 Similarity of Sense Vectors
+
+sim(sk , s j )
+
+Despite of being successful at various tasks, word vectors lack the
+ability to represent different senses of the same word. Thus, it makes
+sense to try out Sense2Vec [24] to see if using the sense disambiguated representation makes any positive difference towards the
+task of fairness policy extraction.
+We used the manually chosen correct relevant senses of the same
+5 words that we chose for GloVe as the seed senses and computed
+the similarity in a very similar way to that of GloVe. The key difference here was, that we used word senses as the basis of similarity
+instead of words themselves.
+
+Both the classical methods of computing semantic similarity (path
+based and information content based) essentially rely on specificity
+of the lowest common ancestor of the two concepts in the Wordnet’s is-a hierarchy. They differ only in the way they determine the
+specificity. The path based approaches use path lengths in the Wordnet itself to determine the specificity e.g. [25], whereas information
+content based approaches rely on probability of occurrence of the
+lowest common ancestor in a large sense tagged corpus to estimate
+its specificity. While both the approaches have there strengths and
+4
+
+6.3
+
+Similarity of Sentence Vectors
+
+With these policies as reference, we trained the para2vec model
+as follows:
+
+Vector representations like Para2Vec a.k.a. Doc2Vec [11] enable us
+to represent the semantics of larger chunks of texts like sentences,
+paragraphs and documents as fixed length vectors. These vectors
+capture the semantics of the full chunk of text that they represent.
+Thus, similarity between such vectors can be very helpful for our
+task.
+We used following set of five known fairness policies as the seed
+set:
+(1) It shall be an unlawful employment practice for an employer
+to discriminate against any of his employees or applicants
+for employment, for an employment agency to discriminate
+against any individual, or for a labor organization to discriminate against any member thereof or applicant for membership, because he has opposed, any practice made an unlawful employment practice by this title, or because he has
+made a charge, testified, assisted, or participated in any manner in an investigation, proceeding, or hearing under this title.
+(2) It shall be an unlawful employment practice for an employer,
+labor organization, or employment agency to print or publish or cause to be printed or published any notice or advertisement relating to employment by such an employer or
+membership in or any classification or referral for employment by such a labor organization, or relating to any classification or referral for employment by such an employment
+agency, indicating any preference, limitation, specification,
+or discrimination, based on race, color, religion, sex, or national origin, except that such a notice or advertisement may
+indicate a preference, limitation, specification, or discrimination based on religion, sex, or national origin when religion, sex, or national origin is a bona fide occupational
+qualification for employment.
+(3) The National Policy on Education (NPE) is a policy formulated by the Government of India to promote education amongst
+India’s people. The policy covers elementary education to
+colleges in both rural and urban India. This policy calls
+for "special emphasis on the removal of disparities and to
+equalise educational opportunity," especially for Indian women,
+Scheduled Tribes (ST) and the Scheduled Caste (SC) communities.
+(4) The right to religious freedom means that people should not
+be forced to act against their convictions nor restrained from
+acting in accordance with their convictions in religious matters in private or in public or in association with others
+(5) It shall be an unlawful employment practice for an employer
+- to fail or refuse to hire or to discharge any individual, or
+otherwise to discriminate against any individual with respect
+to his compensation, terms, conditions, or privileges of employment, because of such individual’s race, color, religion,
+sex, or national origin; or - to limit, segregate, or classify
+his employees in any way which would deprive or tend to
+deprive any individual of employment opportunities or otherwise adversely affect his status as an employee, because
+of such individual’s race, color, religion, sex, or national origin."
+5
+
+(1) Used 100k news headlines from Kaggle2 as base dataset for
+unsupervised training of the Para2Vec model.
+(2) Appended another 165 sentences which we have manually
+tagged as either ‘fairness policy’ or ‘not a fairness policy’
+including five sentences from the seed set. The tags will only
+be used for evaluation later. The purpose of using them here
+is to learn their vector representations in the training process.
+(3) Trained the Para2Vec model in order to get the matured vector representation for 165 sentences of our interest.
+We have intentionally chosen three policies having strong hint
+words like ‘discriminate’, ‘fair’ etc. and other two policies not having any of those words for better coverage.
+Vector representation of each candidate sentence was then compared with seed vectors to determine if the sentence is similar to the
+seed fairness policies.
+
+7 DATASET
+The dataset used for all the experiments consists of two parts viz.,
+165 manually tagged gold sentences with known labels and 100k
+untagged sentences without any labels . The smaller hand-tagged
+dataset is used for checking the performance of the various methods
+whereas the larger untagged dataset is used to assist better learning
+by the approaches like Para2Vec. Out of 165, 5 fairness policies are
+used as seed set for Para2Vec, and remaining 160 sentences are used
+for testing various approaches. 105 out of 160 are fairness policies,
+and other 55 are n-fairness policies.
+The manually tagged gold policies are taken from multiple legal sources viz., Equal Credit Opportunity Act3 , Civil Rights Act4 ,
+Fundamental Rights5 . These sentences are mix of employment and
+labor laws, civil rights and equal credit opportunity laws. Note that
+even if we have chosen the laws from the categories strictly related
+to fairness, not all the sentences are directly related to ensuring or
+defining fairness.
+For all the the vector based approaches except Para2Vec, no additional training data was needed, since good quality pre-trained
+models were available. But for Para2Vec, it was essential to train
+the model with 165 policies along with many other sentences from
+this domain. Thus, we collected 100k sentences from various legal
+domain sources For the training purpose in Para2Vec, we trained
+the model using 100k news headlines from and 160 policies from
+various different sources mentioned above.
+
+8 RESULTS
+All the approaches were evaluated against 160 manually tagged
+policies. We ran four experiments for the fairness policy extraction
+task using classical path based similarity, GloVe, Sense2Vec and
+
+2 https://www.kaggle.com/therohk/million-headlines
+3 https://consumer.findlaw.com/credit-banking-finance/equal-credit-opportunityact.html
+4 http://employment.findlaw.com/employment-discrimination/title-vii-of-the-civilrights-act-of-1964-equal-employment.html
+5 https://en.wikisource.org/wiki/Constitution_of_India/Part_III
+
+scores recorded. ROC plot in Fig 2 explains the relationship between sensitivity and specificity for both the classes Fair and NonFair. As we can see, ROC graph for GloVe has got largest area under the curve (0.78) which is a very good number given the semisupervised nature of approached that we have tried.
+
+Para2Vec. Experiments revealed that GloVe yielded the best performance among all the approaches both in terms of F1 score as well
+as the area under the ROC curve [23].
+ROC Curves between the specificity and sensitivity values have
+been plotted. Each ROC graph consists of two curves, one for each
+class. Even though areas under the curves of both the classes in the
+same graph are same, we have shown both the graphs for the sake
+of completeness.
+
+8.1
+
+8.2.2 Sense2Vec.
+Again, for Sense2Vec as well, we used same set of threshold values 0.1 to 0.9 with the steps of 0.1. The best threshold point is 0.6,
+which provides the macro recall 0.631 and 0.731 macro precision
+score. The relationship between the True Positive Rate and False
+Positive Rate for both the classes is depicted in the Fig 3 through
+an ROC curve. To our surprise, despite of modeling the sense specific embeddings, Sense2Vec could not beat GloVe as could barely
+match with the classical baseline. More error analysis is done in the
+subsequent sections.
+
+Classical Approach
+
+All the metric scores were recorded for a range of threshold values
+from 0.1 to 0.9 with the step of 0.1. The best Case performance of
+the approach was obtained for the threshold Value of 0.8 giving F1
+score to be 0.653.
+As evident from Fig 1, descent amount of area (0.64) is under the
+curve indicating that the classifier is acceptable.
+
+8.2
+
+Vector Based Approach
+
+The three different kinds of approaches relying on vector representation yielded highly varied results.
+8.2.1 GloVe.
+Similar thresholds were tried for this approach ranging from 0.1
+to 0.9 with the steps of 0.1. This approach returns best F-score at
+the threshold value of 0.4, with macro recall value being 0.710 and
+macro precision of 0.720. Table 1 provides the values of different
+
+Table 1: Combined Results
+Approach
+Classical Approach
+GloVe
+Sense2Vec
+Para2Vec
+
+Macro P
+0.651
+0.720
+0.641
+0.501
+
+Macro R
+0.656
+0.710
+0.631
+0.501
+
+F1
+0.653
+0.715
+0.636
+0.501
+
+AUC
+0.64
+0.78
+0.63
+0.46
+
+Figure 2: ROC (GloVe))
+
+Figure 1: ROC (Classical Approach)
+
+Figure 3: ROC (Sense2Vec)
+6
+
+8.2.3 Para2Vec.
+The best threshold for Para2Vec came out to be 0.5 with F1 score
+of 0.501. The ROC plot in Fig 4 is largely linear indicating not so
+good performance. The area under the ROC curve is 0.46. AUC
+(Area under the ROC curve) below 0.5 is generally not considered
+good. Even though Para2Vec models overall semantics of the sentences, it performed poorly. As per [11] it performed very well with
+classification of sentences into sentiment polarities. One possible
+reason for low performance could be the nature of the classes in
+our task which are not as wide as the sentiment categories and do
+not go very well with the coarse grained semantics captured by this
+approach.
+
+9
+
+with each other even though they may not relate to the fairness context.
+
+9.2 Vector Based Approach
+The following reasonings were drawn from the manual analysis of
+the results with the available ground truth:
+9.2.1 Global Vectors (GloVe).
+False Negatives.
+• Sentences which semantically represent fairness related issue, are not reflected as fairness policies since words in those
+sentences have no similarity with the seed words.
+• Words such as legal and equal are ignored by this algorithm
+as they have a similarity score of 0.4 with the set of seed
+words and thus couldn’t reflect as fairness policy since its
+threshold is greater than 0.4.
+
+ERROR ANALYSIS
+
+Each approach has been analyzed for the best threshold and some
+key insights have been laid down for each of the proposed approach,
+explaining the possible reasons for the erroneous results.
+
+9.1
+
+False Positives.
+
+Classical Approach
+
+• Words which are similar to any one of the seed words for
+example, civil is similar to word discrimination categorizes
+the policy as a fairness.
+• Words like discrimination are right away causing the classifier to tag the sentence as a fairness policy, fails to recognize
+the context in which it occurs.
+• Few vectors are highly similar to each other as per the model
+they have been trained upon and eventually create an exception. For example: ‘employment’ and ‘discrimination’ have
+a similarity score of 0.54.
+
+The following inferences were drawn from the manual analysis of
+the results belonging to Classical Approach.
+9.1.1 False Negatives.
+• Words such as unlawful, equal even in the right context,
+pose a low similarity score, thus unable to clear the threshold
+barrier.
+• Certain sentences contain an implied meaning relating to the
+fairness even though it may not contain any explicit word for
+the same. Such sentences are not identified by this approach.
+9.1.2 False Positives.
+• The words discrimination and fair appearing in different context incorrectly causing the sentence to be classified as a fairness policy.
+• Various words like ‘supervision’, ‘enforcement’ are highly
+related to the word ‘discrimination’ provided in the seed senses
+dictionary due to which they present a high similarity rate
+
+9.2.2 Sense2Vec.
+False Negatives.
+• At certain point, the approach fails to work for the sentences
+that have implied meaning hidden. One such example of a
+policy is It aims to curb black money, this policy talks
+about fairness on a very high level but doesn’t contain any
+explicit terms to trigger any of the word or sense based approaches.
+False Positives.
+• Seed words present in the sentence but taking some other
+sense which is not distinguished by the approach. Example‘They shall make such further reports on the cause of and
+means of eliminating discrimination’.
+• Few vectors are highly similar to each other as per the model
+they have been trained upon and eventually create an exception.
+9.2.3 Para2Vec.
+False Negatives.
+• Para2Vec failed to identify even the sentences containing the
+phrase ‘discriminate against ...’ which is a very strong indicator for being a fairness policy but hard to capture on the
+high level, given the length of the sentence.
+
+Figure 4: ROC (Para2Vec)
+
+False Positives.
+7
+
+• A sentence containing definition of employment agency was
+classified as a fairness policy possibly because it picked employment as one of the potential clue from the seed set. This
+does not mean that Para2Vec is doing its job incorrectly, but
+the way we are trying to use it may not be the right way. We
+may have to either modify the way in which we can leverage
+it in the best way or slightly change the process of training
+the model that can capture the required clues correctly.
+
+10
+
+specific and narrow, which is not in correlation with the Para2Vec
+way of representing text. Capturing such semantics may need more
+complex architectures like RNN-LSTM [7] on top of vector representation of words.
+
+DISCUSSIONS
+
+In this section, we summarize all the findings and highlight on the
+interesting insights from the error analysis that could be useful for
+more efforts into the same task and even for other similar tasks.
+Figure 5 clearly shows that GloVe, vector based approach outperforms all the other approaches with the large margins. Whereas, to
+our surprise, Sense2Vec and para2Vec could not show their full potential in this particular setting due to various reasons which we’ll
+discuss here.
+The classical approach based on the path based similarity performed decently without even looking into the sentence composition by merely looking at a sentence as a bag of words. One possible reason for that is the ability to specify exact sense IDs from
+the WordNet as the seed set. Hence, the only sense ambiguity that
+we had was with the senses of the words in the candidate senses.
+We tried performing Word Sense Disambiguation on the candidate
+senses with off-the-shelf approaches like Adaptive Lesk [2] but it
+didn’t help much. There are stronger supervised and unsupervised
+WSD approaches which we could use, but supervised models are
+highly domain specific and the unsupervised models are not very
+highly accurate and need mapping of the discovered word categories with the real senses.
+Word vectors (GloVe) performed really well despite all the problems discussed for the classical approach along with the inability
+to add specific senses in the seed dictionary unlike the classical approach. We used pre-trained GloVe vectors which are not domain
+specific, but still achieved best performance for this task. There are
+of course cases where this approach failed due to slightly generic
+nature of relatedness captured by this approach as discussed in the
+error analysis, but the number of such cases is not very large.
+Sense2Vec captures the context specific representation for words,
+providing the in-built ability of word sense disambiguation, making
+us expect more. But unfortunately, it did not work very well in our
+case. One possible reason could be the difference in the domain of
+the training data and that of the application. Since GloVe does not
+at all consider senses, it does not try to capture the domain specific
+sense distribution, which is not the case with Sense2Vec. Change of
+domain may have negatively affected Sense2Vec because of change
+in the underlying sense distribution due to change in the domain.
+Thus, we should try to re-train the models for such approaches for
+the new domains before use.
+In the end, Para2Vec was also considered as one of the strong
+potential choice due to its ability to capture high level semantics
+by not looking at the sentence as a collection of independent words.
+Fundamentally, this approach was designed for capturing broader
+level semantic differences like sentiment categories. In our problem
+statement, on the other hand, the category of fairness policies is very
+
+Figure 5: Comparison of various approaches
+
+11 CONCLUSION AND FUTURE WORK
+We defined the problem statement of automatically extracting fairness policies from legal documents motivated from the Fair-AI point
+of view. We also highlighted the complexity involved in the task
+given the lack of descent sized training data. Thus, we came-up
+with the semi-supervised strategies to address this problem using
+various available methods of semantic similarity and relatedness.
+GloVe vectors performed very well for this task despite of not
+being able to disambiguate the senses of word occurrences and not
+being able to directly model the sentence level semantics. GloVe
+outperformed the classical baseline of path based similarity with the
+large margin. On the other hand, Sense2Vec and Para2Vec, despite
+of being able to model senses and high level semantics respectively,
+could not really help much in this task due to various reasons including cross-domain usage of trained models and difference in the
+granularity of semantics captured by them. The detailed error analysis is presented with the failed examples to support the reasoning.
+We could not perform Word Sense Disambiguation (WSD on
+the candidate sentences due to reasons like unavailability of legal
+domain sense tagged corpora required for supervised WSD. Using
+the fine-tuned WSD approach as part of the pipeline is the most
+obvious next thing to be tried out as future work.
+Even though we tried to capture the sentence level semantics using Para2Vec which did not work well, we should try other ways
+to capture the required kind of semantics by slightly modifying
+Para2Vec or other ways. As discussed in the previous section, RNNLSTM on top of the word vectors could be a good choice to start
+with. We refrained from parsing the sentences due to their length
+and complexity, but it would worthwhile to attempt semantic understanding via shallow parsing or using some heuristics to parse long
+sentences with some approximations suitable for our task.
+8
+
+REFERENCES
+
+[26] David Yarowsky. 1995. Unsupervised word sense disambiguation rivaling supervised methods. In Proceedings of the 33rd annual meeting on Association
+for Computational Linguistics. Association for Computational Linguistics, 189–
+196.
+Bianca Zadrozny. 2004. Learning and evaluating classifiers under sample selection bias. In Proceedings of the twenty-first international conference on Machine
+learning. ACM, 114.
+Rich Zemel, Yu Wu, Kevin Swersky, Toni Pitassi, and Cynthia Dwork. 2013.
+Learning fair representations. In International Conference on Machine Learning.
+325–333.
+Gen Zou, Harold Boley, Dylan Wood, and Kieran Lea. 2017. Port Clearance Rules in PSOA RuleML: From Controlled-English Regulation to ObjectRelational Logic. Proceedings of the RuleML+ RR (2017).
+
+[1] Shashank Agarwal and Hong Yu. 2009. Automatically classifying sentences in
+full-text biomedical articles into Introduction, Methods, Results and Discussion.
+Bioinformatics 25, 23 (2009), 3174–3180.
+[27]
+[2] Satanjeev Banerjee and Ted Pedersen. 2002. An adapted Lesk algorithm for word
+sense disambiguation using WordNet. In International conference on intelligent
+text processing and computational linguistics. Springer, 136–145.
+[28]
+[3] Flavio Calmon, Dennis Wei, Bhanukiran Vinzamuri, Karthikeyan Natesan Ramamurthy, and Kush R Varshney. 2017.
+Optimized Pre-Processing for
+Discrimination Prevention. In Advances in Neural Information Processing
+[29]
+Systems 30, I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus,
+S. Vishwanathan, and R. Garnett (Eds.). Curran Associates, Inc., 3992–4001.
+http://papers.nips.cc/paper/6988-optimized-pre-processing-for-discrimination-prevention.pdf
+[4] Danqi Chen and Christopher Manning. 2014. A fast and accurate dependency
+parser using neural networks. In Proceedings of the 2014 conference on empirical
+methods in natural language processing (EMNLP). 740–750.
+[5] Michael Feldman, Sorelle A Friedler, John Moeller, Carlos Scheidegger, and
+Suresh Venkatasubramanian. 2015. Certifying and removing disparate impact. In
+Proceedings of the 21th ACM SIGKDD International Conference on Knowledge
+Discovery and Data Mining. ACM, 259–268.
+[6] Christiane Fellbaum. 1998. WordNet. Wiley Online Library.
+[7] Sepp Hochreiter and Jürgen Schmidhuber. 1997. Long short-term memory. Neural computation 9, 8 (1997), 1735–1780.
+[8] Matthew Honnibal and Ines Montani. 2017. spaCy 2: Natural language understanding with Bloom embeddings, convolutional neural networks and incremental parsing. To appear (2017).
+[9] Toshihiro Kamishima, Shotaro Akaho, and Jun Sakuma. 2011. Fairness-aware
+learning through regularization approach. In Data Mining Workshops (ICDMW),
+2011 IEEE 11th International Conference on. IEEE, 643–650.
+[10] Dan Klein and Christopher D Manning. 2003. Accurate unlexicalized parsing.
+In Proceedings of the 41st Annual Meeting on Association for Computational
+Linguistics-Volume 1. Association for Computational Linguistics, 423–430.
+[11] Quoc Le and Tomas Mikolov. 2014. Distributed representations of sentences and
+documents. In International Conference on Machine Learning. 1188–1196.
+[12] Claudia Leacock and Martin Chodorow. 1998. Combining local context and
+WordNet similarity for word sense identification. WordNet: An electronic lexical database 49, 2 (1998), 265–283.
+[13] Lillian Lee. 1999. Measures of distributional similarity. In Proceedings of the
+37th annual meeting of the Association for Computational Linguistics on Computational Linguistics. Association for Computational Linguistics, 25–32.
+[14] Larry McKnight and Padmini Srinivasan. 2003. Categorization of sentence types
+in medical abstracts. In AMIA Annual Symposium Proceedings, Vol. 2003. American Medical Informatics Association, 440.
+[15] Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean. 2013. Efficient estimation of word representations in vector space. arXiv preprint arXiv:1301.3781
+(2013).
+[16] Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Corrado, and Jeff Dean. 2013.
+Distributed representations of words and phrases and their compositionality. In
+Advances in neural information processing systems. 3111–3119.
+[17] María Navas-Loro. 2017. Mining, Representation and Reasoning with Temporal
+Expressions in the Legal Domain. In RuleML+RR.
+[18] Ted Pedersen, Siddharth Patwardhan, and Jason Michelizzi. 2004. WordNet::
+Similarity: measuring the relatedness of concepts. In Demonstration papers at
+HLT-NAACL 2004. Association for Computational Linguistics, 38–41.
+[19] Jeffrey Pennington, Richard Socher, and Christopher Manning. 2014. Glove:
+Global vectors for word representation. In Proceedings of the 2014 conference
+on empirical methods in natural language processing (EMNLP). 1532–1543.
+[20] Philip Resnik. 1995. Using information content to evaluate semantic similarity
+in a taxonomy. arXiv preprint cmp-lg/9511007 (1995).
+[21] MARKV ROEHLING. 1993. “Extracting” policy from judicial opinions: The
+dangers of policy capturing in a field setting. Personnel Psychology 46, 3 (1993),
+477–502.
+[22] Samiulla Shaikh, Harit Vishwakarma, Sameep Mehta, Kush R Varshney,
+Karthikeyan Natesan Ramamurthy, and Dennis Wei. 2017. An end-to-end
+machine learning pipeline that ensures fairness policies.
+arXiv preprint
+arXiv:1710.06876 (2017).
+[23] David L Streiner and John Cairney. 2007. What’s under the ROC? An Introduction to Receiver Operating Characteristics Curves. The Canadian Journal of Psychiatry 52, 2 (2007), 121–128. https://doi.org/10.1177/070674370705200210
+arXiv:https://doi.org/10.1177/070674370705200210 PMID: 17375868.
+[24] Andrew Trask, Phil Michalak, and John Liu. 2015. sense2vec-A fast and accurate method for word sense disambiguation in neural word embeddings. arXiv
+preprint arXiv:1511.06388 (2015).
+[25] Zhibiao Wu and Martha Palmer. 1994. Verbs semantics and lexical selection.
+In Proceedings of the 32nd annual meeting on Association for Computational
+Linguistics. Association for Computational Linguistics, 133–138.
+
+9
+
+

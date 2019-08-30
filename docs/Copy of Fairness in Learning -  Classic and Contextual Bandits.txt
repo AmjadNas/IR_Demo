@@ -1,0 +1,686 @@
+Fairness in Learning: Classic and Contextual Bandits ∗
+
+Matthew Joseph
+
+Michael Kearns
+
+Jamie Morgenstern
+
+Aaron Roth
+
+University of Pennsylvania, Department of Computer and Information Science
+majos, mkearns, jamiemor, aaroth@cis.upenn.edu
+
+Abstract
+We introduce the study of fairness in multi-armed bandit problems. Our fairness
+definition demands that, given a pool of applicants, a worse applicant is never
+favored over a better one, despite a learning algorithm’s uncertainty over the true
+payoffs. In the classic stochastic bandits problem we provide a provably fair
+algorithm based on “chained” confidence intervals, and prove a cumulative regret
+bound with a cubic dependence on the number of arms. We further show that
+any fair algorithm must have such a dependence, providing a strong separation
+between fair and unfair learning that extends to the general contextual case. In
+the general contextual case, we prove a tight connection between fairness and the
+KWIK (Knows What It Knows) learning model: a KWIK algorithm for a class of
+functions can be transformed into a provably fair contextual bandit algorithm and
+vice versa. This tight connection allows us to provide a provably fair algorithm
+for the linear contextual bandit problem with a polynomial dependence on the
+dimension, and to show (for a different class of functions) a worst-case exponential
+gap in regret between fair and non-fair learning algorithms.
+
+1
+
+Introduction
+
+Automated techniques from statistics and machine learning are increasingly being used to make
+decisions that have important consequences on people’s lives, including hiring [24], lending [10],
+policing [25], and even criminal sentencing [7]. These high stakes uses of machine learning have led
+to increasing concern in law and policy circles about the potential for (often opaque) machine learning
+techniques to be discriminatory or unfair [13, 6]. At the same time, despite the recognized importance
+of this problem, very little is known about technical solutions to the problem of “unfairness”, or the
+extent to which “fairness” is in conflict with the goals of learning.
+In this paper, we consider the extent to which a natural fairness notion is compatible with learning in
+a bandit setting, which models many of the applications of machine learning mentioned above. In
+this setting, the learner is a sequential decision maker, which must choose at each time step t which
+decision to make from a finite set of k “arms". The learner then observes a stochastic reward from
+(only) the arm chosen, and is tasked with maximizing total earned reward (equivalently, minimizing
+total regret) by learning the relationships between arms and rewards over time. This models, for
+example, the problem of learning the association between loan applicants and repayment rates over
+time by repeatedly granting loans and observing repayment.
+We analyze two variants of the setting: in the classic case, the learner’s only source of information
+comes from choices made in previous rounds. In the contextual case, before each round the learner
+additionally observes some potentially informative context for each arm (for example representing
+the content of an individual’s loan application), and the expected reward is some unknown function of
+∗
+
+A full technical version of this paper is available on arXiv [17].
+
+30th Conference on Neural Information Processing Systems (NIPS 2016), Barcelona, Spain.
+
+the context. The difficulty in this task stems from the unknown relationships between arms, rewards,
+and (in the contextual case) contexts: these relationships must be learned.
+We introduce fairness into the bandit learning framework by saying that it is unfair to preferentially
+choose one arm over another if the chosen arm has lower expected quality than the unchosen arm.
+In the loan application example, this means that it is unfair to preferentially choose a less-qualified
+applicant (in terms of repayment probability) over a more-qualified applicant.
+It is worth noting that this definition of fairness (formalized in the preliminaries) is entirely consistent
+with the optimal policy, which can simply choose at each round to play uniformly at random from
+the arms maximizing the expected reward. This is because – it seems – this definition of fairness
+is entirely consistent with the goal of maximizing expected reward. Indeed, the fairness constraint
+exactly states that the algorithm cannot favor low reward arms!
+Our main conceptual result is that this intuition is incorrect in the face of unknown reward functions.
+Although fairness is consistent with implementing the optimal policy, it may not be consistent with
+learning the optimal policy. We show that fairness always has a cost, in terms of the achievable
+learning rate of the algorithm. For some problems, the cost is mild, but for others, the cost is large.
+1.1
+
+Our Results
+
+We divide our results into two parts. First, in Section 3 we study the classic stochastic multi-armed
+bandit problem [20, 19]. In this case, there are no contexts, and each arm i has a fixed but unknown
+average reward µi . In Section 3.1 we give a fair algorithm, FAIR BANDITS, and show that it guarantees
+nontrivial regret after T = O(k 3 ) rounds. We then show in Section 3.2 that it is not possible to do
+better – any fair learning algorithm can be forced to endure constant per-round regret for T = Ω(k 3 )
+rounds, thus tightly characterizing the optimal regret attainable by fair algorithms in this setting, and
+formally separating it from the regret attainable by algorithms absent a fairness constraint.
+We then move on to the general contextual bandit setting in Section 4 and prove a broad characterization result, relating fair contextual bandit learning to KWIK (“Knows What It Knows") learning [22].
+Informally, a KWIK leaarning algorithm receives a series of unlabeled examples and must either
+predict a label or announce “I Don’t Know". The KWIK requirement then stipulates that any predicted
+must be label close to its true label. The quality of a KWIK learning algorithm is characterized by
+its “KWIK bound”, which provides an upper bound on the maximum number of times the algorithm
+can be forced to announce “I Don’t Know”. For any contextual bandit problem (defined by the
+set of functions C from which the payoff functions may be selected), we show that the optimal
+learning rate of any fair algorithm is determined by the best KWIK bound for the class C. We prove
+this constructively via a reduction showing how to convert a KWIK learning algorithm into a fair
+contextual bandit algorithm in Section 4.1, and vice versa in Section 4.2.
+This general connection immediately allows us to import known results for KWIK learning [22]. It
+implies that some fair contextual bandit problems are easy and achieve non-trivial regret guarantees
+in only polynomial many rounds. Conversely, it also implies that some contextual bandit problems
+which are easy without the fairness constraint become hard once we impose the fairness constraint, in
+that any fair algorithm must suffer constant per-round regret for exponentially many rounds. By way
+of example, we will show in Section 4.1 that real contexts with linear reward functions are easy, and
+we will show in Section 4.3 that boolean context vectors and conjunction reward functions are hard.
+1.2
+
+Other Related Work
+
+Many papers study the problem of fairness in machine learning. One line of work studies algorithms
+for batch classification which achieve group fairness otherwise known as equality of outcomes,
+statistical parity – or algorithms that avoid disparate impact (see e.g. [11, 23, 18, 15, 16] and [2] for
+a study of auditing existing algorithms for disparate impact). While statistical parity is sometimes
+a desirable or legally required goal, as observed by Dwork et al. [14] and others, it suffers from a
+number of drawbacks. First, if different populations indeed have different statistical properties, then it
+can be at odds with accurate classification. Second, even in cases when statistical parity is attainable
+with an optimal classifier, it does not prevent discrimination at an individual level. This led Dwork
+et al. [14] to encourage the study of individual fairness, which we focus on here.
+2
+
+Dwork et al. [14] also proposed and explored a technical definition of individual fairness formalizing
+the idea that “similar individuals should be treated similarly” by presupposing a task-specific quality
+metric on individuals and proposing that fair algorithms should satisfy a Lipschitz condition on this
+metric. Our definition of fairness is similar, in that the expected reward of each arm is a natural metric
+through which we define fairness. However, where Dwork et al. [14] presupposes the existence of a
+“fair" metric on individuals – thus encoding much of the relevant challenge, as studied Zemel et al.
+[27] – our notion of fairness is entirely aligned with the goal of the algorithm designer and is satisfied
+by the optimal policy. Nevertheless, it affects the space of feasible learning algorithms, because it
+interferes with learning an optimal policy, which depends on the unknown reward functions.
+At a technical level, our work is related to Amin et al. [4] and Abernethy et al. [1], which also relate
+KWIK learning to bandit learning in a different context unrelated to fairness.
+
+2
+
+Preliminaries
+
+We study the contextual bandit setting, defined by a domain X , a set of “arms” [k] := {1, . . . , k} and
+a class C of functions of the form f : X → [0, 1]. For each arm j there is some function fj ∈ C,
+unknown to the learner. In rounds t = 1, . . . , T , an adversary reveals to the algorithm a context xtj
+for each arm2 . An algorithm A then chooses an arm it , and observes stochastic reward ritt for the
+arm it chose. We assume rjt ∼ Djt , E[rjt ] = fj (xtj ), for some distribution Djt over [0, 1].
+Let Π be the set of policies mapping contexts to distributions over arms X k → ∆k , and π ∗ the
+optimal policy which selects a distribution over arms as a function of contexts to maximize the
+expected reward of those arms. The pseudo-regret of an algorithm A on contexts x1 , . . . , xT is
+defined as follows, where π t represents A’s distribution on arms at round t:
+X
+X
+Eit∗ ∼π∗ (xt ) [fit∗ (xtit∗ )] − Eit ∼πt [
+fit (xtit )] = Regret(x1 , . . . , xT ),
+t
+
+t
+∗
+
+shorthanded as A’s regret. Optimal policy π pulls arms with highest expectation at each round, so:
+X
+X
+
+Regret(x1 , . . . , xT ) =
+max fj (xtj ) − Eit ∼πt [
+fit (xtit )].
+t
+
+j
+
+t
+1
+
+We say that A satisfies regret bound R(T ) if maxx1 ,...,xT Regret(x , . . . , xt ) ≤ R(T ).
+t−1
+Let the history ht ∈ X k × [k] × [0, 1]
+be a record of t − 1 rounds experienced by A, t − 1
+t
+3-tuples encoding the realization of the contexts, arm chosen, and reward observed. πj|h
+t denotes the
+t
+t
+probability that A chooses arm j after observing contexts x , given h . For simplicity, we will often
+t
+t
+:= πj|h
+drop the superscript t on the history when referring to the distribution over arms: πj|h
+t.
+We now define what it means for a contextual bandit algorithm to be δ-fair with respect to its arms.
+Informally, this will mean that A will play arm i with higher probability than arm j in round t only if
+i has higher mean than j in round t, for all i, j ∈ [k], and in all rounds t.
+Definition 1 (δ-fair). A is δ-fair if, for all sequences of contexts x1 , . . . , xt and all payoff distributions D1t , . . . , Dkt , with probability at least 1 − δ over the realization of the history h, for all rounds
+t ∈ [T ] and all pairs of arms j, j 0 ∈ [k],
+t
+πj|h
+> πjt 0 |h only if fj (xtj ) > fj 0 (xtj 0 ).
+
+KWIK learning Let B be an algorithm which takes as input a sequence of examples x1 , . . . , xT ,
+and when given some xt ∈ X , outputs either a prediction ŷ t ∈ [0, 1] or else outputs ŷ t = ⊥,
+representing “I don’t know”. When ŷ t = ⊥, B receives feedback y t such that E[y t ] = f (xt ). B is an
+(, δ)-KWIK learning algorithm for C : X → [0, 1], with KWIK bound m(, δ) if for any sequence
+of examples x1 , x2 , . . . and any target f ∈ C, with probability at least 1 − δ, both:
+t
+t
+t
+1. Its numerical predictions are accurate:
+P∞for allt t, ŷ ∈ {⊥} ∪ [f (x ) − , f (x ) + ], and
+2. B rarely outputs “I Don’t Know”: t=1 I [ŷ = ⊥] ≤ m(, δ).
+
+Often, the contextual bandit problem is defined such that there is a single context xt every day. Our model
+is equivalent – we could take xtj := xt for each j.
+2
+
+3
+
+2.1
+
+Specializing to Classic Stochastic Bandits
+
+In Sections 3.1 and 3.2, we study the classic stochastic bandit problem, an important special case
+of the contextual bandit setting described above. Here we specialize our notation to this setting, in
+which there are no contexts. For each arm j ∈ [k], there is an unknown distribution Dj over [0, 1]
+with unknown mean µj . A learning algorithm A chooses an arm it in round t, and observes the
+reward ritt ∼ Dit for the arm that it chose. Let i∗ ∈ [k] be the arm with highest expected reward:
+i∗ ∈ arg maxi∈[k] µi . The pseudo-regret of an algorithm A on D1 , . . . , Dk is now just:
+X
+T · µi∗ − Eit ∼πt [
+µit ] = Regret(T, D1 , . . . , Dk )
+0≤t≤T
+t−1
+
+Let ht ∈ ([k] × [0, 1])
+denote a record of the t − 1 rounds experienced by the algorithm so far,
+represented by t − 1 2-tuples encoding the previous arms chosen and rewards observed. We write
+t
+t
+πj|h
+t to denote the probability that A chooses arm j given history h . Again, we will often drop the
+t
+t
+:= πj|h
+superscript t on the history when referring to the distribution over arms: πj|h
+t . δ-fairness in
+the classic bandit setting then specializes as follows:
+Definition 2 (δ-fairness in the classic bandits setting). A is δ-fair if, for all distributions D1 , . . . , Dk ,
+with probability at least 1 − δ over the history h, for all t ∈ [T ] and all j, j 0 ∈ [k]:
+t
+πj|h
+> πjt 0 |h only if µj > µj 0 .
+
+3
+3.1
+
+Classic Bandits Setting
+Fair Classic Stochastic Bandits: An Algorithm
+
+In this section, we describe a simple and intuitive modification of the standard UCB algorithm [5],
+called FAIR BANDITS, prove that it is fair, and analyze its regret bound. The algorithm and its analysis
+highlight a key idea that is important to the design of fair algorithms in this setting: that of chaining
+confidence intervals. Intuitively, as a δ-fair algorithm explores different arms it must play two arms j1
+and j2 with equal probability until it has sufficient data to deduce, with confidence 1 − δ, either that
+µj1 > µj2 or vice versa. FAIR BANDITS does this by maintaining empirical estimates of the means of
+both arms, together with confidence intervals around those means. To be safe, the algorithm must
+play the arms with equal probability while their confidence intervals overlap. The same reasoning
+applies simultaneously to every pair of arms. Thus, if the confidence intervals of each pair of arms ji
+and ji+1 overlap for each i ∈ [k], the algorithm is forced to play all arms j with equal probability.
+This is the case even if the confidence intervals around arm jk and arm j1 are far from overlapping –
+i.e. when the algorithm can be confident that µj1 > µjk .
+This chaining approach initially seems overly conservative when ruling out arms, as reflected in its
+regret bound, which is only non-trivial after T  k 3 . In contrast, the UCB algorithm [5] achieves
+non-trivial regret after T = O(k) rounds. However, our lower bound in Section 3.2 shows that any
+fair algorithm must suffer constant per-round regret for T  k 3 rounds on some instances.
+We now give an overview of the behavior of FAIR BANDITS. At every round t, FAIR BANDITS
+identifies the arm it∗ = arg maxi uti that has the largest upper confidence interval amongst the active
+arms. At each round t, we say i is linked to j if [`ti , uti ] ∩ [`tj , utj ] 6= ∅, and i is chained to j if i and
+j are in the same component of the transitive closure of the linked relation. FAIR BANDITS plays
+uniformly at random among all active arms chained to arm it∗ .
+Initially, the active set contains all arms. The active set of arms at each subsequent round is defined to
+be the set of arms that are chained to the arm with highest upper confidence bound at the previous
+round. The algorithm can be confident that arms that have become unchained to the arm with the
+highest upper confidence bound at any round have means that are lower than the means of any chained
+arms, and hence such arms can be safely removed from the active set, never to be played again. This
+has the useful property that the active set of arms can only shrink: at any round t, St ⊆ St−1 .
+We first observe that with probability 1 − δ, all of the confidence intervals maintained by FAIR BAN DITS (δ) contain the true means of their respective arms over all rounds. We prove this claim, along
+with all other claims in this paper, in the full technical version of this paper [17].
+4
+
+1: procedure FAIR BANDITS(δ)
+2:
+S 0 ← {1, . . . , k}
+3:
+for i = 1, . . . k do
+4:
+µ̂0i ← 21 , u0i ← 1, `0i ← 0, n0i ← 0
+5:
+6:
+7:
+8:
+9:
+10:
+11:
+12:
+13:
+14:
+
+. Initialize the active set
+. Initialize each arm
+
+for t = 1 to T do
+. Find arm with highest ucb
+it∗ ← arg maxi∈S t−1 uti
+S t ← {j | j chains to it∗ , j ∈ S t−1 }
+. Update active set
+j ∗ ← (x ∈R S t )
+. Select active arm at random
+t
+nt+1
+j ∗ ← nj ∗ + 1
+t+1
+1
+µ̂j ∗ ← nt+1
+. Pull arm j ∗ , update its mean estimate
+(µ̂tj ∗ · ntj ∗ + rjt ∗ )
+j∗
+r
+2 /3δ)
+B ← ln((π·(t+1))
+2nt+1
+∗
+ t+1 t+1  j t+1
+
+`j ∗ , uj ∗ ← µ̂j ∗ − B, µ̂t+1
+. Update interval for pulled arm
+j∗ + B
+t
+∗
+for j ∈ S , j 6= j do
+µ̂t+1
+← µ̂tj , nt+1
+← ntj , ut+1
+← utj , `t+1
+← `tj
+j
+j
+j
+j
+
+Lemma 1. With probability at least 1 − δ, for every arm i and round t `ti ≤ µi ≤ uti .
+The fairness of FAIR BANDITS follows: with high probability the algorithm constructs good confidence
+intervals, so it can confidently choose between arms without violating fairness.
+Theorem 1. FAIR BANDITS (δ) is δ-fair.
+Having proven that FAIR BANDITS is indeed fair, it remains to upper-bound its regret. We proceed by
+a series of lemmas, first lower bounding the probability that any arm active in round t has been pulled
+substantially fewer times than its expectation.
+q
+2
+Lemma 2. With probability at least 1 − 2tδ2 , nti ≥ kt − 2t ln 2k·t
+for all i ∈ S t (for all active
+δ
+arms in round t).
+We now use this lower bound on the number of pulls of active arm i in round t to upper-bound η(t),
+an upper bound on the confidence interval width FAIR BANDITS uses for any active arm i in round t.
+q
+2
+t ln( 2kt
+δ )
+Lemma 3. Consider any round t and any arm i ∈ S t . Condition on nti ≥ kt −
+. Then,
+2
+v
+
+
+u
+u ln (π · t)2 /3δ
+u
+q
+uti − `ti ≤ 2t
+= η(t).
+2
+t ln( 2kt
+δ )
+2 · kt −
+2
+We stitch together these lemmas as follows: Lemma 2 upper bounds the probability that any arm i
+active in round t has been pulled substantially fewer times than its expectation, and Lemma 3 upper
+bounds the width of any confidence interval used by FAIR BANDITS in round t by η(t). Together,
+these enable us to determine how both the number of arms in the active set, as well as the spread of
+their confidence intervals, evolve over time. This translates into the following regret bound.
+q
+
+√
+Theorem 2. If δ < 1/ T , then FAIR BANDITS has regret R(T ) = O
+k 3 T ln Tδk .
+Two points are worth highlighting in Theorem 2. First, this bound becomes non-trivial (i.e. the
+average per-round regret is  1) for T = Ω(k 3 ). As we show in the next section, it is not possible to
+improve on this. Second, the bound may appear to have suboptimal dependence on T when compared
+to unconstrained regret bounds
+√(where
+ the dependence on T is often described as logarithmic).
+However, it is known that Ω
+kT regret is necessary even in the unrestricted setting (without
+fairness) if one does not make data-specific assumptions on an instance [9] It would be possible to
+state a logarithmic dependence on T in our setting as well while making assumptions on the gaps
+between arms, but since our fairness constraint manifests itself as a cost that depends on k, we choose
+for clarity to avoid such assumptions; without them, our dependence on T is also optimal.
+5
+
+3.2
+
+Fair Classic Stochastic Bandits: A Lower Bound
+
+We now show that the regret bound for FAIR BANDITS has an optimal dependence on k: no fair
+algorithm has diminishing regret before T = Ω(k 3 ) rounds. At a high level, we construct our lower
+bound example to embody the “worst of both worlds" for fair algorithms: the arm payoff means are
+just close enough together that the chain takes a long time to break, and the arm payoff means are just
+far enough apart that the algorithm incurs high regret while the chain remains unbroken. This lets
+us prove the formal statement below. The full proof, which proceeds via Bayesian reasoning using
+priors for the arm means, may be found in our technical companion paper [17].
+Theorem 3. There is a distribution P over k-arm instances of the stochastic multi-armed bandit
+problem such that
+ any fair algorithm run on P experiences constant per-round regret for at least
+T = Ω k 3 ln 1δ rounds.
+Thus, we tightly characterize the optimal regret attainable by fair algorithms in the classic bandits
+setting, and formally separate it from the regret attainable by algorithms absent a fairness constraint.
+Note that this already shows a separation between the best possible learning rates for contextual
+bandit learning with and without the fairness constraint – the classic multi-armed bandit problem is a
+special case of every contextual bandit problem, and for general contextual bandit problems, it is also
+known how to get non-trivial regret after only T = O(k) many rounds [3, 8, 12].
+
+4
+4.1
+
+Contextual Bandits Setting
+KWIK Learnability Implies Fair Bandit Learnability
+
+In this section, we show if a class of functions is KWIK learnable, then there is a fair algorithm for
+learning the same class of functions in the contextual bandit setting, with a regret bound polynomially
+related to the function class’ KWIK bound. Intuitively, KWIK-learnability of a class of functions
+guarantees we can learn the function’s behavior to a high degree of accuracy with a high degree
+of confidence. As fairness constrains an algorithm most before the algorithm has determined the
+payoff functions’ behavior accurately, this guarantee enables us to learn fairly without incurring much
+additional regret. Formally, we prove the following polynomial relationship.
+Theorem 4. For an instance of the contextual multi-armed bandit problem where fj ∈ C for all
+j ∈ [k], if C is (, δ)-KWIK learnable with bound m(, δ), KWIKT O FAIR (δ, T ) is δ-fair and
+achieves regret bound:
+
+
+
+
+
+k
+3
+2
+∗ min (δ, 1/T )
+, k ln
+R(T ) = O max k · m  ,
+T 2k
+δ
+for δ ≤
+
+√1
+T
+
+)
+where ∗ = arg min (max( · T, k · m(, min(δ,1/T
+))).
+kT 2
+
+First, we construct an algorithm KWIKT O FAIR(δ, T ) that uses the KWIK learning algorithm as a
+subroutine, and prove that it is δ-fair. A call to KWIKT O FAIR(δ, T ) will initialize a KWIK learner
+for each arm, and in each of the T rounds will implicitly construct a confidence interval around the
+prediction of each learner. If a learner makes a numeric valued prediction, we will interpret this as
+a confidence interval centered at the prediction with width ∗ . If a learner outputs ⊥, we interpret
+this as a trivial confidence interval (covering all of [0, 1]). We then use the same chaining technique
+used in the classic setting to choose an arm from the set of arms chained to the predicted top arm.
+Whenever all learners output predictions, they need no feedback. When a learner for j outputs ⊥, if j
+is selected then we have feedback rjt to give it; on the other hand, if j isn’t selected, we “roll back”
+the learning algorithm for j to before this round by not updating the algorithm’s state.
+1: procedure KWIKT O FAIR(δ, T )
+2:
+3:
+4:
+5:
+6:
+7:
+8:
+
+min(δ, 1 )
+
+δ ∗ ← kT 2 T , ∗ ← arg min (max( · T, k · m(, δ ∗ )))
+Initialize KWIK(∗ , δ ∗ )-learner Li , hi ← [ ] ∀i ∈ [k]
+for 1 ≤ t ≤ T do
+S←∅
+for i = 1, . . . , k do
+sti ← Li (xti , hi )
+S ← S ∪ sti
+6
+
+. Initialize set of predictions S
+. Store prediction sti
+
+9:
+10:
+11:
+12:
+13:
+14:
+15:
+
+if ⊥∈ S then
+Pull j ∗ ← (x ∈R [k]), receive reward rjt ∗
+. Pick arm at random from all arms
+else
+it∗ ← arg maxi sti
+S t ← {j | (stj − ∗ , stj + ∗ ) chains to (stit − ∗ , stit + ∗ )}
+∗
+∗
+Pull j ∗ ← (x ∈R S t ), receive reward rjt ∗ . Pick arm at random from active set sti∗
+hj ∗ ← hj ∗ :: (xtj ∗ , rjt ∗ )
+. Update the history for Lj ∗
+
+We begin by bounding the probability of certain failures of KWIKT O FAIR in Lemma 4.
+Lemma 4. With probabilityPat least 1 − min(δ, T1 ), for all rounds t and all arms i, (a) if sti ∈ R then
+|sti − fi (xti )| ≤ ∗ and (b) t I [sti = ⊥ and i is pulled] ≤ m(∗ , δ ∗ ).
+This in turn lets us prove the fairness of KWIKT O FAIR in Theorem 5. Intuitively, the KWIK
+algorithm’s confidence about predictions translates into confidence about expected rewards, which
+lets us choose between arms without violating fairness.
+Theorem 5. KWIKT O FAIR(δ, T ) is δ-fair.
+We now use the KWIK bounds of the KWIK learners to upper-bound the regret of KWIKT O FAIR(δ, T ). We proceed by bounding the regret incurred in those rounds when all KWIK algorithms
+make a prediction (i.e., when we have a nontrivial confidence interval for each arm’s expected reward)
+and then bounding the number of rounds for which some learner outputs ⊥ (i.e., when we choose
+randomly from all arms and thus incur constant regret). These results combine to produce Lemma 5.
+Lemma 5. KWIKT O FAIR(δ, T ) achieves regret O(max(k 2 · m(∗ , δ ∗ ), k 3 ln Tδk )).
+Our presentation of KWIKT O FAIR(δ, T ) has a known time horizon T . Its guarantees extend to the
+case in which T is unknown via the standard “doubling trick” to prove Theorem 4.
+An important instance of the contextual bandit problem is the linear case, where C consists of the
+set of all linear functions of bounded norm in d dimensions, i.e. when the rewards of each arm are
+governed by an underlying linear regression model on contexts. Known KWIK algorithms [26] for
+the set of linear functions C then allow us, via our reduction, to give a fair contextual bandit algorithm
+for this setting with a polynomial regret bound.
+Lemma 6 ([26]). Let C = {fθ |fθ (x) = hθ, xi, θ ∈ Rd , ||θ|| ≤ 1} and X = {x ∈ Rd : ||x|| ≤ 1}.
+C is KWIK learnable with KWIK bound m(, δ) = Õ(d3 /4 ).
+Then, an application of Theorem 4 implies that KWIKT O FAIR has a polynomial regret guarantee for
+the class of linear functions.
+Corollary 1. Let C and X be as in Lemma 6, and fj ∈ C for each j ∈ [k]. Then, KWIKT
+O
+k
+4/5 6/5 3/5 3
+FAIR(T, δ) using the learner from [26] has regret R(T ) = Õ max T k d , k ln δ .
+4.2
+
+Fair Bandit Learnability Implies KWIK Learnability
+
+In this section, we show how to use a fair, no-regret contextual bandit algorithm to construct a KWIK
+learning algorithm whose KWIK bound has logarithmic dependence on the number of rounds T .
+Intuitively, any fair algorithm which achieves low regret must both be able to find and exploit an
+optimal arm (since the algorithm is no-regret) and can only exploit that arm once it has a tight
+understanding of the qualities of all arms (since the algorithm is fair). Thus, any fair no-regret
+algorithm will ultimately have tight (1 − δ)-confidence about each arm’s reward function.
+Theorem 6. Suppose A is a δ-fair algorithm for the contextual bandit problem over the class of
+functions C, with regret bound R(T, δ). Suppose also there exists f ∈ C, x(`) ∈ X such that for
+every ` ∈ [d 1 e], f (x(`)) = ` · . Then, FAIRT O KWIK is an (, δ)-KWIK algorithm for C with KWIK
+δ
+bound m(, δ), with m(, δ) the solution to m(,δ)
+= R(m(, δ), 2T
+).
+4
+Remark 1. The condition that C should contain a function that can take on values that are multiples
+of  is for technical convenience; C can always be augmented by adding a single such function.
+7
+
+Our aim is to construct a KWIK algorithm B to predict labels for a sequence of examples labeled
+with some unknown function f ∗ ∈ C. We provide a sketch of the algorithm, FAIRT O KWIK, below,
+and refer interested readers to our full technical paper [17] for a complete and formal description.
+We use our fair algorithm to construct a KWIK algorithm as follows: we will run our fair contextual
+bandit algorithm A on an instance that we construct online as examples xt arrive for B. The idea is
+to simulate a two arm instance, in which one arm’s rewards are governed by f ∗ (the function to be
+KWIK learned), and the other arm’s rewards are governed by a function f that we can set to take
+any value in {0, , 2, . . . , 1}. For each input xt , we perform a thought experiment and consider A’s
+probability distribution over arms when facing a context which forces arm 2’s payoff to take each of
+the values 0, ∗ , 2∗ , . . . , 1. Since A is fair, A will play arm 1 with weakly higher probability than
+arm 2 for those ` : `∗ ≤ f (xt ); analogously, A will play arm 1 with weakly lower probability than
+arm 2 for those ` : `∗ ≥ f (xt ). If there are at least 2 values of ` for which arm 1 and arm 2 are
+played with equal probability, one of those contexts will force A to suffer ∗ regret, so we continue
+the simulation of A on one of those instances selected at random, forcing at least ∗ /2 regret in
+expectation, and at the same time have B return ⊥. B receives f ∗ (xt ) on such a round, which is used
+to construct feedback for A. Otherwise, A must transition from playing arm 1 with strictly higher
+probability to playing 2 with strictly higher probability as ` increases: the point at which that occurs
+will “sandwich” the value of f (xt ), since A’s fairness implies this transition must occur when the
+expected payoff of arm 2 exceeds that of arm 1. B uses this value to output a numeric prediction.
+An important
+fact we exploit is that we can query A’s behavior on (xt , x(`)), for any xt and
+ 1 
+` ∈ d ∗ e without providing it feedback (and instead “roll back” its history to ht not including the
+query (xt , x(`))). We update A’s history by providing it feedback only in rounds where B outputs
+⊥. Finally, we note that, as in KWIKT O FAIR, the claims of FAIRT O KWIK extend to the infinite
+horizon case via the doubling trick.
+4.3 An Exponential Separation Between Fair and Unfair Learning
+In this section, we use this Fair-KWIK equivalence to give a simple contextual bandit problem for
+which fairness imposes an exponential cost in its regret bound, unlike the polynomial cost proven
+in the linear case in Section 4.1. In this problem, the context domain is the d-dimensional boolean
+hypercube: X = {0, 1}d – i.e. the context each round for each individual consists of d boolean
+attributes. Our class of functions C is the class of boolean conjunctions: C = {f | f (x) =
+xi1 ∧ xi2 ∧ . . . ∧ xik where 0 ≤ k ≤ d and i1 , . . . , ik ∈ [d]}.
+We first note that there exists a simple but unfair algorithm for this problem which obtains regret
+R(T ) = O(k 2 d). A full description of this algorithm, called C ONJUNCTION BANDIT, may be
+found in our technical companion paper [17]. We now show that, in contrast, fair algorithms cannot
+guarantee subexponential regret in d. This relies upon a known lower bound for KWIK learning
+conjunctions [21]:
+d
+
+Lemma 7. There exists a sequence of examples (x1 , . . . , x2 −1 ) such that for , δ ≤ 1/2, every
+(, δ)-KWIK learning algorithm B for the class C of conjunctions on d variables must output ⊥ for
+xt for each t ∈ [2d − 1]. Thus, B has a KWIK bound of at least m(, δ) = Ω(2d ).
+We then use the equivalence between fair algorithms and KWIK learning to translate this lower bound
+on m(, δ) into a minimum worst case regret bound for fair algorithms on conjunctions. We modify
+Theorem 6 to yield the following lemma.
+Lemma 8. Suppose A is a δ-fair algorithm for the contextual bandit problem over the class C of
+conjunctions on d variables. If A has regret bound R(T, δ) then for δ 0 = 2T δ, FAIRT O KWIK is an
+(0, δ 0 )-KWIK algorithm for C with KWIK bound m(0, δ 0 ) = 4R(m(0, δ 0 ), δ).
+Lemma 7 then lets us lower-bound the worst case regret of fair learning algorithms on conjunctions.
+1
+Corollary 2. For δ < 2T
+, any δ-fair algorithm for the contextual bandit problem over the class C of
+conjunctions on d boolean variables has a worst case regret bound of R(T ) = Ω(2d ).
+
+Together with the analysis of C ONJUNCTION BANDIT, this demonstrates a strong separation between
+fair and unfair contextual bandit algorithms: when the underlying functions mapping contexts to
+payoffs are conjunctions on d variables, there exist a sequence of contexts on which fair algorithms
+must incur regret exponential in d while unfair algorithms can achieve regret linear in d.
+8
+
+References
+[1] Jacob D. Abernethy, Kareem Amin, , Moez Draief, and Michael Kearns. Large-scale bandit problems and
+kwik learning. In Proceedings of (ICML-13), pages 588–596, 2013.
+[2] Philip Adler, Casey Falk, Sorelle A. Friedler, Gabriel Rybeck, Carlos Scheidegger, Brandon Smith, and
+Suresh Venkatasubramanian. Auditing black-box models by obscuring features. CoRR, abs/1602.07043,
+2016. URL http://arxiv.org/abs/1602.07043.
+[3] Alekh Agarwal, Daniel J. Hsu, Satyen Kale, John Langford, Lihong Li, and Robert E. Schapire. Taming
+the monster: A fast and simple algorithm for contextual bandits. In Proceedings of ICML 2014, Beijing,
+China, 21-26 June 2014, pages 1638–1646, 2014.
+[4] Kareem Amin, Michael Kearns, and Umar Syed. Graphical models for bandit problems. arXiv preprint
+arXiv:1202.3782, 2012.
+[5] Peter Auer, Nicolo Cesa-Bianchi, and Paul Fischer. Finite-time analysis of the multiarmed bandit problem.
+Machine learning, 47(2-3):235–256, 2002.
+[6] Solon Barocas and Andrew D. Selbst. Big data’s disparate impact. California Law Review, 104, 2016.
+Available at SSRN: http://ssrn.com/abstract=2477899.
+[7] Anna Maria Barry-Jester, Ben Casselman, and Dana Goldstein. The new science of sentencing. The
+Marshall Project, August 8 2015. URL https://www.themarshallproject.org/2015/08/04/
+the-new-science-of-sentencing. Retrieved 4/28/2016.
+[8] Alina Beygelzimer, John Langford, Lihong Li, Lev Reyzin, and Robert E. Schapire. Contextual bandit
+algorithms with supervised learning guarantees. In Proceedings of AISTATS 2011, Fort Lauderdale, USA,
+April 11-13, 2011, pages 19–26, 2011.
+[9] Sébastien Bubeck and Nicolo Cesa-Bianchi. Regret analysis of stochastic and nonstochastic multi-armed
+bandit problems. Machine Learning, 5(1):1–122, 2012.
+[10] Nanette Byrnes. Artificial intolerance. MIT Technology Review, March 28 2016.
+[11] Toon Calders and Sicco Verwer. Three naive bayes approaches for discrimination-free classification. Data
+Mining and Knowledge Discovery, 21(2):277–292, 2010.
+[12] Wei Chu, Lihong Li, Lev Reyzin, and Robert E. Schapire. Contextual bandits with linear payoff functions.
+In Proceedings of AISTATS 2011, Fort Lauderdale, USA, April 11-13, 2011, pages 208–214, 2011.
+[13] Cary Coglianese and David Lehr. Regulating by robot: Administrative decision-making in the machinelearning era. Georgetown Law Journal, 2016. Forthcoming.
+[14] Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer Reingold, and Richard Zemel. Fairness through
+awareness. In Proceedings of ITCS 2012, pages 214–226. ACM, 2012.
+[15] Michael Feldman, Sorelle A. Friedler, John Moeller, Carlos Scheidegger, and Suresh Venkatasubramanian.
+Certifying and removing disparate impact. In Proceedings of ACM SIGKDD 2015, Sydney, NSW, Australia,
+August 10-13, 2015, pages 259–268, 2015.
+[16] Benjamin Fish, Jeremy Kun, and Ádám D Lelkes. A confidence-based approach for balancing fairness and
+accuracy. SIAM International Symposium on Data Mining, 2016.
+[17] Matthew Joseph, Michael Kearns, Jamie Morgenstern, and Aaron Roth. Fairness in learning: Classic and
+contextual bandits. CoRR, abs/1605.07139, 2016. URL http://arxiv.org/abs/1605.07139.
+[18] Toshihiro Kamishima, Shotaro Akaho, and Jun Sakuma. Fairness-aware learning through regularization
+approach. In Data Mining Workshops (ICDMW), 2011 IEEE 11th International Conference on, pages
+643–650. IEEE, 2011.
+[19] Michael N Katehakis and Herbert Robbins. Sequential choice from several populations. PROCEEDINGSNATIONAL ACADEMY OF SCIENCES USA, 92:8584–8584, 1995.
+[20] Tze Leung Lai and Herbert Robbins. Asymptotically efficient adaptive allocation rules. Advances in
+applied mathematics, 6(1):4–22, 1985.
+[21] Lihong Li. A unifying framework for computational reinforcement learning theory. PhD thesis, Rutgers,
+The State University of New Jersey, 2009.
+[22] Lihong Li, Michael L Littman, Thomas J Walsh, and Alexander L Strehl. Knows what it knows: a
+framework for self-aware learning. Machine learning, 82(3):399–443, 2011.
+[23] Binh Thanh Luong, Salvatore Ruggieri, and Franco Turini. k-nn as an implementation of situation testing
+for discrimination discovery and prevention. In Proceedings of ACM SIGKDD 2011, pages 502–510. ACM,
+2011.
+[24] Clair C Miller. Can an algorithm hire better than a human? The New York Times, June 25 2015.
+[25] Cynthia Rudin. Predictive policing using machine learning to detect patterns of crime. Wired Magazine,
+August 2013.
+[26] Alexander L Strehl and Michael L Littman. Online linear regression and its application to model-based
+reinforcement learning. In Advances in Neural Information Processing Systems, pages 1417–1424, 2008.
+[27] Rich Zemel, Yu Wu, Kevin Swersky, Toni Pitassi, and Cynthia Dwork. Learning fair representations. In
+Proceedings of (ICML-13), pages 325–333, 2013.
+
+9
+
+

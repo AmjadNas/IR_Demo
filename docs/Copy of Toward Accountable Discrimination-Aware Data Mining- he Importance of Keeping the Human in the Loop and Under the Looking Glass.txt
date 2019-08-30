@@ -1,0 +1,1630 @@
+Big Data
+Volume 5, Number 2, 2017
+ª Mary Ann Liebert, Inc.
+DOI: 10.1089/big.2016.0055
+
+ORIGINAL ARTICLE
+
+Toward Accountable Discrimination-Aware Data Mining:
+The Importance of Keeping the Human in the Loop—
+and Under the Looking Glass
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+Bettina Berendt1,* and Sören Preibusch2
+Abstract
+‘ Big Data’’ and data-mined inferences are affecting more and more of our lives, and concerns about their possible discriminatory effects are growing. Methods for discrimination-aware data mining and fairness-aware data mining aim at
+keeping decision processes supported by information technology free from unjust grounds. However, these formal approaches alone are not sufﬁcient to solve the problem. In the present article, we describe reasons why discrimination
+with data can and typically does arise through the combined effects of human and machine-based reasoning, and
+argue that this requires a deeper understanding of the human side of decision-making with data mining. We describe
+results from a large-scale human-subjects experiment that investigated such decision-making, analyzing the reasoning
+that participants reported during their task to assess whether a loan request should or would be granted. We derive data
+protection by design strategies for making decision-making discrimination-aware in an accountable way, grounding
+these requirements in the accountability principle of the European Union General Data Protection Regulation, and outline how their implementations can integrate algorithmic, behavioral, and user interface factors.
+Keywords: accountability; data protection; discrimination-aware and fairness-aware data mining; discrimination
+discovery and prevention; evaluation; user studies
+
+Introduction
+‘‘There’s software used across the country to predict future criminals. And it’s biased against blacks’’: This
+(sub)title of a recent article1 summarizes the concerns
+that more and more citizens, authorities, and also the
+computer scientists who develop predictive methods
+have about computerized decisions: their potential to
+create unlawful or unwanted discrimination. Discriminatory phenomena linked to software are not limited to
+the justice system but have also been found in domains
+as diverse as university admissions,2 search-engine results and advertisements,3 or waiting times for Uber
+taxis.4 Substantial biases can also arise in employmentrelated decisions.5 Effects are also not limited to discrimination based on ethnicity, but relate to gender2,6,7
+or poverty.8
+Freedom from discrimination is recognized as a right
+throughout jurisdictions. The European Union (EU)
+1
+2
+
+has explicitly included protection against discrimination based on data processing into the General Data
+Protection Regulation (GDPR), its new data protection
+law to come into effect in 2018. As stated in Recital 71,
+data controllers should ‘‘implement technical and organisational measures’’ to prevent that processing has, or
+results in ‘‘discriminatory effects on natural persons on
+the basis of racial or ethnic origin, political opinion, religion or beliefs, trade union membership, genetic or
+health status or sexual orientation.’’ The challenge for
+data scientists is how to best support this goal.
+Computer scientists have proposed formal measures of
+(non-)discrimination or fairness9–11,* and modiﬁcations
+*The term ‘‘non-discrimination’’ tends to be used in EU and ‘‘fairness’’ in United
+States contexts. In EU law including data protection law, ‘‘fairness’’ carries the
+connotations of ‘‘a fair deal,’’ ‘‘according to expectations,’’ etc., and hereby
+concerns the relationship between the data subject and the data controller
+rather than a comparison between the way in which different data subjects are
+treated. Where we use the term ‘‘fairness,’’ it carries the United States meaning.
+
+Department of Computer Science, KU Leuven, Leuven, Belgium.
+formerly Microsoft Research, Cambridge, United Kingdom.
+
+*Address correspondence to: Bettina Berendt, Department of Computer Science, KU Leuven, Leuven 3001, Belgium, E-mail: bettina.berendt@cs.kuleuven.be
+
+135
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+136
+
+to data and/or algorithms to avoid or minimize discrimination (from the seminal work of Pedreschi et al.12 to a
+rich body of literature described in recent surveys13,14).
+We will refer to these methods as discrimination-aware
+data mining (DADM).
+However, in many decision situations, softwaregenerated rankings and predictions are only one component in decision-making. While ‘‘the software’’ may
+be ‘‘biased,’’ it is not the software (‘‘it’’) that discriminates. Rather, it is the ensembles of algorithms, data, software implementing the operations of these algorithms
+and used on these data, humans, and larger dynamic
+systems that lead to discriminatory outcomes. Research
+that investigates and unpacks these complex ensembles
+is only just beginning. The present article is part of a
+larger research effort at such investigation drawing
+on an interdisciplinary methodology.
+In the ﬁrst, empirical, part of this article, we present
+a user study that takes a detailed look at human decision processes in semiautomated decision-making, as
+they relate to discrimination. Decision processes differ
+by domain, frequency, and severity; it is therefore imperative to focus on concrete decision problems. We
+focus on a routine task that nonetheless can signiﬁcantly affect individuals: the granting (or not) of a
+loan in retail banking. We analyze so-far-unexplored
+data from an experimental study with 215 participants15
+who were given a ﬁctitious data-mining engine’s results
+and asked to determine whether a portrayed loan applicant should or would receive a loan or not, keeping in
+mind that unlawful discrimination needs to be avoided.
+Results show argumentation patterns that focus on
+discrimination or on real-world knowledge, the inﬂuence of task and human–computer interaction (HCI)
+design on argumentation, and differences in argumentation between high-performing and low-performing
+participants.
+In the second, conceptual, part of the article, we
+widen the view to consider further ways in which humans are involved in shaping the outcomes of systems
+involving data mining, and consider limitations on formalizing fairness or nondiscrimination. We then turn
+to the notion of accountability, which is currently intensively debated in connection with decisions involving computers. Informally speaking, this means that it
+should be possible to ‘‘hold someone/something to account’’ for decisions and outcomes.16 Thus, accountability is a property that complements the (utopian?)
+idea that it could be possible to ‘‘ﬁx’’ machine biases:
+an accountable data controller should be able to and
+
+BERENDT AND PREIBUSCH
+
+support the inspection, questioning, and ideally also
+rectiﬁcation of machine and other biases. This will
+often involve transparency, that is, the provision of
+the basis of decisions. We then discuss the principle
+of accountability set forth in the new European
+GDPR and explain why we consider this deﬁnition particularly useful for the current problem. Drawing on
+the results of our empirical study and our conceptual
+analysis, we then ask how mining software can help
+make decision makers accountable with respect to
+discriminatory biases.
+The twofold contribution and organization of the
+article are as follows. First, we present results from
+a user study that provide a detailed look at human
+decision processes in semiautomated decision-making,
+as they relate to discrimination (section ‘‘Results
+and Discussion: Decision Process’’; this builds on
+work summarized in the section ‘‘Computer-Assisted
+(Non-)Discriminatory Decisions with Data Mining?
+A User Study’’). Second, we highlight key aspects of
+the role of humans in the discriminatory outcomes
+from (semi-)automated decision-making to derive
+two data protection by design strategies to support accountable data processing, as deﬁned by the GDPR
+and applicable also beyond it (sections ‘‘The Role of
+Humans in Generating Discriminatory Outcomes of
+Data Mining, and the Limits of Formalization’’ and
+‘‘Toward Accountability with Respect to DiscriminationAware Decisions’’). The section ‘‘Conclusions and Future
+Work’’ concludes with design recommendations, limitations, and future work. The relevant literature comes
+from different areas and is woven into the text to enhance readability.
+To contextualize this content, we show, in Figure 1, a
+simpliﬁed overview of key actors, entities, and processes involved in decision-making. Consider ﬁrst the
+downward-pointing arrows. We focus on the human
+decision makers who make decisions by performing a
+decision process that yields some decision result. The
+experimental design assumes that there is a software
+tool that has mined data and computed analysis results,
+and keeping these constant, we investigate different
+ways in which a tool presents these results (section
+‘‘Design, materials, and method’’) and study the resulting decision processes (section ‘‘Results and Discussion:
+Decision Process’’). We argue throughout the article
+that most decision-making involves humans in this
+way, and we move from the HCI-centric perspective
+on such involvement to a more general (e.g., organizational and societal) one, see in particular sections ‘‘The
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+FIG. 1.
+
+137
+
+Actors, entities, and processes involved in data-based decision-making.
+
+Role of Humans in Generating Discriminatory Outcomes of Data Mining, and the Limits of Formalization’’ and ‘‘Accountability as a social relationship and
+as a data protection principle.’’ This is in contrast to
+classical DADM, which focuses on the dashed line describing cases in which software tools alone can make
+decisions, and/or regarding only algorithms and their
+outcomes.
+We also discuss a number of the upward-pointing arrows: that decision results may not only impact data
+subjects directly but also become data feeding into future mining and decision-making (sections ‘‘Data and
+data creation’’ and ‘‘Dynamics of data, decisions, and
+discrimination’’), and relevant aspects of how the law
+regulates data processing (sections ‘‘Decision-making
+is rarely fully automated,’’ ‘‘Limitations of formal measures of discrimination,’’ and ‘‘Accountability as a so-
+
+cial relationship and as a data protection principle’’).
+We then move back to a software- and HCI-centric
+perspective and ask how these legal requirements can
+inform the design of processing, focusing on the software tools (sections ‘‘Design strategies for accountability, and their limitation in the age of proﬁling’’ and
+‘‘Design strategies for accountability with respect to
+discrimination-aware decisions’’). We brieﬂy mention
+some of the other entities and processes (the inﬂuence
+of organizational context); the remaining ones are beyond the scope of the present article.
+The article complements an earlier publication,15
+whose conceptual part introduced the notions of
+constraint-oriented and exploratory DADM (summarized in the section ‘‘Design, materials, and method’’)
+and discussed the relative merits of these two forms
+of computing and presenting analysis results in the
+
+138
+
+BERENDT AND PREIBUSCH
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+light of how laws conceptualize discrimination (not
+surveyed here), and whose empirical part focused on
+the decision results (summarized in the section ‘‘Results
+and discussion: overview of decision outcomes’’).
+Computer-Assisted (Non-)Discriminatory
+Decisions with Data Mining? A User Study
+How do people make decisions with data mining? We
+investigated this question by focusing on a task discussed and modeled throughout the literature on
+discrimination and data mining: retail banking. This
+formed our ﬁrst experimental setting: a bank clerk
+tasked with preparing a loan decision and given the instruction to not discriminate against applicants. We
+also considered a second setting, which we had explored in a prior user study17: that of a person working
+in an antidiscrimination agency (ADA) looking into
+loan applications to check for possible occurrences of
+discrimination. Again, we assumed that this person
+would work with the results of data mining as a basis
+for their judgments.
+Our goal was to ﬁnd out whether a sanitization of the
+data mining algorithm would be sufﬁcient and necessary for avoiding discrimination, to investigate the
+
+inﬂuence of setting or task as well as HCI design (sanitizing vs. ﬂagging discrimination), and to study the
+reasoning and decision processes when working with
+data mining results.
+A ﬁrst analysis of data from this experiment was presented in the companion article.15 To keep the present
+article self-contained, in this section, we give an overview of the experiment’s design and method, as well
+as main ﬁndings, and refer the reader to that earlier article for details.
+Design, materials, and method
+We created experimental conditions that differed along
+two dimensions:
+
+ Setting (see Fig. 2)
+B Bank: participant assumes the role of a bank
+clerk
+B ADA: participant assumes the role of an ADA
+ Mining form (see Fig. 3)
+B cDADM: the standard, algorithm-focused approach of discrimination-aware and fairness-aware
+data mining, in which constraints deﬁne which discrimination to avoid and rules are sanitized.
+
+FIG. 2. The overall task descriptions for the settings Bank (a, c) and ADA (b, c), and the instructions against
+discrimination in the two settings (d). ADA, antidiscrimination agency.
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+139
+
+FIG. 3. The tool interfaces for (top left) cDADM, (top right) eDADM, and (bottom) DM. The visualization is
+identical between cDADM and DM, and the risk factors are identical between DM and eDADM. eDADM
+highlights rules with discriminatory features in red (second and fourth bar in the example). Identical
+visualizations were used for the Bank and ADA settings. DADM, discrimination-aware data mining.
+
+eDADM: an approach involving exploratory
+data analysis, which invites the user to explore the discriminatory components in rules to reach the desired
+decision outcomes. These components are highlighted
+visually.
+B DM: non-DADM data mining as a control condition.
+B
+
+This resulted in 2 (settings) · 3 (mining forms), that
+is, 6 experimental conditions. The settings were introduced to participants via instructions about how to
+use data-mining results for reaching decisions and instructions to avoid discrimination in the process
+(Fig. 2).
+Two hundred ﬁfteen participants were recruited over
+Amazon Mechanical Turk.{ They received USD 6.00
+for full participation and up to USD 1.50 as an additional performance-dependent payoff (bonus). To
+reduce cultural confounds, we recruited only U.S. participants. We also heeded factors that have been
+observed to drastically reduce the occurrence of
+cheating and increase data quality.18,19 We included
+attention-check questions whose cross-evaluation can
+help identify users who checked answer options ran{
+Participants gave informed consent to the collection and processing of their
+answers via the study’s Web interface.
+
+domly. All participants obtained a check score of at
+least 50% of the possible maximum. Further analyses
+of our results gave no indication of cheaters either.
+The participants, randomly and approximately
+equally distributed over the six conditions, were
+asked to consider a series of loan requests. They were
+given features of the request and the applicant, and
+provided with decision-supporting rules of a datamining tool that was ﬁctitious but based on the principles of the mining form. Bank participants were asked
+to decide whether to grant the loan or not, and to motivate their decision. ADA participants were asked to
+conclude whether they considered it likely that the
+loan would be granted or not, and to motivate their
+conclusion.
+The textual loan request description contained
+an equal number of applicant and request details for
+each example, with the applicant details comprising
+features considered legitimate and others considered
+discriminatory in the decision context (e.g., ‘‘Dabiku
+is a Kenyan national. [.] She has been employed as
+a manager for the past 10 years. She now asks for a
+loan of $10,000 for 24 months to set up her own business. [.]’’). The rules given as tool output referred to
+these and other features. The tool output consisted of
+visualizations of decision rules in an intentionally
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+140
+
+minimalistic way that follows the basic logic of the rule
+miners that inspired DADM. However, it does not perform the last step of calculating the scores that makes
+the miner decide between two classes (‘‘yes’’/‘‘no’’).
+This calculation was left as a task for the user. These visualizations were given in three versions to implement
+the three mining forms. Figure 3 shows an example.
+The ‘‘foreign worker’’ and ‘‘gender’’ attributes are highlighted in the dark red rules in eDADM, but do not appear in cDADM, where sanitization has led to different
+rule contents. The discriminatory content of rules can
+only be explored when it is there (in eDADM and
+not in cDADM). In principle, DM also allows for exploration, but due to its undifferentiated visual display,
+it does not actively encourage it.
+Participants solved three practice tasks with feedback
+and six assessed tasks. An exit questionnaire completed
+the study. First, we asked for impressions about the task
+and the tool. Subsequently, participants were asked for
+some basic demographics. Three-quarters of participants stated that they had ‘‘applied for a loan at least
+once in [their] life’’ (73%, validated by a reverse-coded
+question), with 50% of these having at least once been
+denied a loan. Also, 50% of all participants reported
+that they had ‘‘experienced discrimination in [their]
+own life,’’ and 59% reported having experienced it
+around them. These tended to occur together (r = 0.60
+overall, with 83% of those reporting ‘‘own’’ experience
+also reporting ‘‘other’’ experience, and 72% vice versa).
+We applied some simpliﬁcations when operationalizing the constructs to test the formalizations of discrimination used in today’s DADM, maximize experimental
+control, and make the tasks feasible for participants.
+First, we applied a simpliﬁed deﬁnition of ‘‘discrimination’’: we restricted the speciﬁed attributes to four (gender, marital status, nationality, and age), and declared
+any use of these attributes toward the decision as illegitimate discrimination, without exceptions. All other attributes were legitimate (e.g., see Fig. 3). Second, we
+wanted to avoid obtaining results confounded by the
+choice of any speciﬁc data mining algorithm. We therefore decided to implement only the key difference between cDADM and eDADM: whether to hide/remove
+or to highlight discrimination-indexed features in rules.
+Results and discussion:
+overview of decision outcomes
+We addressed the accuracy and actionability of the conclusions and the reasoning process. Decision quality
+was measured by the number of correct decisions and
+
+BERENDT AND PREIBUSCH
+
+motivations, that is, those that corresponded to the outcome of taking into account all legitimate features present both in the scenario and in the rules, their numerical
+weights in the rules, and nothing else. The results suggest that both constraint-oriented DADM and exploratory DADM support correct conclusions as well as
+reasoning and do so better than data mining without
+DADM support. They also showed that the ‘‘Bank’’
+task focused on preventing discrimination was supported better by the sanitization approach embedded
+in the cDADM interface, whereas the ‘‘ADA’’ task focused on detecting discrimination was supported better
+by the eDADM interface that focused on exploration
+and highlighting possible discrimination. We also
+found that features of the loan applicant that the datamining engine ﬁltered out, or even nonpresent features,
+were in some cases ‘‘reinserted’’ by the decision makers
+in motivating their choice. In the example of Figure 3,
+reinsertion occurs, for instance, when, given the sanitized rules, a participant refers to the applicant being
+a foreign worker. Thus, discriminatory reasoning may
+persist even when algorithms and results are sanitized.
+Details of the results, including the sizes and statistics
+of the effects, are contained in the companion article.15
+Results and Discussion: Decision Process
+The analysis summarized in the previous section focused
+on the task and the decision outcomes. As an indication
+of how people reasoned toward their decision, we analyzed the multiple-choice motivations regarding which
+actual and potential features of applicant and request
+were taken into account. In the experiment, participants
+were also encouraged to describe their reasoning in textual free form. Here, we focus on decision process as described in these comments, analyze their contents, and
+investigate possible determinants (setting, mining form,
+selected demographics), as well as the relationship with
+decision outcomes. This will help to better understand a
+feature of decisions that is key for accountability: how
+decision makers explain and justify their conduct. In
+the section ‘‘Toward Accountability with Respect to
+Discrimination-Aware Decisions,’’ we will situate the
+explanation and justiﬁcation of conduct in the context
+of a comprehensive deﬁnition of accountability, and
+discuss implications of our results.
+Argumentation features
+One hundred eleven participants gave comments
+explaining their decisions and motivations. For each
+participant who had commented in any way, the
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+141
+
+Table 1. Distributions of argumentation features over comments
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+Comments with that many distinct features
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+10
+
+17
+
+30
+
+22
+
+17
+
+12
+
+1
+
+2
+
+comments on all the assessed tasks were concatenated.
+On average, these concatenated comments were 66
+words (375.2 characters) long, ranging from two
+words (‘‘too risky’’ for task 1) to a detailed account
+for each task of a total of 220 words.
+After a ﬁrst reading of all comments and a discussion
+about relevant features, we settled on the following features to be coded in a binary manner (present or absent).
+Each involved the mentioning of speciﬁc information.
+Except in obvious cases (NAME, OTHER_FEATURES,
+WEIGHTS, META), we also list sample words that
+were used for coding instructions.
+1. Who?
+ I: The participant in a ﬁrst-person narrative
+(e.g., ‘‘I,’’ ‘‘me’’)
+ YOU: The reader or a ﬁctitious dialogue partner who is given advice (e.g., ‘‘you’’)
+ NAME: The name of the person described (the
+loan applicant)
+2. What?
+ DISCRIMINATION: Discrimination as such
+(e.g., ‘‘discrimination,’’ ‘‘discriminatory’’)
+ DISC_FEATURES: Discriminatory features of
+the applicant, speciﬁcally, age, gender, nationality, or family status (including obvious synonyms or labels)
+ OTHER_FEATURES: Other features of the applicant or the application
+3. Why?
+ WEIGHTS: Numerical weights as given by the
+data-mining results, with an explicit comparison
+between positive and negative weights (e.g.,
+‘‘outweigh,’’ ‘‘more than,’’ ‘‘stronger,’’ ‘‘higher’’)
+ WORLD_KNOWLEDGE: Real-world knowledge beyond the data mining tool’s rules was referred to (e.g., ‘‘unreliable job’’).
+ CAUSAL: Reasoning, establishing a causal relationship (e.g., ‘‘because,’’ ‘‘since,’’ ‘‘so’’)
+4. META: A meta-comment on the task was given.
+Two coders independently classiﬁed each comment
+with these features. A comparison showed that there
+was disagreement on 9% of the labels (103 of 1110 =
+111 participants · 10 variables). Cohen’s kappa per feature indicated a reasonable (0.77) inter-rater agreement
+
+for WORLD_KNOWLEDGE and a good to very good
+one for the remaining features, ranging from 0.83
+(CAUSAL) to 0.99 (NAME). In a discussion round, all
+cases of disagreement were resolved, and the resulting
+consensus matrix was used in further analyses.
+The argumentation styles were well distributed over
+the comments, and most comments included several
+argumentation styles, as shown in Table 1. Ten comments were not labeled with any code; these consisted
+only of ‘‘no’’s ( = ‘‘I have no comments’’) and/or of nonpertinent remarks.
+The most frequent types of reasoning involved
+OTHER_FEATURES of the loan application or applicant: 46.8% of the comments. This was to be expected
+given the feature-centric descriptions, the data-mining
+results and the questions, as well as the instruction to
+not make decisions based on discriminatory features.
+Many participants made it explicit that and how they
+had made a decision (I: 43.2%); only 3.6% gave advice
+to another decision maker (YOU). This may have been
+encouraged by the question that addressed the participant personally. DISCRIMINATION and DISC_
+FEATURES were mentioned by 31.5% each. The
+loan applicant him/herself receded behind his/her
+features: a NAME was only mentioned in 17.1% of
+comments.
+31.5% of the comments explained a decision made
+in terms of WORLD_KNOWLEDGE, which was sometimes at odds with the results of the ﬁctitious data-mining
+engine. 27% explained a decision in terms of these results,
+referring to the WEIGHTS and comparing them explicitly. 9.9% used CAUSAL reasoning that indicated
+they diverged from purely following the (correlational)
+data-mining results, explaining their reasoning in detail.
+19.8% gave META comments. Figure 4 shows examples.
+To identify possible patterns, we inspected the results
+manually and calculated pairwise Fisher’s exact test of independence.{ Due to the large number of comparisons
+and the ex-post nature of the comparisons, the signiﬁcance results must be interpreted with care, but they
+still serve to identify relevant ﬁndings. Throughout
+sections ‘‘Argumentation patterns,’’ ‘‘The inﬂuence of
+mining form and setting on argumentation,’’ and
+{
+
+Using www.langsrud.com/ﬁsher.htm
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+142
+
+BERENDT AND PREIBUSCH
+
+FIG. 4. Sample comments from two participants in mining form eDADM. Settings and argumentation feature
+coding, in bold font: (a) Bank; NAME, DISC_FEATURES, OTHER_FEATURES, DISCRIMINATION, WEIGHTS. (b) ADA;
+I, OTHER_FEATURES, WEIGHTS, WORLD_KNOWLEDGE, CAUSAL. (Each paragraph refers to one task).
+
+‘‘Demographic features and argumentation,’’ we use an
+error level of a = 0.05 and distinguish between (**) signiﬁcant after a Bonferroni correction for all tests in
+Tables 2 and 3, and (*) signiﬁcant without the Bonferroni correction.
+The results (total numbers) are shown in Table 2,
+and co-occurrences are described in the text. All pairwise relationships not described in the text were nonsigniﬁcant.
+Argumentation patterns
+To identify possible argumentation patterns, we considered co-occurrences of argumentation features.
+The results are shown in Table 2.
+
+DISC_FEATURES and DISCRIMINATION were
+often mentioned together (**), as were OTHER_
+FEATURES and WORLD_KNOWLEDGE (**). All comments involving WORLD_KNOWLEDGE also involved
+OTHER_FEATURES, but not vice versa. These appeared
+to be characterizing two modes of reasoning, with DISCRIMINATION and WORLD_KNOWLEDGE being
+disassociated with each other (**). The same relationship
+resurfaced in dissociative relationships between OTHER_
+FEATURES–DISCRIMINATION and DISC_FEATURES–
+WORLD_KNOWLEDGE (both *). CAUSAL reasoning
+tended to be associated with OTHER_FEATURES (*)
+and with WORLD_KNOWLEDGE, although the latter
+was nonsigniﬁcant.
+
+Table 2. Argumentation features forming patterns
+Forming patterns
+
+Total
+NAME
+I
+YOU
+DISC_FEATURES
+OTHER_FEATURES
+DISCRIMINATION
+CAUSAL
+WEIGHTS
+WORLD_KNOWLEDGE
+M
+
+NAME
+
+I
+
+19
+
+48
+10
+
+YOU DISC_FEATURES OTHER_FEATURES DISCRIMINATION CAUSAL WEIGHTS WORLD_KNOWLEDGE M
+4
+1
+2
+
+35
+8
+20
+2
+
+52
+13
+26
+3
+14
+
+35
+8
+19
+2
+21
+8
+
+11
+5
+7
+0
+3
+9
+3
+
+30
+6
+15
+2
+11
+15
+11
+5
+
+35
+7
+19
+2
+4
+35
+1
+7
+7
+
+22
+3
+8
+2
+4
+10
+3
+2
+5
+7
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+143
+
+Table 3. Argumentation features in relation to (left) setting and mining form; (right) demographics
+Setting
+
+Total
+NAME
+I
+YOU
+DISC_FEATURES
+OTHER_FEATURES
+DISCRIMINATION
+CAUSAL
+WEIGHTS
+WORLD_KNOWLEDGE
+M
+
+Mining form
+
+Experience of discrimination
+
+Bank
+
+ADA
+
+cDADM
+
+eDADM
+
+DM
+
+61
+10
+25
+2
+16
+29
+13
+8
+14
+23
+15
+
+50
+9
+23
+2
+19
+23
+22
+3
+16
+12
+7
+
+38
+5
+11
+2
+5
+22
+2
+3
+14
+13
+11
+
+41
+9
+23
+2
+16
+16
+20
+5
+11
+11
+6
+
+32
+5
+14
+0
+14
+14
+13
+3
+5
+11
+5
+
+Total
+NAME
+I
+YOU
+DISC_FEATURES
+OTHER_FEATURES
+DISCRIMINATION
+CAUSAL
+WEIGHTS
+WORLD_KNOWLEDGE
+M
+
+Own
+
+Other
+
+Loan denied
+
+48
+13
+22
+2
+17
+22
+13
+5
+14
+14
+12
+
+63
+11
+31
+2
+21
+32
+18
+5
+16
+21
+13
+
+44
+9
+17
+0
+14
+16
+13
+4
+12
+10
+6
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+ADA, antidiscrimination agency; DADM, discrimination-aware data mining.
+
+Names of loan applicants were accompanied less
+often by this person’s discriminatory features (in 8/19
+cases). NAMEs of loan applicants and CAUSAL reasoning tended to be disassociated (*).
+We group these ﬁndings into the two pattern groups.
+44.5% of all comments were discrimination-centric
+(DISC_FEATURES, DISCRIMINATION or both),
+and 47.3% were ﬁnancial-logic-centric (OTHER_
+FEATURES, WORLD_KNOWLEDGE or both).
+13.6% of all comments included both styles of reasoning (DISC_FEATURES or DISCRIMINATION,
+coupled with OTHER_FEATURES and WORLD_
+KNOWLEDGE).
+The inﬂuence of mining form
+and setting on argumentation
+We investigated the possible inﬂuence of the experimental treatments on argumentation, with results
+shown in Table 3 (left).
+The mining form inﬂuenced the style of reasoning:
+in eDADM, about half of the commenting participants
+in the eDADM treatments referred to discrimination,
+more than in DM, which in turn was more than in
+cDADM (mining form—DISCRIMINATION: **). Discriminatory features were also mentioned more often
+in eDADM than in cDADM; but interestingly, they
+were mentioned most often in DM (mining form—
+DISC_FEATURES: *). This may be interpreted as
+showing that eDADM made participants more aware
+of the need to avoid or detect discrimination, but
+DM made it more necessary to pay attention to the detailed features (because these were not ﬂagged by the
+interface). This attention to features did, however,
+not lead to better results; instead, the decision quality
+was best in eDADM.15 The observation that discrimination and discriminatory features were mentioned
+
+less often in cDADM is probably a result of the fact
+that no discriminating features were shown in the ﬁctitious data-mining results in the cDADM treatment.
+Loan applicants’ names were also mentioned more
+often in eDADM than in DM and in turn in cDADM,
+which may indicate that eDADM makes it easier to relate to the applicant as a person rather than a case. However, this relationship was not statistically signiﬁcant,
+and it may also be an effect of other factors.
+The setting also had an inﬂuence: ADA made it more
+likely that discrimination was mentioned (setting—
+DISCRIMINATION: *), which could be interpreted
+to mean that the clerk in the ADA setting had one
+goal (to detect cases of discrimination), whereas the
+clerk in the Bank setting also had the business goals
+of their bank to take into account.
+Demographic features and argumentation
+We also investigated the relationship between selected
+demographic variables and argumentation. We focused
+on ‘‘own experience of discrimination,’’ ‘‘discrimination of others experienced,’’ and ‘‘having had a loan denied in the past,’’ each of which were quite evenly
+distributed in the respondent population. The results
+are shown in Table 3 (right).
+Participants with ‘‘own experience’’ tended to mention loan applicants’ NAMEs more often (*).
+Some further relationships did not reach statistical
+signiﬁcance, but we mention them as interesting descriptive statistics of our observations. Participants with
+‘‘other experience’’ tended to express more ‘‘ﬁrst-person
+messages’’ than seemingly objective messages (other experience—I: p = 0.2) and refer more seldom to the applicants. Having had a loan denied in the past may be
+associated with less attention to OTHER_FEATURES
+and WORLD_KNOWLEDGE reasoning (however,
+
+144
+
+BERENDT AND PREIBUSCH
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+each only had p = 0.1)—styles of argumentation that
+these participants may have experienced in their own
+unsuccessful past attempts at getting a loan.
+Argumentation and decision outcomes
+Finally, we investigated whether patterns could be
+found linking certain argumentation features to outcomes. First, the participants who did make comments
+scored better than those who did not (average numbers
+of correctly solved tasks were 4.4 vs. 3.9, p < 0.05 on a
+two-tailed t-test). This indicates that reﬂection per se
+may have a beneﬁcial effect on making less discriminatory decisions, although we cannot be sure of the causal
+structure.
+With regard to argumentation styles, it is difﬁcult to establish a cause–effect relationship, and in addition, the
+high number of variables and the cardinal scale level of
+outcomes make statistical tests difﬁcult to apply. We
+therefore limit ourselves to a descriptive search for possible patterns of argumentation by more or less successful
+decision makers. Figure 5 shows the result.
+The results indicate that successful solvers (ﬁve or six
+correct) tended to focus on the numerical WEIGHTS
+and their high-level task to avoid or detect discrimination, and they paid attention to DISC_FEATURES.
+Less successful solvers (three or four correct, and in
+particular one or two), in contrast, were led by
+WORLD_KNOWLEDGE reasoning with OTHER_
+
+FEATURES and tended more than the others to consider the applicant as a person (NAME); they tended
+to focus less on discrimination as a topic or as features
+(DISCRIMINATION, DISC_FEATURES).
+In sum, task as well as HCI choices had an impact on
+reasoning, and outcomes were linked to different foci
+in the comments. The statistically weak relationships
+between demographic background and comment contents should be investigated in future work.
+The tasks and HCI choices we studied were designed
+to model prototypical conditions, in which decision makers and their organizations have to (be able
+to) explain and justify their conduct as part of being
+accountable for it. Our results indicate that the tasks
+and HCI choices have an impact, via their inﬂuence
+on human computer-assisted decision-making, both
+on decision outcomes (section ‘‘Computer-Assisted
+(Non-)Discriminatory Decisions with Data Mining?
+A User Study’’) and on explanations and justiﬁcations
+(section ‘‘Results and Discussion: Decision Process’’)
+and should therefore be investigated carefully in technological and process decisions that aim at reducing or
+avoiding discrimination. The question arises whether
+there are further dimensions along which human inﬂuences and inﬂuenceability can contribute to less (or
+more) discrimination in connection with data mining.
+After a conceptual investigation of this question in the
+following section ‘‘The Role of Humans in Generating
+Discriminatory Outcomes of Data Mining, and the Limits of Formalization,’’ we will derive, from an integrated
+view of these results, proposals for designing for accountability in the section ‘‘Toward Accountability
+with Respect to Discrimination-Aware Decisions.’’
+The Role of Humans in Generating
+Discriminatory Outcomes of Data Mining,
+and the Limits of Formalization
+In the previous sections, we have investigated the direct
+involvement of human decision makers in data-based
+decisions and investigated factors related to task and
+HCI factors. However, humans are involved in data
+mining at other levels too. These will be investigated
+in this section.
+
+FIG. 5. Proportion of participants who argued
+with the help of each of the features.
+
+Data and data creation
+The role of data and the potentially discriminatory outcomes (‘‘disparate impact’’) produced by the interaction of ‘‘harmless’’ or ‘‘neutral’’ algorithms and data
+fraught with biases have been shown by analysis5 and
+many examples, as illustrated in the ‘‘Introduction’’
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+section. More often than not, it is humans generating
+these data, as when search-engine users create an association between black-sounding names and searches
+for criminal records (this is one possible reason3) or
+searching often for ‘‘women shouldn’t vote’’ (which
+then became an auto-completion proposal7), or Twitter
+users ‘‘training’’ a bot to make racist jokes.20 In predictive policing applications, where algorithms are often
+praised for being more ‘‘objective’’ than people, data
+on crimes are generated where police have searched
+for these crimes in the past, which can bias recommendations for future searches.21
+The ‘‘sanitization’’ of data is an approach alongside
+the ‘‘sanitization’’ of algorithms (see the classiﬁcation
+of approaches22). Such data/result modiﬁcations are
+possible when one knows what to avoid (such as
+using gender or ethnicity as features, and outcomes
+such as loan decisions or insurance premiums as the
+target variable), or when indirect discrimination can
+be detected by correlational analysis of attributes
+(such as location of residence as a proxy for ethnicity or poverty22–25). Even when the problem is clear,
+the detection of discrimination is often not straightforward and requires a whole knowledge discovery
+process.26
+However, it is impossible for an algorithm designer,
+or even a search-engine provider with access not only
+to algorithms but also to rich data, to expect (and remedy a priori) all possible relationships between, for
+example, all words referring to a protected group on
+the one hand and all phrases denying this group their
+rights or ascribing them negative properties. Also,
+even the automated detection of learned discriminatory associations would require a human-level artiﬁcial
+intelligence. Barring ‘‘associations’’ as such, on the other
+hand, would preclude adaptivity and personalization of
+services. This trade-off remains an open problem.
+Dynamics of data, decisions, and discrimination
+Vicious circles have been recognized as major contributors to discrimination for a long time, from Myrdal’s
+classic study on U.S. racial inequalities27 to current investigations of discrimination against Muslims in
+Europe.28 Myrdal described the ‘‘cumulative causation’’
+in which prejudices of white populations and low living
+standards of black populations reinforce each other in a
+downward spiral: prejudice leads to institutional discriminatory processes, which lead to deteriorating standards of living, which feeds prejudice, and so on. Thus,
+decisions often arise from hard-to-break ‘‘entire net-
+
+145
+
+works of rules and practices [that disadvantage] less
+empowered groups’’ known as structural or institutional
+discrimination.5 At any point in the chain, there may or
+may not be intent to discriminate—good intentions are
+immaterial for the outcome when viewed through the
+lens of disparate impact. Today, ‘‘data’’ about individuals assume part of the role of ‘‘living conditions.’’
+One part of these dynamics is that discrimination
+solidiﬁes into data as described in the section ‘‘Data
+and data creation,’’ but the dynamic nature of the process makes it much harder to detect this. For instance,
+‘‘applicant has no collateral’’ may have been identiﬁed
+as a factor against granting a loan by an algorithm.
+Even if one detects that it is correlated with membership in a protected group, it appears to be a perfectly
+legitimate factor in the banking domain and thus
+should not be blocked by algorithmic safeguards
+against indirect discrimination; it becomes ‘‘explainable
+discrimination.’’29–31 At the microlevel of the individual loan decision, the resulting differential treatment
+appears ‘‘rational.’’32 However, at the macrolevel, one
+may ﬁnd discriminatory dynamics.
+Consider two examples. First, there is evidence that
+people with bad credit scores (presumably because
+of reasons such as missing collateral), that is, people
+who are likely to not get loans from the traditional
+banking sector, turn to payday loans. These not only
+impoverish applicants further by higher interest rates,
+the data feature that ‘‘this individual has had a payday
+loan’’ also negatively impacts the individual’s future
+credit score.33 Similar dynamics may play out, second,
+in the domain of research funding, in which evidence of
+discrimination against female researchers was found.26
+As a result of such funding decisions, female researchers will have less research funding—a data item that
+often negatively impacts future funding decisions.
+Complicating matters further, dynamics can create
+new discrimination grounds, intersectionality and pluridimensional discrimination, phenomena that generally defy the algorithmic detection and prevention of
+discrimination.15
+Cumulative causation can also work toward improvement, via virtuous circles, and this thesis has inﬂuenced major policy decisions such as the desegregation
+of schools in the United States. Vicious and virtuous circles are also consistent with European explanations of
+and concepts against discrimination.28,x A necessary
+x
+Myrdal’s optimism as well as his belief in the strength of the moral basis needed to
+overcome racial inequality in the United States, on the other hand, has been more
+controversial.34,35
+
+146
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+prerequisite for such attempts at remediation is to
+notice and understand the dynamics of cumulative
+causation. This ﬁrst should draw on the huge body
+of knowledge from the social sciences.32 However,
+the study of manifestations of discrimination in data
+has only just begun (if only because ‘‘Big Data’’ itself
+is a relatively recent phenomenon). Computer science
+can contribute tools for exploratory and interactive
+data analysis, and the understanding that phenomena
+may need repeated and iterative analysis.
+Decision-making is rarely fully automated
+Even if we differentiate between the roles of data and
+algorithms and account for their interactions, which
+of the decisions referred to in the introduction, and
+similar ones, are actually made in a fully automated
+way? The serving of search-engine results may be
+one example, although even here, decisions to censor
+certain content must be ‘‘manually’’ programmed,
+for example, as exceptions. However, most real-life
+decision-making is not purely algorithmic, but computer assisted.
+The claim of less-than-full automation is, ﬁrst, descriptive. It follows from the observation that discrimination can not only result from the application of ‘‘the
+data-mining algorithm’’ to ‘‘the data’’ (e.g., through the
+reproduction of biased associations, see the section
+‘‘Data and data creation’’) but also from the deﬁnition
+and selection of features, target variables, and labels, as
+well as the collection of data.5 In other words, discrimination can result from decisions along the whole process
+of knowledge discovery. In domains such as the justice
+sector, automated risk assessments regularly are—and
+must remain—input to human decisions. However,
+what about domains such as banking and insurance?
+EU data protection law requires forms of involving
+humans in decisions in a normative way in Article 22
+GDPR: ‘‘The data subject shall have the right not to
+be subject to a decision based solely on automated processing, including proﬁling, which produces legal effects concerning him or her or similarly signiﬁcantly
+affects him or her.’’ In the—permitted—exceptions to
+this general rule that are relevant to our discussion (decisions necessary for contract or based on data subject
+consent), ‘‘the data controller shall implement suitable
+measures . [giving the data subject] the right to obtain human intervention on the part of the controller,
+to express his or her point of view and to contest the
+decision.’’ A similar combination of prohibition, exceptions, and requirements of safeguards is already con-
+
+BERENDT AND PREIBUSCH
+
+tained in current law, Article 15 of the EU Directive
+95/46/EC.**
+The reasoning toward this provision reﬂected, long
+before ‘‘Big Data,’’ the same concerns about unbridled
+fully automated decision-making as those summarized
+in sections ‘‘Introduction’’ and ‘‘Data and data creation.’’ Further arguments concerned legal or ethical responsibility and the roles of data subject and data
+controller: the former should remain a participant in
+a decision concerning him or her, the latter should
+not abdicate responsibility.36 Whether and what protection against out-of-control algorithmic power this
+actually offers has been controversial.36
+Investigating uses of Article 15 (using the example of
+Germany, since a full exploration was beyond the scope
+of this article), we saw that only two court judgments{{
+have actually referred to x 6a Bundesdatenschutzgesetz
+(BDSG), the implementation of Article 15 in the
+Directive—and that they found it inapplicable. The
+complaints concerned the expected main use case of x
+6a: loan decisions. In both cases, the question was
+whether scores produced by the major German credit
+scoring agency constitute an example of ‘‘automated individual decision-making’’ and are therefore contestable
+under x 6a. The courts ruled in both cases: The loan decision procedure is not fully automated, because it is not
+a unitary decision but one composed of parts.37,38 The
+score is only an ‘‘expression of opinion’’ (not a ‘‘fact’’{{).
+In a knowledge discovery in databases (KDD) sense,
+this means that a bank deploys human discretion to use
+the scores in some way—which conﬁrms the descriptive
+claim made above.
+Another important type of data processing does not
+fall under x 6a BDSG: the compilation of candidate lists
+for job interviews39—the signiﬁcant individual decision
+is the decision to hire someone or not, the shortlist is
+but a preparation for this decision. It should be obvious
+after the section ‘‘Dynamics of data, decisions, and discrimination ’’ that such interpretations become dubious
+when a large proportion of job applications are never
+seen by a human (an estimate about the United States
+is 72%40) and people get continuously ‘‘redlighted,’’
+that is, deselected, based on (maybe the same) undisclosed criteria. However, for the present purposes they
+**There are some differences between the two Articles, irrelevant for the current
+argument and thus omitted for brevity.
+{{
+As determined by a search on the pertinent legal portal, juris.de
+{{
+For this reason, the agency is also allowed to not disclose its formula (this was
+ruled in a different judgment), and the differential treatment that was the
+original motivation of the ﬁrst court case does not constitute gender
+discrimination.
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+serve to highlight the multitude of ways in which humans
+are and remain involved in decisions involving data.
+Article 22 and its predecessors do not prohibit the
+use of automated individual decisions. Instead, Article
+22 entitles individuals to hold data processors to account
+for such decisions and demand a human intervention:
+data subjects have the right to ask for and obtain an explanation of the decision, to enter into a conversation
+in the sense of putting their own point of view forward,
+and to contest the decision. Under the GDPR, data subjects are also entitled to ask for and obtain an explanation of the logic behind processing [Article 15 1 (h)].
+Limitations of formal measures of discrimination
+The Aristotelian principle ‘‘treat equal things equally
+and unequal things unequally’’ stands behind nondiscrimination laws. If one had a formal measure of equality, a test would be able to determine automatically
+whether this principle was followed. However, it is extremely difﬁcult in practice to ﬁnd such measures. In
+addition, satisfying one formal notion of fairness may
+mean violating another.41
+Intended to regulate human societies, laws are not formal rules, but require interpretation in the respective
+contexts. This can present a challenge for data-based
+modelling. First, equal feature values (of individuals
+and of treatments) suggest equality. However, a failure
+to apply differential treatment may constitute discrimination. For example, requiring all employees to enter the
+workplace building by a staircase can discriminate
+against people in wheelchairs. Conversely, differential
+treatment may constitute no discrimination when it is
+justiﬁed by a legitimate aim and the means of achieving
+that aim are appropriate and necessary (‘‘proportional’’).
+Data as representations of what individuals are may
+fail for a second reason. Consider a recent court case
+that ruled that it had been discriminatory to treat an
+unmarried homosexual couple equally to unmarried heterosexual couples (the non-EU partner was denied a residence permit on family grounds).42 The court argued
+that a heterosexual couple can get married (and thus
+change its feature value relevant to this domain),
+whereas at the time and place under consideration, a
+homosexual couple was not able to do so. The judgment
+not only shows the importance of counterfactual reasoning (which may be amenable to artiﬁcial intelligence
+(AI) reasoningxx), it also shows how nondiscriminaxx
+‘‘Counterfactual fairness’’ is a recent research direction exploring similar issues,
+see www.turing.ac.uk/research_projects/counterfactual-fairness
+
+147
+
+tion interacts with other fundamental rights such as
+autonomy and agency.
+It is difﬁcult and maybe impossible to preview all such
+considerations and formalize them. Again, human intelligence can be brought to bear better through exploratory
+analysis tools. Such tools constitute an important component of the approach that we will sketch in the following
+section.
+Toward Accountability with Respect
+to Discrimination-Aware Decisions
+Given the risks of data-based decision-making and the
+importance of humans in the related processes, how
+can data subjects’ rights be strengthened? In the
+‘‘Bank’’ setting of the user study, the bank had the task
+of taking measures to ensure that its mining-based decisions do not violate antidiscrimination requirements.
+The ‘‘ADA’’ setting presumed another task of the bank:
+that of supplying the authority with documentation of
+its data processing (here: the data-mining rules, as in
+Fig. 3). This enabled the authority to perform its task
+of monitoring the bank’s compliance; the ADA setting
+modeled this task. In addition to, and in preparation
+of, such external monitoring, internal monitoring is
+useful and could be mandated legally.
+Accountability as a social relationship
+and as a data protection principle
+These two tasks instantiate the principle of accountability
+as deﬁned by Articles 5 (2) and 24 of the GDPR on the
+responsibility of the data controller: ‘‘the controller shall
+implement appropriate technical and organisational
+measures to ensure and to be able to demonstrate that
+processing is performed in accordance with this Regulation.’’ Accountability is also a requirement in other common data protection guidelines, in particular the OECD
+Guidelines43 or the ISO/IEC 29100 standard,44 and
+in some national laws (e.g., Canada45). However, the
+term’s meaning remains contested and often vague.45,46
+Bovens46 provided a clear operationalization (and an
+in-depth discussion): ‘‘A relationship qualiﬁes as a case
+of accountability when there is a relationship between
+an actor and a forum, in which the actor is obliged to
+explain and justify his conduct, the forum can pose
+questions, pass judgement, and the actor may face
+consequences.’’*** For the present purposes in which
+***We believe that the consequences, which may be sanctions as well as rewards,
+constitute an essential component of accountability: the incentive to comply. It is
+for this reason that we believe true accountability can only be a property of people
+or organizations that in turn internally make people accountable, and not of
+algorithms.
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+148
+
+accountability stands in relation to a norm, we propose
+to add that the conduct is relative to the norm and that
+the actor also, and in general before the other activities,
+has to report on the conduct.
+EU data protection law has so far contained, implicitly, elements of accountability, such as the data controller (the actor) being responsible for informing
+data subjects about processing and correcting inaccuracies in data if requested. The possibility for individuals
+to hold the controller to account (section ‘‘Decision
+making is rarely fully automated’’) is another example
+in which the forum is the data subject. The motivation
+for including an explicit principle of accountability
+into the GDPR was the perception that such implicit
+requirements to be accountable, as well as other data
+protection requirements, were not put into practice
+sufﬁciently. While data processors were under meaningful obligations and may have, internally, put in
+place meaningful policies designed to meet these obligations, this did not ensure that they actually acted accordingly.47 The principle of accountability of the
+GDPR aims to overcome this problem. Here, data protection authorities are the forum, and they are generally
+likely to be in a stronger position to monitor and enforce compliance than data subjects. Through Article
+5, the GDPR emphasizes (a) responsibility (and therefore people) as an essential element of accountability
+and (b) that transparency and accountability require
+each other, but are not identical.
+Design strategies for accountability,
+and their limitation in the age of proﬁling
+Requirements to comply with rules, and, maybe even
+more strongly, requirements to ensure and demonstrate that one complies with rules, are more effective
+when these considerations are built, from the start,
+into policies, procedures, practices, and last not least
+products. To further strengthen data protection, the
+GDPR therefore requires data controllers to apply
+data protection by design (Article 25). Methodologies
+for designing software and systems in this way have
+been and are being developed actively (see, e.g., a
+recent proposal and overview).48 Hoepman49 has provided a useful analytical complement to such procedural methodologies: to use the principles of the
+GDPR as high-level design goals and the wealth of
+existing privacy-enhancing technologies (PETs) as
+possible implementations. This gulf is bridged by design strategies and design patterns as increasingly concrete steps.
+
+BERENDT AND PREIBUSCH
+
+Speciﬁcally for the principle of accountability, Hoepman formulates two design strategies:
+1. ENFORCE: A privacy policy compatible with
+legal requirements should be in place and should
+be enforced.
+2. DEMONSTRATE: The controller is required to
+demonstrate compliance with the privacy policy
+and legal requirements.
+He then lists typical design patterns for the two strategies, such as access control and sticky policies for
+ENFORCE and logging and auditing for DEMONSTRATE, and gives sample PETs.
+However, these strategies, patterns, and PETs focus
+strongly on those threats that classical data protection
+is concerned with: the wrong people (for the wrong
+purposes, at the wrong time, .) get access to data.
+This focuses on the data as they are and the knowledge
+about single individuals as encapsulated in a data point
+about this individual. With data increasingly being
+used to make inferences, the threat changes to also encompass inferred knowledge (e.g., ‘‘proﬁles’’), which
+may (a) derive from data about other individuals, (b)
+be based on data that was anonymized in sophisticated
+ways and otherwise handled in compliant ways, and (c)
+that has harmful effects on groups, whereas Article 22
+and others only protect individuals. The requirement
+to protect against harms, including discrimination arising from proﬁling, is therefore not covered adequately.
+Design strategies for accountability with respect
+to discrimination-aware decisions
+As sections ‘‘Computer-Assisted (Non-)Discriminatory
+Decisions with Data Mining? A User Study,’’ ‘‘Results
+and Discussion: Decision Process,’’ and ‘‘The Role of
+Humans in Generating Discriminatory Outcomes of
+Data Mining, and the Limits of Formalization’’ have
+shown, nondiscrimination can neither be enforced
+nor demonstrated by software means alone, and it
+is difﬁcult, if not impossible, to prove the absence of
+discrimination. We therefore propose two new design
+strategies with a wider scope of corresponding design
+patterns:
+PREVENT-D speciﬁes that technical and organizational measures that avoid discrimination should be
+in place and be enforced. This design strategy is implemented by design patterns consisting of the following.
+
+ Formal and algorithmic means to ensure discrimination/fairness awareness (data mining used in a
+predictive manner),
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+ HCI choices to support discrimination-aware
+decision-making,
+ Recursively, implementations of the design
+strategy DEMONSTRATE-ND to ensure that
+(1) the data operated upon and (2) the data generated as a result encode as little discrimination
+as possible.
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+DEMONSTRATE-ND requires the controller to
+demonstrate that given the available knowledge, no discrimination (as speciﬁed by the agreed-upon measures
+and thresholds) can be detected. This design strategy is
+implemented by design patterns consisting of the following.
+ Formal measures of nondiscrimination/fairness
+applied in data mining used in a descriptive manner,
+ Tools and KDD processes for discrimination discovery and exploratory discrimination discovery,
+ HCI choices to support the detection of possible
+discrimination.
+Conclusions and Future Work
+We conclude with recommendations for design, important limitations of our method, and ideas for future
+work. The discussion extends elements of Figure 1: the
+ways in which laws—and also other norms and values—can inform design, how mining results should be
+presented, and which decision makers’ behavior we
+should investigate.
+Recommendations for design
+Data controllers must perform different tasks to avoid
+discrimination and comply with data protection law.
+Our study has shown that different tasks are better supported by different interface choices, that the tasks
+as well as the interfaces draw attention to different
+features of the problem, and that verbalizing argumentation per se, as well as different argumentation patterns, were associated with different outcomes. This
+suggests that sanitization versus ﬂagging and highlighting should be used in interfaces depending on the task,
+and nudges or requirements to verbalize used to encourage reﬂection.
+Interactive decision-support tools can support such
+reﬂection and help avoid that unconscious bias unwittingly re-enters decision-making. We have made a ﬁrst
+proposal for a visualization tool that supports the multiperspective exploration of a decision data set for pos-
+
+149
+
+sible discrimination, and demonstrated in a user study
+that this form of presentation and interaction can help
+human decision-making.17 However, design was informed only by general HCI considerations, and it
+was constant across tasks.
+One design pattern, which implements the strategy DEMONSTRATE-ND and thereby also helps
+PREVENT-D, is an admissibility test of new features.
+When a human decision maker considers taking into
+account a feature that the data-mining engine did not
+use (e.g., the ‘‘unreliable job’’ referred to in section
+‘‘Argumentation features’’), tools could check whether
+there is organization-internal or organization-external
+knowledge that signals that this must not be used.
+This knowledge could, for example, be guidelines or
+statistics that show how using this new feature would
+amount to indirect discrimination because it is correlated with an explicitly protected ground, and use the
+available detection algorithms for such indirect discrimination. The knowledge could also be a reminder
+of the fact that a particular piece of information, such
+as health or pregnancy status, must not be asked. To
+enhance the detection capabilities, third-party data
+sets could be integrated into the analysis. This requires
+well-designed interactions between human intelligence, machine intelligence, and organizational measures that encourage the reﬂection needed in the ﬁrst
+step (realizing and making explicit the consideration
+of a certain feature), the analytics in the second step
+(and the enforcement of their use), and the action
+upon the results in the third step (discouraging/preventing the use of features found to be inadmissible, accountable documentation, and management of the
+process). The ﬂipside is that such searches could also
+help ﬁnd better proxies to mask discrimination. Empirical evaluations will be needed to determine whether
+such processes are effective and efﬁcient.
+Extension by further notions of accountability
+The strategies should be combined with others for data
+protection by design. Interaction with tools could be
+logged, thereby enhancing the accountability of the
+whole process (strong accountability50). Logging
+could automatically generate raw forms of report of
+the consultation session that help demonstrate that
+possible problems were checked and policies and procedures complied with (the account to be given16).
+However, logging itself creates new personal data and
+thereby poses new challenges. Note that all these software approaches are technical measures that cannot
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+150
+
+alone ensure accountability (including responsibility).
+They need to be complemented by organizational measures to make the law inform the design of processing
+in Figure 1.
+Future work should also investigate the relationships
+with further notions of accountability. It is impossible
+to survey this wide ﬁeld here, so we will focus on links
+to resource collections. These include www.information
+accountability.org and algorithmic accountability (e.g.,
+the summary51 of group discussions in the FATML
+[fatml.org] and ‘‘Data, responsibly’’ workshops’ context). These notions share many characteristics with
+the notion used here, such as auditability. Many of
+them do not make a strong distinction between accountability and transparency (such as the discussions around algorithmic transparency, epic.org/
+algorithmic-transparency/). In recent work, the
+question what and how much needs to be transparent, explained, and understandable is investigated
+in more detail.52,53
+Limitations of the user study
+Besides the limitations of the user study design
+and operationalization,15 parts of our interpretation
+hinge on our assumption of what the ‘‘correct’’ decisions were. We designed the tasks such that considering the numerical weights and the features in the rules
+carefully, automatically led to the ‘‘correct decisions.’’
+Future work should investigate the value of the decisions made by participants who were loath to use
+the sometimes counterintuitive rules and relied on
+background knowledge instead—thereby also opening
+new questions about how to deal with data-mining
+results.
+Our interfaces supported decision makers by information on the features of their task. This is only one
+facet of individual decision-making, and it ignores
+other relevant factors such as social inﬂuence or prior
+decisions. In future work, we aim to investigate a
+wider range of choice strategies, as well as associated
+HCI support.54
+The present article focused on results from exploratory data analysis rather than experimental design.
+Future work should reﬁne these by experimental controls or nudges. For example, it could be explored
+how instructions to verbalize reasoning, or measures
+that draw attention to the applicant-as-a-person and/
+or strengthening self-reﬂection of the decision-makeras-a-person, inﬂuence the detection and prevention
+of discrimination.
+
+BERENDT AND PREIBUSCH
+
+Mechanical Turk
+Our participants were recruited via MTurk, and we
+used established methods for ensuring study validity
+and data quality (see the section ‘‘Design, materials,
+and method’’). Still, the question arises whether these
+participants’ choices can be regarded as representative
+of the decision makers whose role they took: people
+working in banks or antidiscrimination agencies. To
+the best of our knowledge, no studies of this question
+exist. We therefore ask (a) to what extent MTurkers resemble study participants recruited in more traditional
+ways and (b) to what extent the latter resemble the
+modeled decision makers.
+Summarizing pertinent observations from a huge
+body of literature, we ﬁnd the following. (a.1) The demographics of MTurkers are similar, but not equal to
+the general population with regard to age, gender, ethnic origin, political orientation, and education (for speciﬁcs and further references, especially U.S. samples,
+see19,55; our sample showed a similar pattern15). They
+tend to be more diverse than standard samples, but exhibit very similar value-based motivations, including
+‘‘racial resentment.’’56 MTurkers are mainly motivated
+ﬁnancially, and also by the contents of studies19; in this
+sense, they are more similar than standard participants
+to the working decision makers whose role they took
+here. Also, 36% of our sample reported having had professional experience working with data mining, ﬁnance,
+and/or banking. Of course, this does not make them
+equal to the employees with speciﬁc skills whose role
+they took. (a.2) MTurkers are comparable to standard
+participant populations with regard to decisionmaking biases.57,19 Regarding (b), a study of risk assessment in commercial bank lending58 indicated that real
+bankers are subject to the same cognitive biases as general study populations, but that organizational inﬂuences, speciﬁcally proﬁt motives, were stronger than
+cognitive factors when both are present. MTurkers, in
+turn, because of the remuneration and reputation system of the crowdworking platform, tend to pay more
+attention to the instructions they are given than standard participants.59 We speculate that to the extent
+that organizational factors are captured in business
+rules, and these are made explicit in instructions, this
+may lead to MTurkers behaving more similarly to professionals than standard participants. In sum, while
+laboratory and MTurk studies have unavoidable limitations in terms of external validity, these results indicate
+that recruitment through MTurk is adequate for studies such as ours.
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+TOWARD ACCOUNTABLE DISCRIMINATION-AWARE MINING
+
+Empirical studies in real-life settings
+Still, future work should also study decision-making by
+real-life professionals. This presents several challenges:
+professionals are expensive participants, and the experimental data-mining tool should be realistic with
+regard to algorithms, data, and discrimination-aware
+modiﬁcations. It may also be difﬁcult to carry out
+meaningful experimental studies; different study designs may be needed. First, the introduction of new
+AI is usually accompanied by other organizational
+changes such as staff reductions.60 Second, while statistics and data mining have a long tradition in ﬁelds
+such as banking and insurance, the use of such methods is less widespread in antidiscrimination agencies,
+NGOs, and similar organizations, and also by data protection authorities. Algorithmic accountability reporting,61 in which the media act as Boven’s forum,46 is a
+development in this direction. However, additional research is needed to identify the best algorithmic, HCI,
+and organizational design decisions for these different
+use cases. Third, real-life decisions are often not
+made at one point in time only. The law does not forbid
+fully automated decision-making, but (in the EU) allows data subjects to request a human explanation
+and rectiﬁcation. This points to another area of future
+research: how do humans reason about machine-based
+decisions ex post? Under which cognitive biases and
+organizational pressures do they revisit an alreadymade decision, and how can HCI assist?
+Acknowledgments
+We thank the participants of the Dagstuhl 2016 seminar ‘‘Data, responsibly .’’ as well as those of the
+2016 Summer School Big Data for Peace and Justice,
+and Patrick Berendt for valuable discussions.
+Author Disclosure Statement
+No competing ﬁnancial interests exist.
+References
+1. Angwin J, Larson J, Mattu S, Kirchner L. 2016. Machine bias: There’s
+software used across the country to predict future criminals. And it’s
+biased against blacks. Available online at www.propublica.org/article/
+machine-bias-risk-assessments-in-criminal-sentencing (last accessed
+May 26, 2017).
+2. Lowry S, Macpherson G. A blot on the profession. Br Med J 1988;296:657–
+658.
+3. Sweeney L. Discrimination in online ad delivery. Commun ACM
+2013;56:44–54.
+4. Stark J, Diakopoulos N. 2016. Uber seems to offer better service in areas
+with more white people. That raises some tough questions. The
+Washington Post Wonkblog. Available online at www.washingtonpost
+.com/news/wonk/wp/2016/03/10/uber-seems-to-offer-better-servicein-areas-with-more-white-people-that-raises-some-tough-questions/
+(last accessed May 26, 2017).
+
+151
+
+5. Barocas S, Selbst AD. 2016. Big data’s disparate impact. 104 California Law
+Review 671. Available online at SSRN: www.ssrn.com/abstract=2477899
+(last accessed May 26, 2017).
+6. Datta A, Tschantz MC, Datta A. Automated experiments on ad privacy settings: A tale of opacity, choice, and discrimination. Proc PETS 2015. 2015.
+7. UN Women. 2013. UN women ad series reveals widespread sexism.
+Available online at www.unwomen.org/en/news/stories/2013/10/
+women-should-ads (last accessed May 26, 2017).
+8. Crawford K. 2013. Think again: Big data. Foreign policy. Available online at
+www.foreignpolicy.com/articles/2013/05/09/think_again_big_data
+(last accessed May 26, 2017).
+9. Pedreschi D, Ruggieri S, Turini F. A study of top-k measures for discrimination discovery. Proceedings of the SAC’12, ACM, 2012, pp. 126–131.
+10. Dwork C, Hardt M, Pitassi T, et al. Fairness through awareness. ProcITCS
+2012;2012:214–226.
+11. Zliobaite I. Measuring discrimination in algorithmic decision making. Data
+Min Knowl Discov [Epub ahead of print]; DOI: 10.1007/s10618-0170506-1, 2017
+12. Pedreschi D, Ruggieri S, Turini F. Discrimination-aware data mining. Proceedings of the KDD’08, ACM, 2008, pp. 560–568.
+13. Hajian S, Bonchi F, Castillo C. 2016. Algorithmic bias: From discrimination discovery to fairness-aware data mining. Tutorial at KDD 2016.
+Available online at www.francescobonchi.com/algorithmic_bias_
+tutorial.html (last accessed May 26, 2017).
+14. Stoyanovich J, Abiteboul S, Miklau G. 2016. Data, responsibly: Fairness,
+neutrality and transparency in data analysis. Tutorial at EDBT 2016.
+Available online at www.abiteboul.com/PRESENTATION/16.Data
+Responsibly.EDBT.pdf (last accessed May 26, 2017).
+15. Berendt B, Preibusch S. Better decision support through exploratory
+discrimination-aware data mining: Foundations and empirical evidence. Artif Intel Law 2014;22:175–209.
+16. Raab C. The meaning of ‘‘accountability’’ in the information privacy context. In: Guagnin D, Hempel L, Ilten C, Kroener I, Neyland D, Postigo H
+(Eds.): Managing privacy through accountability. London, United
+Kingdom: Palgrave Macmillan. 2012.
+17. Berendt B, Preibusch S. Exploring discrimination: A user-centric evaluation of discrimination-aware data mining. IEEE 12th International Conference on Data Mining Workshops. IEEE Computer Science Press, 2012,
+pp. 344–351.
+18. Eickhoff C, de Vries AP. Increasing cheat robustness of crowd sourcing
+tasks. Inf Ret 2013;16:121–137.
+19. Paolacci G, Chandler J. Inside the Turk: Understanding mechanical Turk as
+a participant pool. Curr Dim Psychol Sci 2014;23:184–188.
+20. The Verge. 2016. Twitter taught Microsoft’s AI chatbot to be a racist
+asshole in less than 24 hours. Available online at www.theverge.com/
+2016/3/24/11297050/tay-microsoft-chatbot-racist (last accessed May
+26, 2017).
+21. Lum K, Isaac W. To predict and serve? Signiﬁcance 2016;13:14–19.
+22. Hajian S, Domingo-Ferrer J. A methodology for direct and indirect discrimination prevention in data mining. IEEE Trans Knowl Data Eng
+2013;25:1445–1459.
+23. Ruggieri S, Pedreschi D, Turini F. DCUBE: Discrimination discovery in
+databases. Proceedings of the SIGMOD’10, ACM, 2010, pp. 1127–1130.
+24. Calders T, Verwer S. Three naive Bayes approaches for discrimination-free
+classiﬁcation. Data Min Knowl Discov 2010;21:277–292.
+25. Feldman M, Friedler SA, Moeller J, et al. Certifying and removing disparate
+impact. Proc KDD 2015;2015:259–268.
+26. Romei A, Ruggieri S, Turini F. Discrimination discovery in scientiﬁc project
+evaluation: A case study. Expert Syst Appl 2013;40:6064–6079.
+27. Myrdal G. An American dilemma: The Negro problem and modern democracy. New York, NY: Harper & Bros. 1944.
+28. Adda CL, Laitin DD, Valfort M-A. Why Muslim integration fails in Christianheritage societies. Cambridge, MA: Harvard University Press. 2016.
+29. Luong BT. Generalized discrimination discovery on semi-structured data
+supported by ontology. PhD thesis. Lucca, Italy: IMT Institute for
+Advanced Studies. 2011.
+30. Kamiran F, Zliobaite I, Calders T. Quantifying explainable discrimination
+and removing illegal discrimination in automated decision making.
+Knowl Inf Syst 2013;35:613–644.
+31. Kamishima T, Akaho S, Asoh H, Sakuma J. Considerations on fairnessaware data mining. IEEE 12th International Conference on Data Mining
+Workshops. IEEE Computer Science Press, 2012, pp. 378–385.
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+152
+
+32. Romei A, Ruggieri S. A multidisciplinary survey on discrimination analysis.
+Knowl Eng Rev 2014;29:582–638.
+33. Insley J, Bachelor L. 2017. Payday loans can put credit rating at risk. The
+Guardian. Available online at www.theguardian.com/money/2012/nov/
+17/payday-loans-credit-rating (last accessed May 26, 2017).
+34. Bell D. Racial realism. Conn L Rev 1992;24:363–379.
+35. Morey M. 2015. Are Americans really champions of racial equality?
+Available online at www.theatlantic.com/politics/archive/2015/04/areamericans-champions-of-racial-equality/389826/ (last accessed May 26,
+2017).
+36. Bygrave LA. Minding the machine: Article 15 of the EC data protection
+directive and automated proﬁling. Comput Law Security Rep
+2001;17:17–24.
+37. OLG München, Urt. v. 12.03.2014, Az. 15 U 2395/13 Judgment. File number 15 U 2395/13. March 12, 2014 [In German].
+38. OLG Frankfurt, Urt. V. 14.12.2015, Az. 1 U 128/15 Judgment. File number 1
+U 128/15. Dec 14, 2015 [In German].
+39. ErfK/Franzen. Erfurter Kommentar zum Arbeitsrecht Rn. 2-2. 16. Auﬂage
+2016. BDSG x 6a Erfurt Legal Commentary on Labor Law. Margin
+number 2-2. BDSG x 6a. 16th Edition. 2016 [In German].
+40. O’Neill C. 2016. How algorithms rule our working lives. The Guardian.
+Available online at www.theguardian.com/science/2016/sep/01/howalgorithms-rule-our-working-lives (last accessed May 26, 2017).
+41. Kleinberg J, Mullainathan S, Raghavan M. Inherent trade-offs in the fair
+determination of risk scores. In Proceedings of the 8th Conference on
+Innovations in Theoretical Computer Science (ITCS). 2017;
+arXiv:1609.05807.
+42. ECHR/European Court of Human Rights. Judgment. Taddeucci and McCall
+vs. Italy. Jun 30, 2016.
+43. OECD. 1980. Guidelines on the protection of privacy and transborder
+ﬂows of personal data. Available online at www.oecd.org/document/
+18/0,2340,en_2649_34255_1815186_1_1_1_1,00.html (last accessed
+May 26, 2017).
+44. ISO/IEC 29100. 2011. Information technology—security techniques—
+privacy framework. Available online at www.iso.org/iso/iso_catalogue/
+catalogue_tc/catalogue_detail.htm?csnumber=45123 (last accessed
+May 26, 2017).
+45. Van Alsenoy B, Coudert F, Jasmontaite L, et al. 2015. Cultures of accountability. Available online at www.law.kuleuven.be/citip/en/news/
+item/coa-workshop-report.pdf (last accessed May 26, 2017).
+46. Bovens M. Analysing and assessing public accountability. A conceptual
+framework. European Law J 2007;13:447–468.
+47. Article 29 Data Protection Working Party. 2010. Opinion 3/2010 on the
+principle of accountability (00062/10/EN WP 173). Available online at
+www.ec.europa.eu/justice/policies/privacy/docs/wpdocs/2010/
+wp173_en.pdf (last accessed May 26, 2017).
+48. Crespo Garcı́a A, et al. 2016. PRIPARE. Privacy- and security-by design
+methodology handbook. Available online at www.pripareproject.eu/
+wp-content/uploads/2013/11/PRIPARE-Methodology-Handbook-FinalFeb-24-2016.pdf (last accessed May 26, 2017).
+49. Hoepman J-H. Privacy design strategies (extended abstract). Proceedings
+ICT Systems Security and Privacy Protection—29th IFIP TC 11 International Conference, 2014, pp. 446–459.
+50. Butin D, Chicote M, Le Métayer D. Strong accountability: Beyond vague
+promises. In: Gutwirth S, Leenes R, de Hert P (eds). Reloading data
+protection: Multidisciplinary insights and contemporary challenges.
+Dordrecht, The Netherlands: Springer, 2014, pp. 343–369.
+
+BERENDT AND PREIBUSCH
+
+51. Diakopoulos N, Friedler S. 2016. How to hold algorithms accountable. MIT
+technology review. Available online at www.technologyreview.com/s/
+602933/how-to-hold-algorithms-accountable/ (last accessed May 26,
+2017).
+52. Kroll JA, Huey J, Barocas S, et al. Accountable algorithms. Univ Penn Law
+Rev 2017;165:633–705.
+53. Lipton ZC. 2016. The mythos of model interpretability. ICML 2016 workshop on human interpretability in machine learning (WHI 2016).
+Available online at www.zacklipton.com/media/papers/mythos_
+model_interpretability_lipton2016.pdf (last accessed May 26, 2017).
+54. Jameson A, Berendt B, Gabrielli S, et al. Choice architecture for humancomputer interaction. Foundations Trends Human Comput Interact
+2014;7:1–235.
+55. Huff C, Tingley D. ‘‘Who are these people?’’ Evaluating the demographic
+characteristics and political preferences of MTurk survey respondents.
+Res Polit 2015:1–12.
+56. Clifford S, Jewell RM, Waggoner PD. Are samples drawn from Mechanical
+Turk valid for research on political ideology? Res Polit 2015:1–9.
+57. Goodman J, Cryder C, Cheema A. Data collection in a ﬂat world: The
+strengths and weaknesses of mechanical Turk samples. J Behav Decis
+Mak 2012;26:213–224.
+58. McNamara G, Bromiley P. Decision making in an organizational setting:
+Cognitive and organizational inﬂuences on risk assessment in commercial lending. Acad Manage J 1997;40:1063–1088.
+59. Berinski AJ, Huber GA, Lenz GS. Evaluating online labor markets for experimental research: Amazon.com’s Mechanical Turk. Polit Anal
+2012;20:351–368.
+60. McCurry J. 2017. Japanese company replaces ofﬁce workers with artiﬁcial
+intelligence. The Guardian. Available online at www.theguardian.com/
+technology/2017/jan/05/japanese-company-replaces-ofﬁce-workersartiﬁcial-intelligence-ai-fukoku-mutual-life-insurance (last accessed
+May 26, 2017).
+61. Diakopoulos N. 2013. Algorithmic accountability reporting: On the investigation of black boxes. Tow center for digital journalism. Available
+online at www.nickdiakopoulos.com/wp-content/uploads/2011/07/
+Algorithmic-Accountability-Reporting_ﬁnal.pdf (last accessed May 26,
+2017).
+
+Cite this article as: Berendt B, Preibusch S (2017) Toward accountable discrimination-aware data mining: the importance of keeping
+the human in the loop—and under the looking glass. Big Data 5:2,
+135–152, DOI: 10.1089/big.2016.0055.
+
+Abbreviations Used
+ADA
+DADM
+EU
+GDPR
+HCI
+KDD
+PET
+
+¼
+¼
+¼
+¼
+¼
+¼
+¼
+
+antidiscrimination agency
+discrimination-aware data mining
+European Union
+General Data Protection Regulation
+human–computer interaction
+knowledge discovery in databases
+privacy-enhancing technology
+
+This article has been cited by:
+
+Downloaded by Haifa from www.liebertpub.com at 03/31/19. For personal use only.
+
+1. Maddalena Favaretto, Eva De Clercq, Bernice Simone Elger. 2019. Big Data and discrimination: perils, promises and solutions.
+A systematic review. Journal of Big Data 6:1. . [Crossref]
+
+

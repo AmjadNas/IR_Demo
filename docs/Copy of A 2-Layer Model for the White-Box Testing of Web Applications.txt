@@ -1,0 +1,903 @@
+A 2-Layer Model for the White-Box Testing of Web Applications
+Paolo Tonella and Filippo Ricca
+ITC-irst
+Centro per la Ricerca Scientifica e Tecnologica
+38050 Povo (Trento), Italy
+tonella, ricca@itc.it
+Abstract
+White-box testing exercises a software system by ensuring that a model of the internal structure is covered by the
+test cases. Extending this approach to Web applications is
+far from obvious, because at least two abstraction levels
+can be considered to represent the internal structure of a
+Web application: the navigation model and the control flow
+model. To further complicate the matter, dynamic code generation must be taken into account in both models.
+In this paper, the two alternative models are presented
+and white-box testing criteria are defined on them. Their
+usage for the white-box testing of a real-world Web application is described, highlighting the associated costs and
+benefits.
+
+1 Introduction
+The Web has become the standard infrastructure for several business and public utility transactions. Correspondingly, the quality of the software that runs over the Web is
+increasingly crucial and technological as well as research
+efforts are directed toward its improvement.
+Special features of Web applications make them harder
+to test than traditional software. They are associated with
+the multiple technologies involved in their development and
+with the highly dynamic behavior that they exhibit. Programming these applications requires the ability to compose multiple programming languages (e.g., server side and
+client side languages), which are often associated with different programming styles (compare HTML with any other
+one). Moreover, part of the code that defines the behavior of
+a Web application is constructed dynamically at run time on
+the server and is sent to the client for execution within the
+browser. Analysis and testing of such code is a challenging
+task.
+In this paper, the focus is on white-box testing of Web
+applications. According to this testing method, a set of test
+
+cases is adequate when it satisfies a coverage criterion of
+choice (e.g., branch coverage). Coverage criteria are defined with reference to a model of the software under test. In
+the case of Web applications, models can be defined at different abstraction levels. In the available proposals, two layers can be devised: the navigation and the control flow layer.
+While the navigation model describes the user interaction in
+terms of pages visited, links followed and forms submitted,
+at the control flow level the individual instructions executed
+at the server or at the client side are represented. Coverage
+of the lower-layer model subsumes coverage of the higherlayer and is correspondingly more demanding. On the other
+side, it gives potentially more confidence of a reliable run
+time behavior of the Web application. These two alternative
+choices will be contrasted with reference to an existing Web
+application, used as a case study.
+Most available tools for Web testing are focused on link
+validity. Usage of a navigation model for Web application
+testing was considered in [1, 4, 6, 7, 9], while the work described in [8] is based on a low-level model, which is exploited to determine and exercise the data flows. Our paper
+takes into consideration Web application modeling at different abstraction levels, according to a layered view which
+makes it possible to compare the advantages and the costs
+of the associated white-box testing techniques.
+The paper is organized as follows: after a description
+of the 2 layer model given in Section 2, white-box testing
+criteria based on such a model are defined in Section 3. In
+Section 4 we report our experience with testing a real-world
+Web application by means of the proposed method. Concluding remarks are given in Section 5.
+
+2 The 2 layer model
+The structure of a Web application can be described at
+the high level, in terms of its composing pages and its navigation links, or at the low level, by considering the execution flow followed at the server and client side.
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+Form
+
+0..*
+link
+
+input: Set<Var>
+hidden: Set<Couple>
+
+HTMLPage
+url: String
+isDynamic: boolean
+
+submit
+split into
+
+1
+
+split
+into
+
+1
+
+1
+
+LoadPageIntoFrame
+
+1..*
+0..*
+
+{optional}
+
+f: Frame
+
+initial page
+build redirect
+to stat
+redirect
+to dyn
+
+link
+
+{xor}
+
+ServerProgram
+
+0..*
+
+Frame
+name: String
+
+{xor}
+
+Parameter
+p: Set<Couple>
+
+0..*
+
+1
+
+Figure 1. Navigation model of a generic Web application.
+
+2.1 Navigation model
+The high-level, navigation model of a Web application
+has been described in detail elsewhere [9, 10]. It is summarized in the following to make this paper self-contained.
+The aim of the navigation model is describing a Web application in terms of composing pages and allowed navigation links. Both dynamic and static pages are properly
+represented. Dynamic pages are the result of executing a
+program on the Web server in response to a request from
+the Web browser. Important interactive features that are exploited by Web applications, like forms and frames, are part
+of the model, being relevant to the navigation.
+Figure 1 shows the navigation meta-model of a generic
+Web application. The central entity in a Web application is
+the HTMLPage. An HTML page contains the information
+to be displayed to the user, and the navigation links toward
+other pages. It also includes organization and interaction facilities (e.g., frames and forms). Its URL is recorded in the
+attribute url. Navigation from page to page is modeled by
+the auto-association of class HTMLPage named link. Web
+pages can be static or dynamic. While the content of a static
+Web page is fixed, the content of a dynamic page is computed at run time by the server (a similar distinction is proposed by Conallen [2] and Eichmann [5]) and may depend
+on the information provided by the user through input fields.
+The boolean flag isDynamic distinguishes the two cases.
+The entity ServerProgram models the script/executable that
+runs on the server side and generates a dynamic HTML
+output. A server-side program can be executed by traversing a link from an HTML page whose target is the server
+script/executable and whose attributes include a set of parameters, represented as pairs name, value or by submitting a form. The server program can either redirect the
+
+request to another server program (auto-association redirect
+to dyn), build an output, dynamic HTML page (association
+build), or simply redirect to a static HTML page (association redirect to stat).
+In HTML user input is gathered by exploiting forms and
+is passed to a server program, which processes it, in response to a submit event. A Web page can include any number of forms. Each form is characterized by the input variables that are provided by the user through it. Additional
+hidden variables are exploited to record the state of the interaction. They allow transmitting pairs of the type name,
+value from page to page. Typically, the constant value
+they are assigned needs be preserved during the interactive
+session for successive usage. Since the HTTP protocol is
+stateless, this is the basic mechanism used to record the interaction state (variants are represented by cookies and URL
+parameters).
+In a Web application, the same server program may behave differently, according to the interaction state. Server
+programs with state-dependent behavior perform different
+computations when executed under different conditions. A
+server program may, for example, provide two completely
+different computations – and consequently different output
+pages – according to the value of a hidden flag recording a
+previous user selection.
+In presence of server programs with state-dependent behavior, the possible navigations are obtained as paths in the
+Web application model only if the dynamic pages are replicated for all the possible behavioral variants. We call the
+resulting model an explicit-state model, differing from the
+alternative one, called implicit-state model, in that it unrolls
+dynamic pages with different behaviors into actually different entities. Automated recovery of the explicit-state model,
+in presence of dynamic pages, requires a combination of dy-
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+
+ 
+         
+  
+  
+
+
+  !"  ! # #  
+ !  ! # #$%  
+"
+
+& ""  
+!%!
+
+
+ '  $  %%! "
+"
+
+!
+
+
+namic and static analysis [10].
+
+2.2 Control flow model
+Nodes in the control flow model of a Web application
+represent the statements that are executed either by the Web
+server or by the client (Internet browser). Edges represent control transfer. Since the execution on the server involves one (or more) server side languages (e.g., PHP and
+SQL) and the execution on the client involves additional
+languages (such as HTML and JavaScript), the control flow
+model has different node kinds (“colors”), according to the
+programming language of the respective statements. In the
+following, the shape of the nodes, instead of their color, indicates their kind (box is used for HTML, ellipse for PHP
+and rounded box for JavaScript).
+HTML statements are interpreted by the browser, which
+renders them graphically, thus they require a special treatment. Three types of HTML statements are recognized:
+tags, text and incomplete tags. Purely static HTML pages
+consist of tags intermixed with textual content. Correspondingly, only the first two types of HTML nodes are in the
+control flow model of these pages (Tag and Text). Nodes
+of type IncompleteTag are introduced when tags are built
+dynamically through the execution of server-side code, by
+successive substring concatenation.
+Figure 2 shows a fragment of PHP/HTML code, with the
+related control flow model. The topmost node represents
+the if statement in the PHP code. Its then part contains a
+for loop that includes some HTML statements, to be produced repeatedly. The first of these statements is the tag
+div. Then, an incomplete tag of type img follows. It is incomplete in that part of the name of the source image is
+produced dynamically by a PHP echo statement. Closure of
+such a tag is obtained by means of another incomplete tag.
+Similarly, the following hyperlink references a page whose
+name is partially generated dynamically. On the else part of
+the initial if statement a fixed sequence of tags and texts is
+generated.
+Thus, differently from typical, traditional software, control flow models for Web applications are multi-colored and
+have special nodes for the HTML statements. Another remarkable difference is related to the way the control is transferred. In addition to the sequential, deterministic control
+transfer, possibly controlled by conditional or loop statements, in Web applications some statements determine the
+“registration” of functions or scripts/pages with respect to
+given graphical events. Since the registration time, such
+functions or scripts/pages are activated as soon as the event
+for which they have registered occurs. This is similar to the
+callback mechanism in traditional software. The graphical
+event for which a function or a script/page are registered
+can happen at any time, non deterministically, even while
+
+if ($n > 0)
+false
+
+true
+for ($i=1; ...)
+
+Tag("<div>")
+
+$a=$x[$i]
+
+Tag("<i>")
+
+$b=$y[$i]
+
+Text("No info...")
+
+Tag("<div>")
+
+Tag("</i>")
+
+IncompleteTag("<img src=’images/")
+
+echo($a.".gif")
+
+Tag("</div>")
+
+IncompleteTag("’>")
+
+IncompleteTag("<a href=’")
+
+echo($b.".html")
+
+IncompleteTag("’>")
+
+Tag("</div>")
+
+endif
+
+Figure 2. Example of control flow model.
+the remaining of the statements in the page loaded by the
+browser are still being interpreted. A non deterministic control transfer might occur while the statements in the control
+flow model are being executed, leading to the control flow
+graph of the function or script/page registered for the given
+graphical event.
+The most frequent case of event handling described
+above is represented by the hyperlinks. After an anchor tag
+has been inserted, the user can click on the hyperlink, interrupting the page loading and transferring the control to the
+target page/script. A similar mechanism is in place with the
+forms. JavaScript code introduces more sophisticated interactions, since JavaScript functions can be registered for a
+wider variety of events than just the mouse click.
+Figure 3 shows another example of control flow model,
+for the HTML/JavaScript code fragment at the top. The
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+  
+ 
+     
+   
+ " 
+  
+
+    
+    
+       ! 
+  #
+
+ $$% 
+ &'!
+ (!
+    )
+  
+**!
+  !
++
+ 
+
+Tag("<a href=’p.html’ onMouseOver=’f()’>")
+register(onClick)
+Text("Active link")
+
+Tag("</a>")
+
+Tag("<form action=’a.php’ method=’post’>")
+
+ables a and x.
+Construction of the control flow model is complicated
+by the presence of dynamically generated code. PHP statements can produce any HTML or JavaScript code fragment in output, thus making a static analysis of the source
+code infeasible in the general case. For example, the target pages of the hyperlinks generated inside the for loop of
+Figure 2 are only partially known, resulting from the concatenation of the PHP variable $b and of the constant string
+".html". Thus, the page registered for the click on this
+hyperlink is not available directly from the source code. In
+such cases, static flow analysis algorithms can be employed
+to conservatively approximate all possible targets [11]. Alternatively, a manual adjustment intervention may produce
+the control flow model, in case of a highly dynamic Web
+application. Dynamic analysis may help produce the final
+model.
+
+register(onMouseOver)
+
+IncompleteTag("<input type=’text’ name=’x’ value=’")
+
+3 White-box testing
+
+echo($x)
+
+IncompleteTag("’>")
+
+Tag("<input type=’submit’ value=’Send’")
+register(onClick)
+Tag("</form>")
+
+a=10
+
+x=5
+
+Similarly to traditional software, white-box testing of
+Web applications is based on the knowledge about the internal structure of the system under test. The adequacy of
+the test cases is assessed in terms of the level of coverage
+of the structure they reach. This approach can be applied
+to the Web applications either representing the structure at
+the high-level, by means of the navigation model, or at the
+low-level, by means of the control flow model.
+
+if (x < a)
+
+3.1 Coverage criteria
+x++
+
+return true
+function f()
+
+p.html
+
+a.php
+
+Figure 3. Example of event handling.
+
+Coverage criteria can be defined by taking into account
+the Web application structure alone (either the navigation
+or the control flow model). The following are examples of
+purely structural coverage criteria:
+Paths: All paths in the Web application model are traversed in some test case.
+
+first HTML statement registers the target page p.html for
+the event onClick. This means that the control is transferred
+inside p.html as soon as the user clicks on this hyperlink,
+regardless of page loading completion. The same tag registers the JavaScript function f for another graphical event that
+may occur on this hyperlink, onMouseOver. Then, the following sequence of HTML statements create an input form,
+with the default value of the input variable x generated dynamically by a PHP statement echo. It should be noted that
+the HTML input is non-blocking, i.e., execution does not
+stop, waiting for user input. The tag input of type submit
+registers the action of this form (the script a.php) for execution upon the click on the submit button. The two JavaScript
+statements following the form initialize the JavaScript vari-
+
+Branches: All branches (edges) in the Web application
+model are traversed in some test case.
+Nodes: All nodes in the Web application model are traversed in some test case.
+In the presence of loops the first criterion is not applicable, since an infinite number of paths to be covered would
+exist. Common practice consists of restricting the set of
+all paths to a proper subset, containing, for example, all independent (vector representations of paths are linearly independent) or k-limited (loops are traversed 0 to k times)
+paths.
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+Assuming that nodes in the Web application model be
+decorated with information about which variables are defined or used by them, the data flows can be taken into account for the definition of the coverage criteria. Examples
+of data flow coverage criteria are the following:
+All def-use (all-du): all definition-clear paths from every
+definition to every use of all Web application variables
+are traversed in some test case.
+All uses: at least one def-clear path (if any exist) from every definition to every use of all Web application variables is traversed in some test case.
+All defs: at least one def-clear path (if any exist) from every definition to at least one use of all Web application
+variables is traversed in some test case.
+Similarly to path coverage, all-du coverage is generally
+not feasible, unless restricted to independent or k-limited
+paths.
+In the following the branch-coverage criterion is considered in detail, being one of the most widely adopted with
+traditional software. Coverage of the branches in the navigation model and in the control flow model will be contrasted.
+
+3.2 Instrumentation
+In order to determine the level of coverage reached by
+a given test suite, the Web application under test must be
+instrumented and the branches in the navigation or control flow model that are traversed during test case execution
+must be traced.
+Tracing server side code (e.g., PHP) execution is quite an
+easy task. In fact, server side code can write tracing information into a persistent storage (e.g., a text file) resident on
+the server. Program transformation tools, such as TXL [3],
+can be used to insert tracing instructions inside the original code, to trace the branches of interest in the high or low
+level model.
+Once an HTML page is loaded into the browser, the contained HTML statements are executed in sequence, since
+no control flow statement, such as conditional or loop statements, is available in HTML. Thus, traversal of all sequential branches is granted, once the HTML page is loaded
+into the browser, unless page loading is interrupted (currently, we do not handle such a case). The only branches
+that involve a user selection are those associated with GUI
+events (e.g., onClick). Consequently, tracing HTML code
+turns out into tracing the traversal of the hyperlinks/form
+submissions contained in an HTML page. This is a bit
+tricky, since the client cannot write information directly on
+the server. A possible solution consists of adding an extra
+
+GET variable in each href inside HTML anchor nodes (e.g.,
+href = "a.php" becomes href = "a.php?trace
+= p.html:href:2" to trace the 2nd hyperlink inside
+page p.html). The target page of the hyperlink will check
+for the presence of a GET parameter named trace. If such
+a parameter exists, its information is written to the trace file
+on the server. The drawback of this solution is that every
+hyperlink referencing a purely static page (e.g., href =
+"a.html") must be transformed into a hyperlink referencing a dynamic page (href = "a.php"). The target
+dynamic page a.php writes the GET variable trace into
+the trace file and redirects the execution to the original static
+page.
+Tracing information about the execution of JavaScript
+code is even more complicated. In fact, the client does not
+have permission to write into server-side files and no GET
+parameter can be added, since no hyperlink is being followed. A possible solution consists of accumulating tracing
+data into a cookie (e.g., named trace). When the execution is transferred to the server, the first operation performed by the server-side code consists of checking if a
+cookie named trace is defined. In case it exists, the server
+program writes it to the same trace file used for server (PHP)
+and HTML (href and form submit) statements. In order to
+avoid missing the trace information of the last JavaScript
+statements that are executed, each navigation session must
+end with the invocation of a server-side script, which writes
+the tracing cookie, if any is present. A fictitious termination
+page can be defined for such a purpose, if none exists in the
+given application.
+TXL can be used also to transform the client side code,
+adding the trace instructions described above. Hyperlinks
+and form submissions are modified by adding an extra parameter trace. Inside JavaScript code, the cookie trace
+is updated each time a branch is traversed.
+
+3.3 Execution
+To make test results reproducible, the same initial condition must be ensured each time a test case is executed. Test
+harness accounts for such a task. The initial state of a Web
+application consists of all the persistent data it may access.
+Thus, test harness for a Web application consists of creating
+all necessary databases, files, and in general persistent data
+in the initial state each test case expects them to be. Simple
+server side scripts usually suffice to accomplish this job.
+Execution of a test case for a Web application consists
+of requesting a sequence of static/dynamic pages according
+to a legal navigation path, passing all required parameters
+to the server. This can be fully automated, by adapting the
+technology of the crawlers to this task. However, when the
+user needs to perform an interaction through the GUI to execute some client-side (e.g., JavaScript) code fragment, au-
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+Go home
+
+index.php
+Go home
+See message n
+[top=n with n>0]
+
+add.php
+Go home
+
+New message
+
+See answer m
+of message n
+[top=nSm]
+
+add.php?top=0&go=0
+: Form
+Your name
+Your email
+Subject
+Message
+URL
+
+add.php?top=n&go=0
+: Form
+
+See answer m
+[top=nSm]
+
+Add message
+
+Add answer
+
+Your name
+Your email
+Subject
+Message
+URL
+
+Go home
+Go home
+
+add.php?top=0&go=1
+
+add.php?top=n&go=1
+back
+[top=n]
+
+small.php?top=nSm
+
+forward
+See answer m+1
+[top=nS(m+1)]
+
+Go home
+
+back
+See answer m−1
+[top=nS(m−1)]
+
+Figure 4. Navigation model of the Web application wmforum.
+tomation becomes more problematic (capture-replay tools
+may be used in these cases).
+The problem of covering as much as possible of the
+structure of a given Web application is orthogonal to the
+problem of verifying that the results of execution are correct. For each test case, an oracle must be defined with the
+expected output (displayed information in resulting page).
+During the first run of the test cases, correctness of the
+output is usually assessed manually. However, during reexecution of the test cases (regression testing) the oracle can
+be obtained from the previous run and the correctness check
+can be automated.
+
+4 Case study
+We have considered the Web application wmforum
+(http://wmforum.lehed.com/), the organization of which is
+shown in Figure 4. Wmforum supports the management
+of discussion forums. It allows storing user messages and
+replies into server side text files (no usage of any database).
+In this Web application, users can post messages to a newsgroup, see the messages that have been posted previously
+and reply to them.
+Wmforum is composed of three PHP programs: index.php, add.php and small.php. In the model
+shown in Figure 4, the dynamic page add.php is split
+into four different nodes, one for each different behavior
+of the script add.php. Actually, the model has been obtained by running our reverse engineering tool ReWeb, described elsewhere [10]. ReWeb unrolls dynamic pages
+
+which exhibit different behaviors in different states into distinct nodes of the model. In the wmforum example, the values of the variables top and go decide on the behavior of
+add.php: when users insert a new message from the page
+index.php, both top and go are equal to zero. A page
+is dynamically created by add.php for the insertion of the
+new message. The model element representing such a page
+is labeled add.php?top=0&go=0 in Figure 4. In this
+page, users are requested to insert name, email, subject, text
+of the message and URL by means of a FORM, indicated
+on the outgoing, downward edge. After clicking the submit
+button, the message is added to the forum and a page is dynamically created by add.php to inform the user that the
+operation was completed successfully. The variable values
+top=0, go=1 are interpreted by add.php as a request
+to build such a confirmation page, indicated in the model as
+a node labeled add.php?top=0&go=1.
+From page index.php, users can select one of the previously posted messages, displayed in the entry page (index.php). The result is a request sent to add.php, with
+variable top assigned a value  ¼ and go=0. The response to such a request is a dynamically constructed page,
+showing the newsgroup message number , indicated in the
+model as add.php?top=n&go=0. At this point of the
+interaction, the user can reply to the message, by means of
+a FORM, or can select one of the available replies (if any)
+posted previously. In the first case, the reply is posted and a
+confirmation page is created (add.php?top=n&go=1).
+In the second case, if the user selects the reply number
+ to the message number , variable top is assigned the
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+value nSm, and the script small.php generates a dynamic
+page, indicated as small.php?top=nSm. In case there
+are other replies to the message number , it is possible to
+navigate across them, using forward and back hyperlinks.
+Back
+Forward
+
+1
+2
+
+Go to Home Page
+
+index.php
+
+3
+echo
+
+register
+
+4
+
+onClick
+
+5
+register
+onClick
+
+Coverage of the navigation model of wmforum required
+the definition of three scripts (harnesses) that put the Web
+application in a proper initial state. When coverage was extended to the control flow model, three additional harnesses
+were necessary. A short description of the initial conditions set by them is given in Table 1. The different initial
+states vary by number of messages in the message list and
+by number of replies. Moreover, a harness (H5) requires
+the existence of a corrupted reply (i.e., a reply whose file is
+unreadable).
+
+add.php
+Back to List
+
+6 echo
+7
+
+register
+onClick
+
+4.1 White-box testing
+
+8 echo
+9
+10
+
+small.php
+
+Figure 5. Control flow model of small.php.
+Figure 5 shows the control flow model of one of the 3
+modules composing wmforum, small.php. To reduce
+the size of the diagram, each block of consecutive statements is represented as a single node. As apparent from
+the node shapes, this module mixes PHP and HTML statements (blocks 4, 6, 8, 10 are in HTML). Incomplete HTML
+tags containing echo PHP statements (such as those in Figures 2, 3) are indicated as box nodes with an ellipse labeled
+echo inside.
+The module small.php contains four hyperlinks, two
+at node 4, one at 6 and one at 8, leading respectively to
+the dynamic pages index.php, add.php, small.php,
+small.php. They are associated with dashed edges, that
+activate a control transfer as soon as the onClick event occurs on any of the four hyperlinks. The slanted text that is
+displayed on these hyperlinks clarifies their meaning. The
+first hyperlink is labeled “Go to Home Page” and has the
+initial page, index.php as its target. The second hyperlink, labeled “Back to List”, leads to the message associated
+with the selected reply. The other two hyperlinks are labeled
+“Back” and “Forward”. They allow navigating through the
+replies.
+All branches in the source code of this Web application
+have been instrumented, according to the method described
+in the previous section. The level of coverage reached on
+the navigation model as well as on the control flow model
+was easily determined from the traced data.
+
+Coverage of the navigation model
+Description
+empty message list
+message list with 1 message and 1 reply
+message list with 1 message and 2 replies
+Coverage of the control flow model
+Harness Description
+H4
+message list with 12 messages
+H5
+message list with 1 message and
+1 corrupted reply
+H6
+message list with 1 message and no reply
+Harness
+H1
+H2
+H3
+
+Table 1. Harnesses created for the white-box testing
+of wmforum.
+Full coverage of the branches in the navigation model
+was achieved by defining 8 test cases. They are briefly described in Table 2, top. They correspond to the main interactions with this application, apparent from the model in
+Figure 4.
+TC1 traverses the link from index.php to index.php (“go home”).
+TC2 adds a new message
+to the forum, by traversing the link that leads to
+add.php?top=add.php?top=0&go=0, the link to
+add.php?top=0&go=1 and then going back home (index.php). The detailed instructions for the execution of
+TC2 are given in Figure 6. TC3 is similar to TC2, but
+after reaching add.php?top=add.php?top=0&go=0
+the link leading to the home page is traversed (aborted addition of message). TC4 to TC7 require a harness (H2) with
+1 message and 1 reply. TC8 requires H3, where two replies
+are present. In fact, only when more than one reply exist,
+the “Forward” and “Back” hyperlinks are created.
+For the coverage of the control flow model, 7 additional
+test cases have been created (requiring 3 additional harnesses). Their description is given in Figure 2, bottom.
+Some code fragments of index.php are devoted to
+handling the case where the message list cannot be accom-
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+Coverage of the navigation model
+Test case Harness Description
+TC1
+H1
+self loop in home page
+TC2
+H1
+add new message
+TC3
+H1
+abort addition of new message
+TC4
+H2
+display reply to message
+TC5
+H2
+display selected message
+TC6
+H2
+display reply to selected message
+TC7
+H2
+add reply to selected message
+TC8
+H3
+display reply to selected message
+and go forward/backward
+Coverage of the control flow model
+Test case Harness Description
+TC9
+H4
+scroll messages in multiple pages
+TC10
+H1
+add message with subject length
+greater than 60 characters
+TC11
+H5
+display message list with
+corrupted reply
+TC12
+H1
+add message with wrong
+email address
+TC13
+H1
+add message with empty
+sender name
+TC14
+H5
+reply to message with
+corrupted reply list
+TC15
+H6
+select message with no reply
+Table 2. Test cases for the white-box testing of wmforum.
+
+modated in a single page. This happens, for example, with
+12 messages (harness H4). To cover the branches leading to
+these code fragments, the test cases defined for the navigation model are not sufficient. An additional test case, TC9,
+must be created.
+A similar situation is related to the length of the message subject. The test cases for the navigation model are
+never associated with a subject longer than 60 characters.
+However, this is the condition that must be met to exercise
+one of the branches in index.php. TC10 deals with this
+situation.
+Other error or boundary conditions are not represented in
+the test cases for the navigation model, such as the presence
+of a corrupted reply file (TC11, TC14), of a wrong email
+address (TC12) or of an empty sender name (TC13). TC15
+deals with a case that was “accidentally” not represented in
+the first 8 test cases: selection of a message with no reply.
+In the message visualization code, a branch previously uncovered (no existing answer to display) gets covered in this
+way.
+The test case TC13 is interesting because it activates the
+
+    
+      
+ 
+  
+    
+  
+  
+!" 
+#    
+$    %   &
+
+Figure 6. Execution instructions for TC2.
+only JavaScript code fragment of this application. Still, coverage of the navigation model does not exercise it. When
+the message sender name is empty, a pop-up window is displayed, with an error message inside. This is the JavaScript
+code that implements it:
+<script type="text/javascript">
+window.alert(’Bad Content’);
+history.back(-1);
+</script>
+
+With the whole test suite, all of the branches in the control flow model are covered, except one, which was regarded as an infeasible branch. It is represented in Figure 5
+as the edge from node 1 to node 2. This is the associated
+PHP code:
+$topic=$HTTP_GET_VARS["top"];
+if (!$topic):
+$topic="1";
+endif;
+
+Since the GET variable top is always defined, along any
+navigation leading to small.php, it is by no means possible to make the condition !$topic true.
+
+5 Conclusions and future work
+White-box testing of the Web application wmforum
+was conducted at two levels, corresponding to our 2-layer
+model. The higher-level was useful to check the different
+navigation paths that a user can follow while interacting
+with this application. Full coverage of the navigation model
+required 8 test cases and 3 harnesses, with an associated
+effort of about 1/2 person-day.
+Coverage of the lower-level model was useful to test the
+boundary conditions associated with some of the branches
+in the code under test, which would have been otherwise
+not exercised. A higher confidence can thus be gained on
+the ability of the application to handle error conditions and
+limit cases. This was not achieved by the test cases for the
+navigation model. The additional effort required was still
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+the order of 1/2 person-day, so that a doubling of the initial
+effort seems necessary to cover the lower-level model. This
+is confirmed by the number of test cases, passing from 8 to
+15, and by the number of harnesses, passing from 3 to 6. Of
+course, more experimental work is necessary to draw definitive conclusions on this. In our case, the total effort remains
+affordable even when the strongest coverage is reached. The
+advantages of a more thorough test seem remarkable ones,
+in terms of special and error conditions otherwise untested.
+The instrumentation effort is not accounted for, since it can
+be fully automated.
+Our future work will be devoted to an assessment of the
+fault revealing ability of the test suites developed either for
+high-level or for low-level coverage. This might be based
+on the fault seeding method. Moreover, we will complete
+the implementation of the branch instrumentor in TXL.
+
+References
+[1] W. K. Chang and S. K. Hon. A systematic framework for
+ensuring link validity under web browsing environments.
+In Proc. of the 13th International Software/Internet Quality
+Week, San Francisco, California, USA, 2000.
+[2] J. Conallen. Building Web Applications with UML. AddisonWesley Publishing Company, Reading, MA, 2000.
+[3] J. Cordy, T. Dean, A. Malton, and K. Schneider. Source
+transformation in software engineering using the TXL transformation system. Information and Software Technology,
+44(13):827–837, 2002.
+
+[4] G. A. Di Lucca, A. R. Fasolino, F. Faralli, and U. D. Carlini. Testing Web applications. In Proc. of the International Conference on Software Maintenance (ICSM), Montreal, Canada, October 2002. IEEE Computer Society.
+[5] D. Eichmann. Evolving an engineered Web. In Proc. of the
+International Workshop on Web Site Evolution, Atlanta, GA,
+USA, October 1999.
+[6] S. Elbaum, S. Karre, and G. Rothermel. Improving Web
+application testing with user session data. In Proceedings
+of the 25th International Conference on Software Engineering (ICSE), pages 49–59, Portland, USA, May 2003. IEEE
+Computer Society.
+[7] C. Kallepalli and J. Tian. Measuring and modeling usage
+and reliability for statistical web testing. IEEE Transactions on Software Engineering, 27(11):1023–1036, November 2001.
+[8] C.-H. Liu, D. C. Kung, P. Hsia, and C.-T. Hsu. An objectbased data flow testing approach for web applications. International Journal of Software Engineering and Knowledge
+Engineering, 11(2):157–179, April 2001.
+[9] F. Ricca and P. Tonella. Analysis and testing of Web applications. In Proc. of ICSE 2001, International Conference
+on Software Engineering, Toronto, Ontario, Canada, May
+12-19, pages 25–34, 2001.
+[10] P. Tonella and F. Ricca. Dynamic model extraction and statistical analysis of Web applications. In Proc. of the International Workshop on Web Site Evolution (WSE), pages 43–52,
+Montreal, Canada, October 2002. IEEE Computer Society.
+[11] P. Tonella and F. Ricca. Web application slicing in presence of dynamic code generation. IRST Technical Report n.
+0306-11, to appear in Journal of Automated Software Engineering, June 2003.
+
+Proceedings of the Sixth IEEE International Workshop on Web Site Evolution (WSE’04)
+1550-4441/04 $ 20.00 IEEE
+
+

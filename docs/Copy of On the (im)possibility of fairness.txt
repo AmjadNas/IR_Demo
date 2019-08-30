@@ -1,0 +1,896 @@
+On the (im)possibility of fairness∗
+Sorelle A. Friedler
+
+arXiv:1609.07236v1 [cs.CY] 23 Sep 2016
+
+Haverford College
+
+†
+
+Carlos Scheidegger
+University of Arizona
+
+‡
+
+Suresh Venkatasubramanian
+University of Utah§
+
+Abstract
+What does it mean for an algorithm to be fair? Different papers use different notions of algorithmic fairness, and
+although these appear internally consistent, they also seem mutually incompatible. We present a mathematical setting in
+which the distinctions in previous papers can be made formal. In addition to characterizing the spaces of inputs (the
+“observed” space) and outputs (the “decision” space), we introduce the notion of a construct space: a space that captures
+unobservable, but meaningful variables for the prediction. We show that in order to prove desirable properties of the
+entire decision-making process, different mechanisms for fairness require different assumptions about the nature of the
+mapping from construct space to decision space. The results in this paper imply that future treatments of algorithmic
+fairness should more explicitly state assumptions about the relationship between constructs and observations.
+
+1
+
+Introduction
+
+Machine learning has embedded itself deep inside many of the decision-making systems that used to be
+driven by humans. Whether it’s resume filtering for jobs, or admissions to college, credit ratings for loans,
+or all components of the criminal justice pipeline, automated tools are being used to find patterns, make
+predictions, and assist in decisions that have significant impact on our lives.
+The “rise of the machines” has raised concerns about the fairness of these processes. Indeed, while one
+of the rationales for introducing automated decision making was to replace subjective human decisions
+by “objective” algorithmic methods, a large body of research has shown that machine learning is not free
+from the kinds of discriminatory behavior humans display. This area of algorithmic fairness now contains
+many ideas about how to prevent algorithms from learning bias1 and how to design algorithms that are
+“fairness-aware.”
+Strangely though, the basic question “what does it mean for an algorithm to be fair?” has gone underexamined. While many papers have proposed quantitative measures of fairness, these measures rest on
+unstated assumptions about fairness in society. As we shall show, these assumptions, if brought into the
+open, are often mutually incompatible, rendering it difficult to compare proposals for fair algorithms with
+each other.
+
+1.1
+
+Our Work
+
+Definitions of fairness, nondiscrimination, and justice in society have been debated in the social science
+community extensively, from Rawls to Nozick to Roemer, and many others. A parallel debate is ongoing
+within the computer science community, including discussions of individual fairness [8] vs. group fairness
+(e.g., disparate impact’s four-fifths rule [10] and a difference formulation of a discrimination score [3, 13, 14,
+20, 25]). These discussions reveal differences in the understood meaning of “fairness” in decision-making
+centering around two different interpretations of the extent to which factors outside of an individual’s
+∗ This
+
+research was funded in part by the NSF under grants IIS-1251049, CNS-1302688, IIS-1513651, IIS-1633724, and IIS-1633387.
+
+† sorelle@cs.haverford.edu
+‡ cscheid@cscheid.net
+§ suresh@cs.utah.edu
+1
+
+Here, and in the rest of this paper, we will typically use “bias” to denote discriminatory behavior in society, rather than the statistical
+notion of bias. Similarly, “discriminate” will refer to the societal notion.
+
+1
+
+2 Spaces: Construct, Observed and Decision
+
+2
+
+control should be factored into decisions made about them and the extent to which abilities are innate and
+measurable. This tension manifests itself in the debates between “equality of outcomes” and “equality of
+treatment” that have long appeared under many names. Our contribution to this debate will be to make
+these definitions mathematically precise and reveal the axiomatic differences at the heart of this debate. (We
+will review the literature in light of these definitions in Section 5.)
+In order to make fairness mathematically precise, we tease out the difference between beliefs and mechanisms to make clear what aspects of this debate are opinions and which choices and policies logically follow
+from those beliefs. Our goal is to make the embedded value systems transparent so that the belief system
+can be chosen, allowing mechanisms to be proven compatible with these beliefs.
+We will create this separation of concerns by developing a mathematical theory of fairness in terms of
+transformations between different kinds of spaces. Our primary insight can be summarized as:
+To study algorithmic fairness is to study the interactions between different spaces that make up the
+decision pipeline for a task.
+We will first argue that there are more spaces that are implicitly involved in the decision-making pipeline
+than are typically specified. In fact, it is the conflation of these spaces that leads to much of the confusion and
+disagreement in the literature on algorithmic fairness. Next, we will reinterpret notions of fairness, structural
+bias, and non-discrimination as quantifying the way that spaces are transformed to each other. With this
+framework in place, we can make formal tensions between fairness and non-discrimination by revealing
+fundamental differences in worldviews underlying these definitions.
+Our specific contributions are as follows:
+
+• We introduce the idea of (task-dependent) spaces that interact in any learning task, specifically introducing the construct space that captures the notion that features of interest for decision-making are
+necessarily imperfect proxies for the construct of interest.
+• We reinterpret notions of fairness, structural bias, and non-discrimination mathematically as functions
+of transformations between these spaces.
+• Surprisingly, we show that fairness can be guaranteed only with very strong assumptions about the
+world: namely, that “what you see is what you get,” i.e., that we can correctly measure individual fitness
+for a task regardless of issues of bias and discrimination. We complement this with an impossibility
+result, saying that if this strong assumption is dropped, then fairness can no longer be guaranteed.
+• We develop a theory of non-discrimination based on a quantification of structural bias. Building
+non-discriminatory decision algorithms is shown to require a different worldview, namely that “we’re
+all equal,” i.e., that all groups are assumed to have similar abilities with respect to the task in the
+construct space.
+• We show that virtually all methods that propose to address algorithmic fairness make implicit assumptions about the nature of these spaces and how they interact with each other.
+
+2
+
+Spaces: Construct, Observed and Decision
+
+If we consider our guiding informal understanding of fairness - that similar people should be treated
+similarly - in the context of algorithm design, we must begin by determining how people will be represented
+as inputs to the algorithm, and what associated notion of similarity on this representation is appropriate.
+These two choices will entirely determine what we mean by fairness, and there are many subtle choices that
+must be made in this determination as we build up to a formal definition. Fairness-aware algorithms (and
+indeed all algorithms in machine learning) can be viewed as mappings between spaces, and we will adopt
+this viewpoint. They take inputs from some feature space and return outputs in a decision space. The question
+then becomes how we should define points and the associated metric to precisely define these spaces. To
+illuminate some of the subtleties inherent in these choices, we’ll introduce what will be a running example
+of fairness in a college admissions decision.
+
+2 Spaces: Construct, Observed and Decision
+
+3
+
+Example: Setting up a College Admissions Decision
+We can think of the college admissions process as being a procedure that takes a set of people and applies a
+yes or no decision to each person. Before determining a fair procedure, an admissions office would need to
+determine what aspects of a person they wanted to make the decision based on. This might include potential,
+intelligence, and diligence. These choices would lead to other questions: At what point in a person’s life
+should these aspects of their personality and ability be measured? Is intelligence set at birth or adaptable
+and when does this mean it should be measured for a college admissions decision? How can potential and
+diligence be accurately measured?
+In order to define a feature space, we must answer questions about what features should be included
+and how (and when) they should be measured. This description illuminates our first important distinction
+from a common set-up of such a problem: the feature space itself is a representation of a chosen set of
+possibly hidden or unmeasurable constructs. Determining which features should be considered is part of the
+determination of how the decision should be made; representing those constructs in measurable form is a
+separate and important step in the process. This distinction motivates our first two definitions.
+Definition 2.1 (Construct space (CS)). The construct space is a metric space CS = ( P, d P ) consisting of individuals
+and a distance between them. It is assumed that the distance d P correctly captures closeness with respect to the task.
+The construct space is the space containing the features that we would like to make a decision based on.
+These are the “desired” or “true” features at the time chosen for the decision, and the ability to accurately
+measure similarity between people with respect to the task. This is the space representing the input to a
+decision-making process, if we had full access to it.
+Example: Construct space for a College Admissions Decision
+Suppose that a college admissions team decided to make admissions decisions based on predicted potential of
+applicants. Personal qualities, such as self-control, growth mind-set, and grit, are known to be determining
+factors in later success [2]. Grit is roughly defined as an individual’s ability to demonstrate passion,
+perseverance and resilience towards their chosen goal. In this way, a college admissions decision could
+attempt to use grit as a feature of “potential” in the construct space.
+In reality, we might not know these features or even the true similarity between individuals. All we have
+is what we measure or observe, and this leads us to our next definition.
+Definition 2.2 (Observed space (OS)). The observed space (with respect to T) is a metric space OS = ( P̂, dˆ). We
+assume an observation process g : P → P̂ that generates an entity p̂ = g( p) from a person p ∈ CS .
+Example: Observed space for a College Admissions Decision
+Grit (and other such qualities) are not directly observable: research attempts to measure grit indirectly
+through proxies such as self-reported surveys [6]. The ability to measure grit and these other qualities
+precisely is limited [7]. In this setting, the “amount of grit” is a feature in the construct space: it is hidden
+from us but appears to have some unknown influence on the desired predicted outcome. We attempt to infer
+it through imperfect proxy features, such as a “survey-based grit score,” that lie in the observed space.
+The final part of a task is a decision space of outcomes.
+Definition 2.3 (Decision space (DS)). A decision space is a metric space DS = (O, dO ), where O is a space of
+outcomes and dO is a metric defined on O. A task T can be viewed as the process of finding a map from P or P̂ to O.
+Example: Decision space for a College Admissions Decision
+The decision space for a college admissions decision consists of the (potentially unobservable, hopefully
+predictable) information that makes up the final admissions decision. The decision space might be simply
+the resulting yes/no (admit / don’t admit) decisions, or might be the predicted potential of an applicant or
+their predicted performance in college (a threshold could then be applied to this decision space to generate
+yes/no decisions).
+
+4
+
+2 Spaces: Construct, Observed and Decision
+
+How the spaces interact. Algorithmic decision-making is a set of mappings between the three spaces
+defined above. The desired outcome is a mapping from CS to DS via an unknown and complex function
+o = f ( X1 , X2 , . . .) of features that lie in the construct space.
+In order to implement an algorithm that predicts the desired outcome, we must first extract usable data
+from CS : this is a collection of mappings from CS to OS . The features Y1 , Y2 , . . . , Y` in OS might be:
+
+• noisy variants of the Xi : Yi = g( Xi ) where g(·) is some stochastic function,
+• some unknown (and noisy) combination of Xi : Yi = g( Xi1 , Xi2 , . . .), or
+• new attributes that are independent of any of the Xi .
+Further, some of the Xi might even be omitted entirely when generating Yi .
+Our goal is (ideally) to determine o. We instead design an algorithm that learns õ = f˜(Y1 , Y2 , . . . Y` ) i.e a
+mapping from OS to DS . The hope is that õ ' o.
+
+2.1
+
+Examples
+
+The easiest way to understand the interactions between the decision space, the construct space and the
+observed space is to start with a prediction task, posit features that seem to control the prediction, and then
+imagine ways of measuring these features. We provide a number of such examples in Table 1, described in
+more detail below.
+Decision space
+
+Construct space
+
+Observed space
+
+Performance in college
+Performance in college
+Recividism
+Recidivism
+Employee Productivity
+
+Intelligence
+Success in High School
+Propensity to commit crime
+Risk-averseness
+Knowledge of job
+
+IQ
+GPA
+Family history of crime
+Age
+Number of Years of Experience
+
+Tab. 1: Examples of construct space attributes and their corresponding observed space attributes for different
+outcomes
+College Admission. Universities consider a number of factors when deciding who to admit to their
+university. One admissions goal might be to determine the likelihood that an admitted student will be
+successful in college, and the factors considered can include things like intelligence, high school GPA, scores
+on standardized tests, extracurricular activities and so on. In this example, performance in college is the
+decision space, while intelligence and success in high school are in the construct space. Intelligence might be
+represented in the observed space by the result of an IQ test, while success in high school could be observed
+by high school GPA.
+Recidivism Prediction. When an offender is eligible for parole, judges assess the likelihood that the
+offender will re-offend after being released as part of the parole decision. Many jurisdictions now use
+automated prediction methods like COMPAS [17] to generate such a likelihood. With the goal of predicting
+the likelihood of recidivism (the decision space), such an algorithm might want to determine an individual’s
+propensity for criminal activity and their level of risk-aversion. These construct space attributes could be
+modeled in the observed space by a family history of crime and the offender’s age.
+Hiring. One of the most important criteria in hiring a new employee is their ability to succeed at a
+future job. As proxies, employers will use features like the college attended, GPA, previous work experience,
+interview performance and their overall resume. The decision space in this case is employee productivity
+once hired, while a construct space attribute is the applicant’s current knowledge of the job. One way to
+observe this knowledge (an attribute in the observed space) is by their number of years of experience at a
+similar job.
+
+5
+
+2 Spaces: Construct, Observed and Decision
+
+2.2
+
+Quantifying transformations between spaces
+
+We can describe the entire pipeline of algorithmic decision-making (feature extraction and measurement,
+prediction algorithms and even the underlying predictive mechanism) in the form of transformations
+between spaces. This is where the metric structure of the spaces plays a role. As we will see, we can
+express the quality of the various transformations between spaces in terms of how distances (that capture
+dissimilarity between entities) change when one space is transformed into another. The reason to use
+(functions of) distances to compare spaces is because most learning tasks rely heavily on the underlying
+distance geometry of the space. By measuring how the distances change relative to the original space we can
+get a sense of how the task outcomes might be distorted.
+We introduce two different approaches to quantifying these transformations: one that is more “local”
+and one that compares how sets of points are transformed. We start with a standard measure of point-wise
+transformation cost.
+Definition 2.4 ((additive) Distortion). Let ( X, d X ) and (Y, dY ) be two metric spaces and let f : X → Y be a map
+from X to Y. The distortion ρ f of f is defined as the smallest value such that for all p, q ∈ X
+
+|d X ( p, q) − dY ( f ( p), f (q))| ≤ ρ f
+The distortion ρ( X, Y ) is then the minimum achievable distortion ρ f over all mappings f .
+Notes. While the above notion (and its multiplicative variant) is standard in the theoretical computer
+science literature, it is helpful to understand why it is justified in the context of algorithmic fairness. Distortion
+is commonly used as way to minimize the change of geometry when doing dimensionality reduction to
+make a task more efficiently solvable 2 . The specific measure above is a special case ( p = ∞) of a general
+` p -additive distortion (where the norm is computed over the vector of distance differences). In this more
+general setting there are a number of approximation algorithms for estimating ρ when the “target space” Y
+is restricted to a line [5], a tree [1], or an ultrametric [9].
+There are many different ways to compare metric spaces using their distances. Distortion is a worst-case
+notion: it is controlled by the worst-case spread between a pair of distances in the two spaces. If instead we
+wished to measure distances between subsets of points in a metric space, there is a more appropriate notion.
+Definition 2.5 (Coupling Measure). Let X, Y be sets with associated probability measures µ X , µY . A probability
+measure ν over X × Y is a coupling measure if ν( X, ·) (the projection of ν on X) equals µ X , and similarly for ν(·, Y )
+and µY . The space of all such coupling measures is denoted by U ( X, Y ).
+Definition 2.6 (Wasserstein distance (WD)). Let ( X, d) be a metric space and let Y, Y 0 be two subsets of X. Let µ
+be a probability measure defined on X, which in turn induces probability measures µY , µY 0 on Y, Y 0 respectively.
+The Wasserstein distance between Y, Y 0 is given by
+
+Wd (Y, Y 0 ) =
+
+min
+
+ν∈U (Y,Y 0 )]
+
+Z
+
+d(y, y0 )ν(y, y0 )
+
+The WD finds an optimal transportation between the two sets and computes the resulting distance. It is
+a metric when d is.
+Finally, we need a metric to compare subsets of points that lie in different metric spaces. Intuitively,
+we would like some distance function that determines whether the two subsets have the same shape with
+respect to the two underlying metrics. We will make use of a distance function called the Gromov-Wasserstein
+distance [16] that is derived from the Wasserstein distance above.
+2 It is possible to take a more information-theoretic perspective on the nature of transformations between spaces. For example, we
+could quantify the quality of a (stochastic) transformation by the amount of mutual information between the source and target spaces.
+While this is relevant when we wish to determine the degree to which we can reconstruct the source space from the target, it is not
+necessary for algorithmic decision-making. For example, it is not necessary that we be able to reconstruct the construct space features
+from features in the observed space. But it will matter that individuals with similar features in the construct space have similar features
+in the observed space.
+
+6
+
+3 A mathematical formulation of fairness and bias
+
+Definition 2.7 (Gromov-Wasserstein distance (GWD)). Let ( X, d X ), (Y, dY ) be two metric spaces with associated
+probability measures µ X , µY . The Gromov-Wasserstein distance between X and Y is given by
+1
+GW ( X, Y ) =
+inf
+2 ν∈U (X,Y )
+
+Z Z
+
+|d X ( x, x 0 ) − dY (y, y0 )|dµ X × dµ X dµY × dµY
+
+Intuitively, the GWD computes the WD between the sets of pairs of points, to determine whether the two
+point sets determine similar sets of distances.
+We note that both W ( X, Y ) and GW ( X, Y ) can be computed using the standard Hungarian algorithm for
+optimal transport. W ( X, Y ) can be computed in time O(n3 ) (where | X | = |Y | = n) and GW ( X, Y ) can be
+computed in time O(n6 ).
+
+3
+
+A mathematical formulation of fairness and bias
+
+We have now introduced three spaces that play a role in algorithmic decision-making: the construct space,
+the observed space and the decision space. We have also introduced ways to measure the fidelity with which
+spaces map to each other. Armed with these ideas, we can now describe how notions of fairness and bias
+can be expressed formally.
+
+3.1
+
+A definition of fairness
+
+The definition of fairness is task specific, and prescribes desirable outcomes for a task. Since the solution to a
+task is a mapping from the construct space CS to the decision space DS , a definition of fairness should describe
+the properties of such a mapping. Inspired by the fairness definition due to Dwork et al. [8], we give the
+following definition of fairness:
+Definition 3.1 (Fairness). A mapping f : CS → DS is said to be fair if objects that are close in CS are also close in
+DS . Specifically, fix two thresholds e, e0 . Then f is defined as (e, e0 )- fair if for any x, y ∈ P,
+d P ( x, y) ≤ e =⇒ dO ( f ( x ), f (y)) ≤ e0
+Note that the definition of fairness does not require any particular outcome for entities that are far apart
+in CS .
+
+3.2
+
+A worldview: what you see is what you get
+
+The presence of the observed space complicates claims that data-driven decision making can be fair, since
+features in the observed space might not reflect the true value of the attributes that you would like to use to
+make the decision. In order to address this complication, given that the construct space is unobservable,
+assumptions must be introduced about the points in the construct space, or the mapping between the
+construct space and observed space, or both.
+One worldview focuses on the mapping between the construct space and observed space by asserting
+that the construct space and observed space are essentially the same. We call this worldview the what you see is
+what you get (WYSIWYG) view.
+Axiom 3.1 (WYSIWYG). There exists a mapping f : CS → OS such that the distortion ρ f is at most e for some small
+e > 0. Or equivalently, the distortion ρ between CS and OS is at most e
+In practice, we can think of e as a very small number like 0.01.
+Example: WYSIWYG in a College Admissions Decision
+In the college admissions setting, the WYSIWYG is the assumption that features like SAT scores and highschool GPA (which are observed) correlate well with the applicant’s ability to succeed (a property of the
+construct space). More precisely, it assumes that there is some way to use a combination of these scores to
+correctly compare true applicant ability.
+
+7
+
+3 A mathematical formulation of fairness and bias
+
+3.3
+
+A worldview: structural bias
+
+But what if the construct space isn’t accurately represented by the observed space? In the case of stochastic
+noise in the transformation between CS and OS, fairness in the system may decrease for all decisions. This
+case can be handled using the WYSIWYG worldview and usual techniques for accurate learning in the face of
+noise (see, e.g., [15]).
+Unfortunately, in many real-world societal applications, the noise in this transformation is non-uniform
+in a societally biased way. To explain this structural bias, we start with the notion of a group: a collection
+of individuals that share a certain set of characteristics (such as gender, race, religion and so on). These
+characteristics are often historically and culturally defined (e.g., by the long history of racism in the United
+States). We represent groups as a partition of individuals into sets G1 , G2 , . . . , Gk . In this work, we will
+think of a group membership as a characteristic of an individual; thus each of the construct space, observed
+space, and decision space admits a partition into groups, induced by the group memberships of individuals
+represented in these spaces.
+Structural bias manifests itself in unequal treatment of groups. In order to quantify this notion, we first
+define the notion of group skew: the way in which group (geometric) structure might be distorted between
+spaces. What we wish to capture is the relative distortion of groups with respect to each other, rather than
+(for example) a scaling transformation that would transform all groups the same way.
+Let ( X, d) be a metric space partitioned into groups X = { X1 , . . . , Xk }. Any probability measure µ X
+defined on X induces a measure µX on X in the natural way. We can define a metric dX on X via the operation
+dX ( Xi , X j ) = Wd ( Xi , X j ). Now consider two such metric spaces ( X, d X ), (Y, dY ) and their associated group
+metric spaces (X , dX ), (Y , dY ) and measures µ X , µY
+Definition 3.2 (Between-groups distance). The between-groups distance between ( X, d X ), (Y, dY ) with measures µ X , µY is
+GW (X , Y )
+ρb =
+(2k )
+The between-groups distance treats the groups in a space as individual “points”, and compares two
+collections of “points”. To capture the differential treatment of groups, we need to normalize this against a
+measure of how each group is distorted individually3 .
+Definition 3.3 (Within-group distance). Let Xi and Yi be the two sets in the spaces X, Y corresponding to the ith
+group. Let ρi = GW ( Xi , Yi ). Then we define
+1 k
+ρ w = ∑ ρi
+k i =1
+We can now define a notion of group skew between two spaces.
+Definition 3.4 (Group skew). Let ( X, d X ) and (Y, dY ) be metric spaces with group partitioning X , Y and measures
+µ X , µY . The group skew between X and Y is the quantity
+σ (X , Y ) =
+
+ρb (X , Y )
+ρw (X , Y )
+
+There is a degenerate case in which group skew is not well-defined. This is when for each i the sets
+Xi and Yi are identical in distance structure. In this (admittedly unlikely) setting, each ρi will be zero, and
+thus ρw = 0. This can be interpreted as saying that when groups are identical in the two spaces, any small
+variation between groups is magnified greatly. To avoid this degenerate case, we will instead compute ρb
+and ρw on a perturbed version of the data, where each point is shifted randomly within a metric ball of radius
+δ. The parameter δ acts as a smoothing operator to avoid such degenerate cases. This effectively adds O(δ) to
+each of the numerator and denominator, ensuring that the ratio is always well defined.
+Using these definitions, we can now account for structural bias, which can be informally understood
+as the existence of more distortion between groups than there is within groups when mapping between
+the construct space and the observed space, thus identifying when groups are treated differentially by the
+observation process.
+3
+
+This is similar to how we might measure between-group and within-group variance in statistical estimation problems like ANOVA.
+
+3 A mathematical formulation of fairness and bias
+
+8
+
+Definition 3.5 (Structural Bias). The metric spaces CS = ( X, d X ) and OS = (Y, dY ) admit t-structural bias if the
+group skew σ (X , Y ) > t.
+Example: Structural Bias in a College Admissions Decision
+Researchers have shown that the SAT verbal questions function differently for the African-American subgroup, so that the validity of the results as a measure of ability are in question for this subgroup [21]. In the
+case where SAT scores are a feature in the observed space, this research indicates that we should consider
+these scores to be the result of structural bias.
+3.3.1
+
+Non-Discrimination: a top-level goal
+
+Since group skew is a property of two metric spaces, we can consider the impact of group skew between the
+construct space and observed space (structural bias as defined above), between the observed space and the
+decision space, and between the construct space and the decision space. While colloquially “structural bias”
+can refer to any of these (since the construct space and observed space are often conflated), in this paper we
+will give different names to group skew depending on the relevant spaces used in the mapping. We will
+refer to group skew in the decision-making procedure (the mapping from observed space to decision space)
+as direct discrimination.
+Definition 3.6 (Direct Discrimination). The metric spaces OS = ( X, d X ) and DS = (Y, dY ) admit t-direct
+discrimination if the group skew σ (X , Y ) > t.
+Note that the group structure Y is the direct result of a mapping f : OS → DS , so we can think of direct
+discrimination as a function of this mapping.
+Since group membership is usually defined based on innate or culturally defined characteristics that
+individuals have no ability to change, it is often considered unacceptable (and in some cases, illegal) to use
+group membership as part of a decision-making process. Thus, in decision-making non-discrimination is
+often a high-level goal. This is sometimes termed “fairness,” but we will distinguish the terms here.
+Definition 3.7 (Non-Discrimination). Let CS = ( X, d X ) and DS = (Y, dY ). A mapping f : CS → DS is
+t-nondiscriminatory if the group skew ρ(X , Y ) ≤ t.
+Thus, this worldview is primarily concerned with achieving non-discrimination by avoiding both
+structural bias and direct discrimination. Given the social history of this type of group skew occurring
+in a way that disadvantages specific sub-populations it makes sense that this is a common top-level goal.
+Unfortunately, it is hard to achieve directly, since we have no knowledge of the construct space and the
+existence of structural bias precludes us from using the observed space as a reasonable representation of the
+construct space (as is done in the WYSIWYG worldview).
+3.3.2
+
+An Axiomatic Assumption: we’re all equal
+
+Instead, a common underlying assumption of this worldview, that we will make precise here, is that in the
+construct space all groups look essentially the same. In other words, it asserts that there are no innate differences
+between groups of individuals defined via certain potentially discriminatory characteristics. This latter
+axiom of fairness appears implicitly in much of the literature on statistical discrimination and disparate
+impact.
+There is an alternate interpretation of this axiom: the groups aren’t equal, but for the purposes of the
+decision-making process they should be treated as if they were. In this interpretation, the idea is that any
+difference in the groups’ performance (e.g., academic achievement) is due to factors outside their individual
+control (e.g., the quality of their neighborhood school) and should not be taken into account in the decision
+making process [18]. This interpretation has the same mathematical outcome as if the equality of groups is
+assumed as true, and thus we will refer to a single axiom to cover these two interpretations.
+Axiom 3.2 (we’re all equal (WAE)). Let CS = ( X, d X ) with measure µ X be partitioned into groups X1 , . . . , Xk . There
+exists some ε > 0 such that for all i, j, WdX ( Xi , X j ) < ε.
+
+3 A mathematical formulation of fairness and bias
+
+9
+
+Example: WAE in a College Admissions Decision
+In the college admissions setting, the WAE asserts that all groups will have almost the same distribution
+in the construct space of intrinsic abilities, such as grit or intelligence, chosen as important inputs to the
+decision making process. In the example of SAT scores, given above, this would mean that we assume
+the structural bias of these scores apparent in the observed space is not representative of a distributional
+difference in the construct space.
+It is useful to note that the WAE is a property of the construct space, whereas the WYSIWYG describes the
+relation between the construct space and observed space. Note also that the definition of structural bias
+does not itself assume the WAE - in fact, there could be structural bias that acted in addition to existing true
+differences between groups present in the construct space to further separate the groups in the observed
+space. However, because of the lack of knowledge about the construct space when assuming the existence of
+structural bias, the WAE will often be assumed in practice under the structural bias worldview.
+
+3.4
+
+Comparing Worldviews
+
+While we introduce these two axioms as different world views or belief systems, they can also be strategic
+choices. Whatever the motivation (which is ultimately mathematically irrelevant), the choice in axiom is
+critical to a decision-making process. The chosen axiom determines what fairness means by giving enough
+structure to the construct space or the mapping between the construct space and observed space to enforce
+fairness despite a lack of knowledge of the construct space. We discuss the subtleties of the axiomatic choice
+here and will return to the enforcement of fairness based on this axiomatic choice in the next section.
+Example: Choice of WYSIWYG or WAE for a College Admissions Decision
+There are many reasonable ways that a college admissions office might decide to set up a fair decision
+making procedure. These would include different choices of what features to be included in the construct
+space and might indicate different fairness goals. They would also necessitate different axiomatic choices.
+1. One decision-making philosophy might be that the college should admit only those students who reach
+a high level of achievement and demonstrated intelligence at the time of admission. The construct
+space in this example might include potential, intelligence, and diligence at the time of the admissions
+decision.
+(a) If the admissions office believes that their observed space features accurately represent the
+construct space features, this scenario aligns with the WYSIWYG axiom.
+(b) If the admissions office believes that any systemic group differences in the observed space are
+inaccuracies (e.g., potentially due to culturally inflected exam questions), this scenario follows the
+WAE axiom.
+2. Another decision-making philosophy might be that the college should focus on admitting those with
+high innate potential, regardless of the social environment and life experiences that may have shaped
+that potential. In this case, the construct space might include potential, intelligence, and diligence at
+birth. As above, the admissions office could choose to believe either the WYSIWYG or the WAE axioms.
+3. A third decision-making philosophy might be that the college admissions process should serve as a
+social equalizer, so that, e.g., applicants from different class backgrounds are admitted at approximately
+the same rate. Since the construct space is the space of features used for ideal decision-making, in
+this case potential, intelligence, and diligence might be assumed to represent an idealized belief of the
+characteristics and abilities of an individual were their class background equalized. (Some may believe
+that this case is the same as representing these qualities at the time of birth.) This would be a choice to
+follow the WAE axiom.
+
+The choice of worldview is heavily dependent on the specific attributes and task considered, and on the
+algorithm designer’s beliefs about how observations of these attributes align with the associated constructs.
+
+4 Making fair or non-discriminatory decisions
+
+10
+
+Roemer identifies the goal of such choices as ensuring that negative attributes that are due to an individual’s
+circumstances of birth or to random chance should not be held against them, while individuals should
+be held accountable for their effort and choices [18]. He suggests that differences in worldview can be
+attributable to when in an individual’s development the playing field should be leveled and after what point
+an individual’s own choices and effort should be taken into account. In our decision-making formulation,
+the decision about when amounts to a decision of which axiom to believe at the point in time the decision
+will be made. If the decision is being made while the playing field should be leveled, then the we’re all equal
+axiom should be assumed. If the decision is being made while only an individual’s own efforts should be
+included in the decision, then the WYSIWYG axiom may be the right choice.
+
+3.5
+
+Mechanisms
+
+We can think of the axioms as assumed relationships between the construct space and the observed space (or
+operating within the construct space), and fairness definitions as desirable outcomes (executions of tasks)
+that reflect these relationships. A mechanism is then a constructive expression of a definition: it is a mapping
+(or set of mappings) from OS to DS that allow the definition to be satisfied. In effect, a well-designed
+mechanism working from a specific set of axioms should yield a fair outcome.
+Formally, a mechanism is a mapping f : OS → DS that satisfies certain properties. First and foremost, a
+mechanism should be nontrivial. For example, if the decision space is {0, 1} (e.g for binary classification), a
+mechanism that assigned a 0 to each point would be trivial.
+Definition 3.8 (Richness). A mechanism f : OS → DS is rich if for each d ∈ DS , f −1 (d) 6= ∅.
+There are then two types of mechanisms that (we will show) provide guarantees under the two different
+world views described above: individual fairness mechanisms (aiming to guarantee fairness) and group
+fairness mechanisms (aiming to guarantee non-discrimination).
+Definition 3.9 (Individual fairness mechanism (IFM)). Fix a tolerance e. A mechanism IFM e is a rich mapping
+f : OS → DS such that ρ f ≤ e.
+The individual fairness mechanism asserts that the mechanism for decision making treats people similarly
+if they are close, and can treat them differently if they are far, in the observed space.
+Definition 3.10 (Group fairness mechanism (GFM)). Let X be partitioned into groups X1 , X2 , . . . as before. A rich
+mapping f : OS → DS is said to be a valid group fairness mechanism if all groups are treated equally. Specifically,
+fix e. Then f is said to be a GFM e if for any i, j, WdO ( Xi , X j ) ≤ e.
+The group fairness mechanism asserts that the decision mechanism should treat all groups the same way.
+The doctrine of disparate impact is an example of such an assertion (although the precise measure of the
+degree of disparate impact as measured by the 4/5-rule is different).
+In the following sections we will explore whether and how these types of mechanisms actually guarantee
+fairness under certain axiomatic assumptions.
+
+4
+
+Making fair or non-discriminatory decisions
+
+With the basic vocabulary in place, we can now ask questions about when fairness is possible. An easy first
+observation is that under the WYSIWYG, we can always be fair.
+Theorem 4.1. Under the WYSIWYG with error parameter δ, an IFM δ0 will guarantee (e, e0 )-fairness for some function
+f such that e0 = f (δ, δ0 ).
+Proof. Two points in the observed space at distance d have a distance in the construct space between d − δ
+and d + δ. Applying the mechanism WMδ0 yields decision elements that have a distance (in DS ) between
+d − δ − δ0 and d + δ + δ0 . Setting e0 appropriately yields the claim.
+
+4 Making fair or non-discriminatory decisions
+
+11
+
+The requirement that we have an individually fair mechanism turns out to be important. We start with
+some background. Fix CS . Assume that we have two groups a, b, and so each point p ∈ CS has a label
+`( p) : CS → { a, b}. Let φ : CS → OS be the method by which features of p are “observed”. For simplicity,
+we assume this map is bijective and so for each q ∈ OS there exists φ−1 (q) = p ∈ CS . We will abuse notation
+and denote the (group) label of q ∈ OS as `(q) = `(φ−1 (q)). Let dOS be a metric on OS . Let P ⊂ OS be a
+set of points. The diameter of P is ∆( P) = maxx,y∈ P dOS ( x, y). Consider an arbitrary f .
+Theorem 4.2. Under the WYSIWYG with parameter e, for any δ, δ0 < 1 and a rich mechanism f : OS → DS where
+the decision space is discrete (DS = {0, 1, 2, . . . , k}), f is not (δ − e, δ0 )-fair.
+Proof. Fix the metric d( x, y) = 1 x6=y . Let B = Br ( x ) be a ball of radius r centered at x ∈ OS . We will say
+that B is monochromatic if all points in B have the same image under f . Let r 0 be the smallest value of r such
+that Br ( x ) is not monochromatic. If such an r 0 does not exist, then f cannot be rich. Consider the difference
+∆ = Br ( x ) \ Br−δ ( x ), and let Bδ/2 (y) ∈ ∆ be some ball that is not monochromatic (such a ball must exist
+since f is injective). Pick two points p, q ∈ Bδ/2 (y) that have different images under f . But they are at most δ
+apart! Any bijection φ from CS to OS that preserves this distance will thus ensure that there are two points
+φ−1 ( p) and φ−1 (q) that are within distance δ − e but have a distance of 1 > δ0 in DS .
+The essence of the above argument is that a discrete decision space disallows a fair mechanism, and
+precludes fairness.
+
+4.1
+
+Non-discriminatory decisions are possible
+
+Demographic parity, the disparate impact four-fifths rule, and other measures quantifying the similarity
+in the outcomes that groups receive in the decision space are prevalent and associated with many group
+fairness mechanisms that attempt to guarantee good outcomes under these measures. We will show that
+such group fairness mechanisms guarantee non-discriminatory decisions.
+Recall from Definition 3.7 that non-discriminatory decisions guarantee a lack of group skew in the
+mapping between the construct space and decision space, i.e., the goal of non-discrimination is to ensure
+that the process of decision-making does not vary based on group membership. Given that it’s not possible to
+directly measure the construct space or the mapping between the construct space and decision space without
+assuming the WYSIWYG axiom, these group fairness mechanisms attempt to ensure non-discrimination
+through measurements of the decision space.
+Do these group fairness mechanisms succeed? Not at first glance. Suppose we have two groups X1 , X2 in
+CS that are far apart, i.e W ( X1 , X2 ) is large and suppose also that they are appropriately far apart in their
+performance on the task. Suppose that because of structural bias, the images of these two groups in the
+observed space OS are even further apart while keeping the distribution of task performance within each
+group the same.
+A group fairness mechanism applied to the observed space will then move these groups, on the whole,
+to the same smaller portion of the decision space so that they receive decisions indicating that they are, on
+the whole, equal with respect to the task. (Suppose again that the individuals within the group are mapped
+similarly with respect to each other and the task.)
+Is this decision process non-discriminatory? No. While the within-group distortion will remain the same
+between the construct space and the decision space, the between-group distortion will be as large as the
+separation between X1 and X2 in the construct space. Intuitively, we can see this as discriminatory towards
+the group that performs better with respect to the task in the construct space, since they are, as a group,
+receiving worse decisions than less skilled members of the other group (i.e., there has been group skew in
+their group’s mapping to the decision space).
+Yet these group fairness mechanisms are in common practice – why? First, let’s review the assumptions
+of this scenario. If the WYSIWYG axiom is assumed, then guaranteeing fairness is easily achievable, so here
+we are interested in what to do in the case when the WYSIWYG axiom is not assumed. Specifically, let’s
+assume that we are worried about the existence of structural bias – group skew in the mapping between
+the construct space and the observed space. In this scenario, it may make sense to assume the we’re all equal
+axiom. In fact, as we will show now, when the we’re all equal axiom is assumed group fairness mechanisms
+can be shown to guarantee non-discrimination.
+
+5 Analyzing Related Work
+
+12
+
+Theorem 4.3 (Group fairness mechanisms guarantee non-discrimination). Under the WAE, a GFM with
+parameter e0 guarantees (max(e, e0 )/δ)-nondiscrimination.
+Proof. The WAE ensures that in the construct space CS , all groups are within distance e from each other
+under Wd . Similarly, a group fairness mechanism ensures that in the decision space DS , all groups are within
+distance e0 from each other.
+Consider now the between-group distance ρb between CS and DS . Since all groups are within e of
+each other in CS and within e0 in DS , each term in the integral that computes GW is upper bounded by
+max(e, e0 ). By construction, the within-group distance ρw is lower bounded by the noise parameter δ. Thus,
+the overall structural bias score σ is upper bounded by max(e, e0 )/δ.
+Note that this guarantee of non-discrimination holds even under the structural bias worldview, i.e., the
+theorem makes no assumptions about the mapping from the construct space to the observed space. With
+this theorem, we now have both an axiom and mechanism under which fairness can be achieved, and a
+corresponding axiomatic assumption and mechanism under which non-discrimination can be achieved.
+
+4.2
+
+Conflicting worldviews necessitate different mechanisms
+
+As we have shown in this section, under the WYSIWYG worldview fairness can be guaranteed, while under a
+structural bias worldview non-discrimination can be guaranteed. Are these worldviews fundamentally conflicting, or do mechanisms exist that can guarantee fairness or non-discrimination under both worldviews?
+Unfortunately, as discussed above, the WYSIWYG appears to be crucial to ensuring fairness: if for example
+there is structural bias in the decision pipeline, no mechanism can guarantee fairness. Fairness can only
+be achieved under the WYSIWYG worldview using an individual fairness mechanism, and using a group
+fairness mechanism will be unfair within this worldview.
+What about non-discrimination? Unfortunately, a simple counterexample again shows that these mechanisms are not agnostic to worldview. While group fairness mechanisms were shown to achieve nondiscrimination under a structural bias worldview and the we’re all equal axiom, if structural bias is assumed,
+applying an individual fairness mechanism will cause discrimination in the decision space whether the we’re
+all equal axiom is assumed or not. Consider again the two groups X1 , X2 in CS with large W ( X1 , X2 ), and
+again suppose that the images of these two groups in the observed space OS are even further apart, while
+keeping the distribution of task performance in each group the same. Now apply an individual fairness
+mechanism to this observed space. The resulting decision space contains a large between-group distortion
+since the group that performed better with respect to the task in the construct space will have received, on
+the whole, much better decisions than their original skill with respect to the other group warrants. These
+decisions will thus be discriminatory.
+Choice in mechanism must thus be tied to an explicit choice in worldview. Under a WYSIWYG worldview,
+only individual fairness mechanisms achieve fairness (and group fairness mechanisms are unfair). Under
+a structural bias worldview, only group fairness mechanisms achieve non-discrimination (and individual
+fairness mechanisms are discriminatory).
+
+5
+
+Analyzing Related Work
+
+This section serves partly as a review of the literature on fairness. But it also serves as a form of “empirical
+validation” of our framework, in that we use our new formalization of what fairness and non-discrimination
+mean and the underlying assumptions necessitated when attempting to build fair mechanisms in order to
+reconsider previous work within this framework. Broadly, we find that the previous work in fairness-aware
+algorithms either (i) adopt the WYSIWYG worldview and guarantee fairness while assuming the WYSIWYG
+axiom or (ii) adopt the structural bias worldview and guarantee non-discrimination while assuming the we’re
+all equal axiom. A full survey of such work can be found in [19, 23]. Here, we will describe some interesting
+representative works from each of the worldviews.
+
+5 Analyzing Related Work
+
+5.1
+
+13
+
+WYSIWYG Worldview
+
+One foundational work that adopts the WYSIWYG worldview is Dwork et al. [8]. The definition of fairness
+they introduce is similar to (and inspired) ours – they are interested in ensuring that two individuals who are
+similar receive similar outcomes. The difference from our definition is that they consider outcome similarity
+according to a distribution of outcomes for a specific individual. Dwork et al. emphasize that determining
+whether two individuals are similar with respect to the task is critical, and assume that such a metric is given
+to them. In light of the formalization of the construct space and observed space, we add the understanding
+that the metric discussed by Dwork et al. is the distance in the construct space. In our framework, this
+metric is not knowable unless WYSIWYG is assumed (or the specific mapping between the construct space
+and observed space is otherwise provided), so we classify this work as adopting the WYSIWYG worldview.
+Additionally, Dwork et al. [8] show that when the earthmover distance between distributions of
+the attributes conditioned on protected class status are small, then their notion of fairness implies nondiscrimination (which they measure as statistical parity, or a ratio of one between the positive outcome
+probability for the protected class and that for the non-protected class). Thus, they show that under an
+assumption similar to the WYSIWYG axiom, if an assumption similar to the we’re all equal axiom is also
+assumed, then group fairness mechanisms guarantee fairness. Note that this special case is unusual, since
+both axiomatic assumptions are made. A follow-up work by Zemel et al. [25] attempts to bridge the gap
+between these worldviews by adding a regularization term to attempt to enforce statistical parity as well as
+fairness.
+Interestingly, some of the examples in Dwork et al. [8] arguing that a particular form of non-discrimination
+measure (“statistical parity”) is insufficient in guaranteeing fairness make an additional subtle assumption
+about what spaces are involved in the decision-making process. Their model implicitly assumes that there
+could be both an observed decision space and a true decision space (a scenario common in the differential
+privacy literature), while our framework assumes only a single truly observable decision space (as is
+more common in the machine learning literature). One example issue they introduce is the “self-fulfilling
+prophecy” in which, for example, an employer purposefully brings in under-qualified minority candidates
+for interviews (the observed decision space) so that no discrimination is found at the interview stage, but
+since the candidates were under-qualified, only white applicants are eventually hired (the true decision
+space). Under our framework, only the final decisions about who to hire make up the single decision space,
+and so the discrimination in the decision is detected.
+Another type of fairness definition is based on the amount of change in an algorithm’s decisions when the
+input or training data is changed. Datta et al. [4] consider ad display choices to be discriminatory if changing
+the protected class status of an individual changes what ads they are shown. Fish et al. [11] consider a
+machine learning algorithm to be fair if it can reconstruct the original labels of training data when noise has
+been added to the labels for anyone from a given protected class. Both of these definitions make the implicit
+assumption that the remaining training data that is not the protected class status or the label is the correct
+data to use to make the decision. This is exactly the WYSIWYG axiomatic assumption.
+A recent work by Joseph et al. [12] also contributes a new fairness definition, akin to those introduced in
+this paper and by Dwork et al., that aims to ensure that worse candidates are never accepted over better
+candidates as measured with respect to the task. Their goal is to take these measurements within the
+construct space with unknown per-group functions mapping from the construct space to the observed space.
+Joseph et al. aim to learn these per-group functions. Thus, although their fairness goal focuses on fairness
+at an individual level, this work serves as a bridge to the structural bias worldview by recognizing that
+different groups may receive different mappings between the construct space and the observed space.
+
+5.2
+
+Structural Bias Worldview
+
+The field of fairness-aware data mining began with examinations of how to ensure non-discrimination in the
+face of structural bias. These group fairness mechanisms often implicitly assume the we’re all equal axiom
+and, broadly, share the goal of ensuring that the distributions of classification decisions when conditioned
+on a person’s protected class status are the same for historically disadvantaged groups as they are for the
+majority. The underlying implicit goal in many of these papers and associated discrimination measures is
+non-discrimination as we have defined it in this paper – a decision-making process that is made based on
+
+6 Conclusions
+
+14
+
+an individual’s attributes in the construct space and that does not have group skew in its mapping to the
+decision space.
+The particular formulation of the group fairness mechanism goal has taken many forms. Let Pr [C =
+Yes| G = 0] be the probability of people in the minority group receiving a positive classification and
+Pr [C = YES| G = 1] be the probability of people in the majority group receiving a positive classification.
+Much previous work has considered the goal of achieving a low discrimination score [3, 13, 14, 20, 25], where
+the discrimination score is defined as Pr [C = YES| G = 1] − Pr [C = YES| G = 0]. Since the goal is to bring
+this difference close to zero, the assumption is that groups should, as a whole, receive similar outcomes.
+This reflects an underlying assumption of the we’re all equal axiom so that similar group outcomes will be
+non-discriminatory.
+Previous work [10] has also created group fairness mechanisms with the goal of ensuring that decisions
+are non-discriminatory under the disparate impact four-fifths ratio, a U.S. legal notion with associated
+measure advocated by the E.E.O.C. [22]. Work by Zafar et al. [24] has used a related definition that is
+easier to optimize. The disparate impact four-fifths measure looks at the ratio comparing the protected
+class-conditioned probability of receiving a positive classification to the majority class’ probability: Pr [C =
+YES| G = 0] / Pr [C = 0| G = 1]. Ratios that are closer to one are considered more fair, i.e., it is assumed
+that groups should as a whole receive similar classifications in order for the result to be non-discriminatory.
+Again, this shows that the we’re all equal axiom is being assumed in this measure.
+Many of these works attempt to ensure non-discrimination by modifying the decision algorithm itself
+[3, 14] while others change the outcomes after the decision has been drafted. Especially interesting within
+the context of our definitional framework, some solutions change the input data to the machine learning
+algorithm before a model is trained [10, 13, 25]. These works can be seen as attempting to reconstruct the
+construct space and make decisions directly based on that hypothesized reality under the we’re all equal
+assumption.
+
+6
+
+Conclusions
+
+In this paper, we have shown that some notions of fairness are fundamentally incompatible with each other.
+These results might appear discouraging if one hoped for a universal notion of fairness, but we believe they
+are important. They force a shift in the focus of the discussion surrounding algorithmic fairness: without
+precise definitions of beliefs about the state of the world and the kinds of harms one wishes to prevent, our
+results show that it is not possible to make progress. They also force future discussions of algorithmic fairness
+to directly consider the values inherent in assumptions about how the observed space was constructed, and
+that such value assumptions should always be made explicit.
+Although the specific theorems themselves matter, it is the definitions and the problem setup that are the
+fundamental contributions of this paper. This work represents a first step towards fairness researchers using
+a shared setting, vocabulary, and assumptions.
+
+7
+
+Acknowledgements
+
+We want to thank the attendees at the Dagstuhl workshop on Data, Responsibly for their helpful comments
+on an early presentation of this work; special thanks to Cong Yu and Michael Hay for encouraging us to
+articulate the subtle differences in reasons for choosing a specific worldview and to Nicholas Diakopoulos
+and Solon Barocas to pointing us to the relevant work on “constructs” and inspiring our naming of that
+space. Thanks to Tionney Nix and Tosin Alliyu for generative early conversations about this work. Thanks
+also to danah boyd and the community at the Data & Society Research Institute for continuing discussions
+about the meanings of fairness and non-discrimination in society.
+
+References
+[1] R. Agarwala, V. Bafna, M. Farach, M. Paterson, and M. Thorup. On the approximability of numerical
+taxonomy (fitting distances by tree metrics). SIAM Journal on Computing, 28(3):1073–1085, 1998.
+
+7 Acknowledgements
+
+15
+
+[2] M. Almlund, A. L. Duckworth, J. J. Heckman, and T. D. Kautz. Personality psychology and economics.
+Technical Report w16822, NBER Working Paper Series. Cambridge, MA: National Bureau of Economic
+Research., 2011.
+[3] T. Calders and S. Verwer. Three naı̈ve Bayes approaches for discrimination-free classification. Data Min
+Knowl Disc, 21:277–292, 2010.
+[4] A. Datta, M. C. Tschantz, and A. Datta. Automated experiments on ad privacy settings: A tale of opacity,
+choice, and discrimination. Proceedings on Privacy Enhancing Technologies, 1:92 – 112, 2015.
+[5] K. Dhamdhere. Approximating additive distortion of embeddings into line metrics. In Approximation,
+Randomization, and Combinatorial Optimization. Algorithms and Techniques, pages 96–104. Springer, 2004.
+[6] A. L. Duckworth, C. Peterson, M. D. Matthews, and D. R. Kelly. Grit: Perseverance and passion for
+long-term goals. Journal of Personality and Social Psychology, 92(6):1087–1101, 2007.
+[7] A. L. Duckworth and D. S. Yeager. Measurement matters: Assessing personal qualities other than
+cognitive ability for educational purposes. Educational Researcher, 44(4):237–251, 2015.
+[8] C. Dwork, M. Hardt, T. Pitassi, O. Reingold, and R. Zemel. Fairness through awareness. In Proc. of
+Innovations in Theoretical Computer Science, 2012.
+[9] M. Farach, S. Kannan, and T. Warnow. A robust model for finding optimal evolutionary trees. Algorithmica, 13(1-2):155–179, 1995.
+[10] M. Feldman, S. A. Friedler, J. Moeller, C. Scheidegger, and S. Venkatasubramanian. Certifying and
+removing disparate impact. Proceedings of the 21th ACM SIGKDD International Conference on Knowledge
+Discovery and Data Mining, pages 259–268, 2015.
+[11] B. Fish, J. Kun, and A. D. Lelkes. A confidence-based approach for balancing fairness and accuracy. In
+Proc. of the SIAM International Conference on Data Mining (SDM), 2016.
+[12] M. Joseph, M. Kearns, J. Morgenstern, and A. Roth. Fairness in learning: Classic and contextual bandits.
+In Proc. of the Neural Information Processing Systems (NIPS), 2016.
+[13] F. Kamiran and T. Calders. Classifying without discriminating. In Proc. of the IEEE International
+Conference on Computer, Control and Communication, 2009.
+[14] T. Kamishima, S. Akaho, and J. Sakuma. Fairness aware learning through regularization approach. In
+Proc of. Intl. Conf. on Data Mining, pages 643–650, 2011.
+[15] M. Kearns. Efficient noise-tolerant learning from statistical queries. Journal of the ACM, 45(6):983–1006,
+Nov. 1998.
+[16] F. Mémoli. Gromov–wasserstein distances and the metric approach to object matching. Foundations of
+computational mathematics, 11(4):417–487, 2011.
+[17] Northpointe.
+COMPAS - the most scientifically advanced risk and needs assessments.
+http://www.northpointeinc.com/risk-needs-assessment.
+[18] J. E. Roemer. Equality of Opportunity. Harvard University Press, 1998.
+[19] A. Romei and S. Ruggieri. A multidisciplinary survey on discrimination analysis. The Knowledge
+Engineering Review, pages 1–57, April 3 2013.
+[20] S. Ruggieri. Using t-closeness anonymity to control for non-discrimination. Transactions on Data Privacy,
+7:99–129, 2014.
+[21] M. V. Santelices and M. Wilson. Unfair treatment? The case of Freedle, the SAT, and the standardization
+approach to differential item functioning. Harvard Educational Review, 80(1):106–134, April 2010.
+
+7 Acknowledgements
+
+16
+
+[22] The U.S. EEOC. Uniform guidelines on employee selection procedures, March 2, 1979.
+[23] I. Žliobaitė. A survey on measuring indirect discrimination in machine learning. arXiv preprint
+arXiv:1511.00148, 2015.
+[24] M. B. Zafar, I. Valera, M. G. Rogriguez, and K. P. Gummadi. Fairness constraints: A mechanism for
+fair classification. In ICML Workshop on Fairness, Accountability, and Transparency in Machine Learning
+(FATML), 2015.
+[25] R. Zemel, Y. Wu, K. Swersky, T. Pitassi, and C. Dwork. Learning fair representations. In Proc. of Intl.
+Conf. on Machine Learning, pages 325–333, 2013.
+
+

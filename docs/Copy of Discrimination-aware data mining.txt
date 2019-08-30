@@ -1,0 +1,3257 @@
+Università di Pisa
+
+Dipartimento di Informatica
+
+Technical Report: TR-07-19
+
+Discrimination-aware
+data mining
+Dino Pedreschi
+
+Salvatore Ruggieri
+
+Franco Turini
+
+September 28, 2007
+ADDRESS: Largo B. Pontecorvo 3, 56127 Pisa, Italy.
+
+TEL: +39 050 2212700
+
+FAX: +39 050 2212726
+
+Discrimination-aware data mining
+Dino Pedreschi
+
+Salvatore Ruggieri
+
+Franco Turini
+
+Dipartimento di Informatica, Università di Pisa
+L.go B. Pontecorvo 3
+56127 Pisa, Italy
+
+{pedre,ruggieri,turini}@di.unipi.it
+
+ABSTRACT
+
+individual (or group) based on certain characteristics. U.S.
+federal laws guarantee civil rights and prohibit discrimination in a number of settings, including:
+
+In the context of civil rights law, discrimination refers to
+unfair or unequal treatment of people based on membership to a category or a minority, without regard to individual merit. Rules extracted from databases by data mining
+techniques, such as classification or association rules, when
+used for decision tasks such as benefit or credit approval,
+can be discriminatory, in the above sense. This deficiency
+of classification and association rules poses ethical and legal issues, as well as obstacles to practical application. In
+this paper, the notion of discriminatory classification rules
+is introduced and studied. Examples of potentially discriminatory attributes include gender, race, job, and age. A
+measure, termed α-protection, of the discrimination power
+of a classification rule containing a discriminatory item is
+defined and its properties studied. We show that the introduced notion is non-trivial, in the sense that discriminatory
+rules can be derived from apparently safe ones under natural assumptions about background knowledge. Finally, we
+discuss how to check α-protection and provide an empirical
+assessment on the German credit dataset.
+
+• credit/insurance scoring, with the Equal Credit Opportunity Act [4] that prohibits a creditor to discriminate against any applicant on the basis of race, color,
+religion, national origin, sex or marital status, age, or
+because all or part of the applicant’s income derives
+from any public assistance program;
+• lending, with the Fair Housing Act [6] prohibiting discrimination in the sale, rental, and financing of housing based on race, color, national origin, religion, sex,
+familial status, and disability;
+• personnel selection and wage discrimination, with the
+Intentional Employment Discrimination [15], the Equal
+Pay Act [5] and the Pregnancy Discrimination Act [7]
+prohibiting discrimination in personnel selection and
+wages based on race, color, religion, sex, national origin or pregnancy.
+
+Keywords
+
+Other U.S. federal laws exists on discrimination programs or
+activities concerning public accommodations, education and
+health care. Services, benefits and aids must be provided in
+these context in a nondiscriminatory manner. Sample activities and programs covered include for instance academic
+programs, student services, nursing homes, adoptions, senior citizens centers, hospitals, transportation and open-topublic businesses such as in providing food, lodging, gasoline, and entertainment. Several authorities (regulation boards, consumer advisory councils, commissions) are settled
+to monitor discrimination compliances in U.S., European
+Union and many other countries.
+
+Discrimination, knowledge discovery in databases, classification models, classification rules, interestingness measures.
+
+1.
+
+INTRODUCTION
+
+The word discrimination originates from the Latin discriminare, which means to “distinguish between”. In social sense,
+however, discrimination refers specifically to an action based
+on prejudice resulting in unfair treatment of people. According to Wikipedia, for instance, to discriminate is to make a
+distinction between people on the basis of their membership
+to a category, without regard to individual merit. Examples
+of social discrimination include racial, religious, gender, sexual orientation, disability, ethnic, height-related, and agerelated discrimination. In the context of civil rights law,
+discrimination refers to unfair or unequal treatment of an
+
+Indirect or systematic discrimination has also been considered in laws [1, 2, 3]. Indirect discrimination consists of
+rules, procedures or requirements that, while not explicitly
+mentioning discriminatory attributes, intentionally or not
+impose disproportionate burdens on minority or disadvantaged groups. As an example, requiring that a job applicant
+must be over 1.8 meters tall will have the effect of excluding a disproportionate number of women or of people from
+some ethnic groups from applying. The legislator has also
+accounted for the use of scoring systems, which are automatic means of assigning a score to a benefit application
+based on some predetermined rules. In order to guarantee
+the fairness of rules used by scoring systems, U.S. law [4]
+1
+
+(and also Italian law [13]) requires that adverse actions, such
+as rejection of a credit application or increase in insurance
+premium, when based on scoring systems, must be provided
+with specific and detailed reasons and explanations, in plain,
+unambiguous language, of the factors that had negatively affected the scoring degree.
+
+the notion of discriminatory classification rules, as a criterion to identify the potential risks of discrimination. This
+criterion is based on two ingredients:
+• some selected attribute values are identified as potentially discriminatory, on the basis of domain or background knowledge; examples include female gender,
+ethnic minority, low-level job, specific age range. It
+is worth noting that discriminatory items do not necessarily coincide with sensitive attributes with respect
+to pure privacy protection. For instance, gender is generally considered a non-sensitive attribute, whereas it
+can be discriminatory in many decision contexts.
+
+Concerning the research side, the issue of discrimination in
+credit, mortgage, insurance, labor market, education and
+other human activities has attracted much interest of researchers in economics and human sciences since late ’50s,
+when a theory on the economics of discrimination was proposed [10]. The literature in those research fields has given
+evidence of unfair treatment in racial profiling and redlining
+[36], mortgage discrimination [25], personnel selection discrimination [19, 21], and wages discrimination [24]. Indirect
+discrimination has also been investigated [20, 22].
+
+• α-protection is introduced as a measure of the discrimination power of a classification rule containing one or
+more discriminatory items. The idea is to define such a
+measure as an estimation of the gain in precision of the
+rule due to the presence of the discriminatory items.
+The α parameter is the key for tuning the desired level
+of protection against discrimination.
+
+In data mining and machine learning, classification models
+are constructed on the basis of historical data exactly with
+the purpose of discrimination in the original Latin sense: i.e.
+distinguishing between elements of different classes, in order
+to unveil the reasons of class membership, or to predict it
+for unclassified samples. In either cases, classification models can be adopted as a support to decision making, clearly
+also in socially sensitive tasks such as the access of applicant people to benefits, to public services, to credit. As an
+example, a large body of literature [9, 16, 17, 41, 43, 44]
+has considered classification models as the basis of scoring
+systems to predict the reliability of a mortgage/credit card
+debtor or the risk of taking up an insurance. Furthermore,
+data mining screening systems have recently been proposed
+[11] for personnel selection as well. Obviously, the risk of
+discrimination poses clear ethical and legal issues, as well
+as real obstacles to the practical application of classification
+techniques in socially sensitive decision making.
+
+As an example, consider the classification rules:
+a. purpose=used car
+==> class=bad
+-- conf:(0.165)
+
+b. age=senior
+gender=female
+purpose=used car
+==> class=bad
+-- conf:(1)
+
+Rule (a) can be translated into the statement “people that
+intend to buy a used car are assigned the bad credit class”
+16.5% of times. Rule (b) concentrates on “senior women
+that intend to buy a used car”. In this case, the additional (discriminatory!) items in the premise increase the
+confidence of the rule up to 100%, more than 6 times. αprotection is intended to detect rules where such an increase
+is higher than a fixed threshold α. We study the properties of α-protection, which motivate its adoption as a criterion to assess the discriminatory power of a classification
+rule, both theoretically and empirically. The experiments
+conducted on the real dataset ‘German credit’ [30] of bank
+credit approval records show that many discriminatory rules
+are indeed discovered using our proposed criterion.
+
+Now the question that naturally arises is the following. While
+classification models used for decision support can potentially guarantee less arbitrary decisions, can they be discriminating in the social, negative sense? The answer is clearly
+yes: it is evident that relying on mined models, e.g. classification rules, for decision making does not put ourselves on
+the safe side, as the rules extracted from the historical data
+may be discriminatory in the precise sense that disadvantaged groups or minorities can be unfairly classified just on
+the basis of their own status. Rather dangerously, learning
+rules from historical data may mean to discover traditional
+prejudices that are endemic in reality, and to assign to such
+practices the status of general rules, maybe unconsciously, as
+these rules are hidden within a classifier. For instance, if it
+is a current malpractice to deny to pregnant women the access to certain job positions, there is a high chance to find a
+strong association in the historical data between pregnancy
+and access denial, and therefore we run the risk of learning
+a discriminatory rule. Despite its high accuracy and statistical significance, such a rule should be clearly identified:
+while it is useful as an explanation, which actually reveals
+the mentioned malpractice, it should absolutely not be used
+for decision making.
+
+As far as indirect discrimination is concerned, we investigate
+the case when discrimination of a classification rule can be
+inferred by reasoning on a given set of α-protective rules.
+For instance, this happens in the case of binary classes, e.g.
+good/bad credit: we show how, in this case, the presence of
+a rule for the positive class, e.g.,
+bg. age=senior
+gender=female
+purpose=used car
+==> class=good
+may be used under certain conditions to infer that the complementary rule (b) is discriminatory. In order to take into
+account such inferences, we extend α-protection to strong
+α-protection. Moreover, we show how our approach can be
+geared to identify rules that are indirectly discriminatory,
+i.e. rules that do not contain discriminatory conditions but,
+when combined with other rules or with background knowledge, allow to infer discriminatory rules. As an example,
+consider the classification rule:
+
+In this paper, we tackle the problem of discrimination in
+data mining models in a rule-based setting, by introducing
+
+2
+
+c. driving_licence=no
+purpose=used car
+==> class=bad
+-- conf:(1)
+
+in order to extract frequent itemsets, i.e. itemsets with a
+specified minimum support, and valid association rules, i.e.
+rules with a specified minimum confidence.
+
+Assume to know that among the people that intend to buy
+a used car, people without driving licence are almost the
+same as senior women. Despite rule (c) does not contain
+any discriminatory item, it can bring some information on
+the discriminatory power of rule (b). We will show a formal
+result on inferring a lower bound in such cases, and discuss
+how to prevent inferences that make use of that lower bound.
+
+2.2
+
+Extended Lift
+
+We introduce a key concept for our purposes.
+Definition 2.1. [Extended lift] Let A, B → C be an association rule such that conf (B → C) > 0. We define the
+extended lift of the rule with respect to B as:
+conf (A, B → C)
+.
+conf (B → C)
+
+The paper is organized as follows. In Section 2, we recall
+standard notions on itemsets, association rules, classification rules, and measures such as support and confidence.
+Moreover, we introduce the measure of extended lift of an
+association rule. In Section 3, we introduce the notion of
+α-discrimination, study its properties on the German credit
+dataset, and extend it to strong α-discrimination. Inference
+of discrimination through two attack models is considered
+in Section 4. In Section 5 extensions of the approach and
+related work are discussed. Finally, in Section 6 the contribution of the paper is summarized. All proofs of theorems
+are reported in the Appendix A.
+
+We call B the context, and B → C the base-rule.
+Intuitively, the extended lift expresses the relative variation
+of confidence due to the addition of the extra itemset A
+in the premise of the base rule B → C. In general, the
+extended lift ranges over [0, ∞[. However, if association rules
+with a minimum support ms > 0 are considered, it ranges
+over [0, 1/ms]. Similarly, if association rules with base-rules
+with a minimum confidence mc > 0 are considered, it ranges
+over [0, 1/mc]. Proofs of these statements are reported in the
+Appendix A, Lemma A.6. The extended lift can be traced
+back to the well-known measure of lift [39], defined as:
+
+2. BASIC DEFINITIONS
+2.1 Association and Classification Rules
+
+lif tD (A → C) = confD (A → C)/suppD (C).
+
+We recall the notions of itemsets, association rules and classification rules from standard definitions [8, 27, 47]. Let R
+be a relation with attributes a1 , . . . , an . A class attribute is
+a fixed attribute c of the relation. An a-item is an expression
+a = v, where a is an attribute and v ∈ dom(a), the domain
+of a. We assume that dom(a) is finite for every attribute
+a. A c-item is called a class item. An item is any a-item.
+Let I be the set of all items. A transaction is a subset of I,
+with exactly one a-item for every attribute a. A database
+of transactions, denoted by D, is a set of transactions. An
+itemset X is a subset of I. As usual in the literature, we
+write X, Y for X ∪ Y. For a transaction T , we say that T
+verifies X if X ⊆ T . The support of an itemset X w.r.t. a
+non-empty transaction database D is the ratio of transactions in D verifying X:
+
+Lemma 2.2. Let A, B → C be an association rule such
+that confD (B → C) > 0. We have:
+confD (A, B → C)
+confD (B → C)
+
+=
+
+lif tB (A → C)
+
+where B = {T ∈ D |B ⊆ T }.
+Notice that when B is empty, we have B = D, and then the
+extended lift reduces to the standard lift.
+
+3. MEASURING DISCRIMINATION
+3.1 Discriminatory Itemsets and Rules
+Our starting point consists of flagging at syntax level those
+items which might potentially lead to discrimination in the
+sense explained in the introduction. Potentially discriminatory itemsets are then itemsets which consists of flagged
+items only.
+
+suppD (X) = |{ T ∈ D | X ⊆ T }|/|D|,
+where | | is the cardinality operator. An association rule is
+an expression X → Y, where X and Y are itemsets such
+that X ∩ Y = ∅. X is called the premise (or the body) and
+Y is called the consequence (or the head) of the association
+rule. We say that X → Y is a classification rule if Y is
+a class item and X contains no class item. We refer the
+reader to [27, 47] for a discussion of the integration between
+classification and association rule mining. The support of
+X → Y w.r.t. D is defined as:
+
+Definition 3.1. [PD/PND itemset] A discriminatory set
+Id is a subset of items, i.e. Id ⊆ I. A potentially discriminatory (PD) itemset is a non-empty subset of Id . A
+potentially non-discriminatory (PND) itemset is a (possibly
+empty) subset of I \ Id .
+Any itemset X can be uniquely split into a PD part A =
+X ∩ Id and a PND part B = X \ Id .
+
+suppD (X → Y) = suppD (X, Y).
+
+Example 3.2. Consider a relation with attributes age,
+gender, education, residence and class hire. Transactions model whether candidates of given age, gender, education and residence were hired or not on past applications.
+Assume now that Id = {gender=female, age=senior}. The
+itemset:
+
+The confidence of X → Y, defined when suppD (X) > 0, is:
+confD (X → Y) = suppD (X, Y)/suppD (X).
+Support and confidence range over [0, 1]. We omit the subscripts in suppD () and confD () when clear from the context.
+Since the seminal paper by Agrawal and Srikant [8], a number of well explored algorithms [35] have been introduced
+
+gender=female, age=young, residence=Italy,
+3
+
+can be split into a PD part, i.e. gender=female, and a PND
+part, namely age=young, residence=Italy.
+
+i.e. non-single (divorced, separated or married) female, and
+
+It is worth noting that we use the adjective potentially both
+for PD and PND itemsets. This may seems strange, since
+we located PD items as the source of (potential) discrimination. The rationale for using potentially in PND itemsets
+will be clear later on, when we will discuss how discrimination can be hidden in non-discriminatory items as well. The
+notion of potential (non-)discrimination is now extended to
+classification rules.
+
+i.e. senior people. Moreover, fix α = 3. Consider the following classification rules, which are extracted from the German
+credit dataset [30].
+a.
+
+personal_status=female div/sep/mar
+savings_status=no known savings
+==> class=bad
+-- supp:(0.013) conf:(0.27) elift:(1.52)
+
+Definition 3.3. [PD/PND classification rule] A classification rule X → C is called potentially discriminatory (PD)
+if X = A, B with A PD itemset and B PND itemset. It is
+called potentially non-discriminatory (PND) if X is a PND
+itemset.
+
+b.
+
+age=(52.6-inf)
+personal_status=female div/sep/mar
+purpose=used car
+==> class=bad
+-- supp:(0.003) conf:(1) elift:(6.06)
+
+age=(52.6-inf)
+
+Rule (a) can be translated as follows: if we know nothing
+about the savings of a person asking for credit, then assign
+bad credit class (or bad credit class has been assigned in past)
+to non-single women 52% more often than average. The
+support of the rule is 1.3%, its confidence 27%, and its extended lift 1.52. Hence, the rule is α-protective. Also, the
+confidence of the base rule
+
+Example 3.4. Consider again Example 3.2, and the classification rules:
+a.
+
+gender=female
+age=young
+residence=Italy
+==> hire=no
+
+b. age=young
+residence=Italy
+==> hire=no
+
+savings_status=no known savings ==> class=bad
+
+Rule (a) is potentially discriminatory since its premise contains an item belonging to Id , namely gender=female. On
+the contrary, rule (b) is potentially non-discriminatory.
+
+3.2
+
+is 0.27/1.52 = 17.8%.
+Rule (b) states that senior non-single women that intend
+to buy a used car are assigned the bad credit class with a
+probability more than 6 times higher than the average one
+for those that ask credit for the same purpose. The support
+of the rule is 0.3%, its confidence 100%, and its extended
+lift 6.06. Hence the rule is α-discriminatory. Finally, the
+confidence of the base rule
+
+Measuring Discrimination of PDCR
+
+We start concentrating on PD classification rules as the potential source of discrimination. In order to capture the idea
+of when a PD rule may lead to discrimination, we introduce
+the key concept of α-protective classification rules.
+Definition 3.5. [α-protection] Let c = A, B → C be a
+PD classification rule, where A is a PD and B is a PND
+itemset, and let:
+γ
+δ
+
+=
+=
+
+purpose=used car ==> class=bad
+is 1/6.06 = 16.5%.
+
+conf (A, B → C)
+conf (B → C) > 0.
+
+3.3
+
+Checking α-protection of PDCR
+Now that we have set the stage for discussing a discrimination measure of PD classification rules, we need to tackle the
+problem of checking α-protection, which is implicitly stated
+by Definition 3.5.
+
+For a given threshold α ≥ 0, we say that c is α-protective if
+elif t(γ, δ) < α, where:
+elif t(γ, δ) = γ/δ.
+
+Problem 3.7 (α-protection checking). Given a set
+of PD classification rules A and a threshold α, find the
+largest subset of A containing only α-protective rules.
+
+c is called α-discriminatory if elif t(γ, δ) ≥ α.
+Intuitively, the definition assumes that the extended lift of
+c w.r.t. B is a measure of the degree of discrimination of
+A in the context B. This is supported by two basic intuitions. First, α-protection states that the added (discriminatory) information A increases the confidence of concluding
+an assertion C under the base hypothesis B only by an acceptable factor, bounded by α. The second intuition follows
+from Lemma 2.2, which reduces extended lift to standard
+lift, and the known properties of standard lift. In this sense,
+α-protection states that the degree of correlation between A
+and C in the context of B is bounded by α.
+
+We envisage that checking α-protection can be exploited in
+at least three different practical purposes:
+• check that the set of rules under analysis is made of
+α-protective rules only, to the purpose of authorizing
+the safe use of the set of rules as a provably fair model;
+• identify all discriminatory rules to the purpose of discovering discrimination malpractices that emerge from
+the historical transactions in the source dataset;
+
+Example 3.6. Assume that Id includes the items:
+
+• identify certain expected discriminatory rules to the
+purpose of checking that the results of some specific
+
+personal_status=female div/sep/mar,
+4
+
+ExtractCR()
+C = { class items }
+PDgroup = PN D group = ∅ for group ≥ 0
+ForEach k s.t. there exists k-frequent itemsets
+Fk = { k-frequent itemsets }
+ForEach Y ∈ Fk with Y ∩ C 6= ∅
+C = Y∩C
+X = Y\C
+s = supp(Y)
+s0 = supp(X)
+// found in Fk−1
+conf = s/s0
+group = |X \ Id |
+If group = |X|
+add X → C to PN D group with confidence conf
+Else
+add X → C to PD group with confidence conf
+EndIf
+EndForEach
+EndForEach
+
+CheckAlphaPDCR(α)
+ForEach group s.t. PD group 6= ∅
+ForEach X → C ∈ PDgroup
+A = X ∩ Id
+B = X\A
+γ = conf (X → C)
+δ = conf (B → C)
+// found in PN D group
+If elif t(γ, δ) ≥ α
+output A, B → C
+EndIf
+EndForEach
+EndForEach
+
+Figure 1: Classification rules extraction (left) and checking α-protection (right) algorithms.
+positive discrimination policies – or affirmative actions,
+that tend to favor some disadvantaged category – actually emerge from the historical transactions in the
+source dataset.
+
+credit history, credit request purpose, credit request
+amount, installment commitment, existing credits, other parties, other payment plan;
+• attributes on employment status: job type, employment since, number of dependents, own telephone;
+
+The problem of checking α-protection is solvable by directly
+checking the inequality of Definition 3.5, provided that the
+elements of the inequality are available. We define a checking algorithm that starts from the set of frequent itemsets,
+namely itemsets with a given minimum support. This is
+the output of any of the several frequent itemset extraction
+algorithms available at the FIMI repository [35]. The algorithm is reported in Figure 1. On the left hand side of the
+figure, the extraction of PD and PND classification rules
+is reported. It requires a single scan of frequent itemsets
+ordered by the itemset size k. For k-frequent itemsets that
+include a class item, a single classification rule is produced in
+output. The confidence of the rule can be computed by looking only at itemsets of length k − 1. The rules in output are
+distinguished between PD and PND rules, based on the presence of discriminatory items in their premise. Moreover, the
+rules are grouped on the basis of the number group of nondiscriminatory items appearing in their premise. The output
+is a collection of PD rules PDgroup and a collection of PND
+rules PN D group . On the right hand side of Figure 1, the
+extended lift of a classification rule A, B → C ∈ PD group
+is computed from its confidence and the confidence of the
+base rule B → C ∈ PN D group .
+
+3.4
+
+• personal attributes: personal status and gender, age,
+resident since, foreign worker.
+In the following, we fix Id to consists of the following items:
+personal_status=female div/sep/mar (female and not single), age=(52.6-inf) (senior people), job=unemp/unskilled
+non res (unskilled or unemployed non-resident), and foreign_worker=yes (foreign workers).
+
+Discrimination w.r.t. support thresholds
+Figure 2 shows the distribution of α-discriminatory PD classification rules for minimum support thresholds of 1%, 0.5%
+and 0.3%. The left hand side graph reports the absolute
+count, while the one at the right hand side reports the relative count w.r.t. the total number of PD classification rules
+having the minimum support. Figure 2 highlights that lower
+support values allows for increasing both the maximum extended lift of PD classification rules, the number and the
+proportion of PD rules with higher extended lift. This confirms the theoretical ranges of the extended lift measure and
+it is coherent with the intuition that, in smaller and smaller
+niches of the sampled credit approval transactions, it is possible to find higher discriminatory behavior.
+
+The German Credit Dataset
+
+By looking at the extracted classification rules, we report
+a few example of PD rules with decreasing support and increasing extended lift.
+
+We illustrate the notion of α-protection by analysing the
+German credit dataset [30], which consists of 1000 transactions representing the credit class good/bad of bank account
+holders. The dataset include the following nominal (or discretized):
+
+a1. personal_status=female div/sep/mar
+employment=1<=X<4
+property_magnitude=real estate
+job=skilled
+==> class=bad
+-- supp:(0.011) conf:(0.48) elift:(2.39)
+
+• attributes on personal properties: checking account
+status, duration, savings status, property magnitude,
+type of housing;
+• attributes on past/current credits and requested credit:
+5
+
+1e+008
+1
+Fraction of PD class. rules that are α-discriminatory
+
+No. of PD class. rules that are α-discriminatory
+
+1e+007
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+0.5
+
+1
+
+1.5
+α
+
+α
+minsup=1.0%
+
+minsup=0.5%
+
+minsup=0.3%
+
+minsup=1.0%
+
+2
+
+minsup=0.5%
+
+2.5
+
+minsup=0.3%
+
+Figure 2: Distributions of discriminatory PD classification rules: absolute count (left) and relative count
+(right) for minimum support thresholds of 1%, 0.5% and 0.3%.
+
+8
+
+minsupp=1%
+1e+007
+
+No. of PD class. rules that are α-discriminatory
+
+7
+
+max elift of PD class. rules
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+0
+
+0.5
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1
+
+minsup=1.0%
+
+minsup=0.5%
+
+minsup=0.3%
+
+1
+
+1.5
+
+2
+
+2.5
+
+α
+
+min confidence of base rules
+minconf=0%
+minconf=20%
+
+1/mc
+
+minconf=40%
+minconf=60%
+
+minconf=80%
+
+Figure 3: Distributions of discriminatory PD classification rules: contribution of confidence of base rule.
+
+a2. age=(52.6-inf)
+employment=1<=X<4
+existing_credits=(1.6-2.2]
+==> class=bad
+-- supp:(0.005) conf:(1) elift:(3.60)
+
+age-item. Finally, rule a3 reaches a lift of 9 when compared
+to the base rule:
+employment=1<=X<4
+savings_status=>=1000
+==> class=bad
+-- supp:(0.002) conf:(0.11)
+
+a3. age=(52.6-inf)
+employment=1<=X<4
+savings_status=>=1000
+==> class=bad
+-- supp:(0.002) conf:(1) elift:(9)
+
+There are 18 cases satisfying the premise of the base rule,
+which means that people with large savings are usually given
+good credit. However, only 2 cases out of 18 are assigned
+class=bad. Both of them are senior people!
+
+Rule a1 states that among the people employed since one
+to four years, having a real estate property and with skilled
+job, the status of being woman and not single leads to having assigned the ‘bad’ credit class 2.39 times more than the
+average. The rule has confidence 48%, which means that the
+base rule has confidence 0.48/2.39 = 20%. Rule a2 states
+that senior people employed since one to four years, having already two existing credits are assigned the bad credit
+class 3.6 times more than the case of not considering the
+
+Discrimination w.r.t. confidence thresholds
+In addition to minimum support, a widely adopted parameter for controlling rule generation is minimum confidence.
+By recalling that extended lift ranges over [0, 1/mc], where
+mc is the minimum confidence threshold of base rules, Figure 3 shows how the threshold mc affects the distribution of
+discriminatory classification rules. The left hand side graph
+reports the maximal extended lift reachable by a PD clas6
+
+minsup=1.0%
+1e+007
+
+1e+006
+
+1e+006
+
+No. of PD class. rules that are α-discriminatory
+
+No. of PD class. rules that are α-discriminatory
+
+minsup=1.0%
+1e+007
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+0.5
+
+1
+
+α
+class=bad
+
+1.5
+
+2
+
+2.5
+
+α
+class=good
+
+class=bad
+
+class=good
+
+Figure 4: Distributions of discriminatory PD classification rules for two different discriminatory sets. Left:
+Id = { personal_status=female div/sep/mar, age=(52.6-inf), job=unemp/unskilled non res, foreign_worker=yes }.
+Right: Id0 = { personal_status=male single, age=(30.2-41.4] }.
+
+sification rule with given minimum support and confidence.
+The graph shows that lower and lower confidence thresholds for base rules lead to higher extended lifts, as the range
+[0, 1/mc] suggests. Notice that the upper bound 1/mc is
+reached for minimum support of 0.3% and minimum base
+confidence greater or equal than 20%. The right hand side
+considers minimum support of 1% and shows the absolute
+count distribution of discriminatory rules at various minimum confidence thresholds for base rules. Acting on this
+value allows to reduce both the number of discriminatory
+classification rules and their maximum extended lift value.
+
+rule, such as in b3, cannot always be compensated, and then
+the extended lift value tend to decrease considerably.
+
+Discrimination w.r.t. class item
+The contribution of the class item to the distribution of
+discriminatory PD classification rules is shown in Figure 4,
+where the minimum support of 1% is fixed. The left hand
+side highlights that rules with class item class=bad (resp.,
+class=good) contribute mostly to higher values (resp., lower
+values) of extended lift. Intuitively, the set of discriminatory
+items fixed so far leads mainly to discrimination against assigning credit. There are, however, cases where discrimination in favor of assigning credit is raised. Here there are a
+few examples.
+
+A few sample PD rules with the same support (0.5%) but
+with increasing extended lift and decreasing confidence are
+reported below.
+
+c1. personal_status=female div/sep/mar
+property_magnitude=no known property
+employment=<1
+other_parties=none
+==> class=good
+-- supp:(0.005) conf:(1) elift:(2.14)
+
+b1. personal_status=female div/sep/mar
+purpose=used car
+job=high qualif/self emp/mgmt
+==> class=bad
+-- conf:(0.55) conf_base:(0.17) elift:(3.24)
+b2. personal_status=female div/sep/mar
+purpose=used car
+checking_status=0<=X<200
+==> class=bad
+-- conf:(0.84) conf_base:(0.29) elift:(2.91)
+
+c2. age=(52.6-inf)
+housing=own
+credit_history=existing paid
+employment=unemployed
+other_parties=none
+==> class=good
+-- supp:(0.005) conf:(1) elift:(2.13)
+
+b3. personal_status=female div/sep/mar
+residence_since=(1.6-2.2]
+job=high qualif/self emp/mgmt
+duration=(31.2-inf)
+==> class=bad
+-- conf:(1) conf_base:(0.48) elift:(2.10)
+
+In rules c1 and c2 recently employed women and unemployed (maybe, retired) senior people are assigned good credit
+score two times more than the average of people in the
+same conditions. This reveals a good practice of enforcement of affirmative actions or other policies or laws in support of disadvantaged categories. Discrimination in favor
+of assigning credit can also reveal a malpractice of unfair
+favoritism for certain categories. In order to illustrate this
+issue, however, we need to switch to a different discriminatory set. Figure 4 shows the distributions of discriminatory PD rules for each class item. The discriminatory set
+
+All of the rules consider being woman and not single as the
+discriminatory item. By comparing rule b1 against b2, we
+note that the increasing of confidence of the base rule is
+partly compensated by higher confidence of the classification
+rule, which leads to a slightly lower extended lift. However,
+since confidence is at most 1, a higher confidence of the base
+7
+
+Fraction of PD class. rules that are strongly α-discriminatory
+
+No. of PD class. rules that are strongly α-discriminatory
+
+1e+008
+
+1e+007
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+0.8
+
+1
+
+α
+minsup=1.0%
+
+minsup=0.5%
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+α
+minsup=0.3%
+
+minsup=1.0%
+
+minsup=0.5%
+
+minsup=0.3%
+
+Figure 5: Distributions of strongly discriminatory PD classification rules: absolute count (left) and relative
+count (right) for minimum support thresholds of 1%, 0.5% and 0.3%.
+
+used used so far, namely Id = { personal_status=female
+div/sep/mar, age=(52.6-inf), job=unemp/unskilled non
+res, foreign_worker=yes }, leads to higher extended lift
+for class=bad, rather than for class=good. On the contrary, the discriminatory set Id0 = { personal_status=male
+single, age=(30.2-41.4] } leads to the distribution shown
+at the right hand side of Figure 4. Here, classification rules
+with class item class=good occur more frequently for higher
+extended lift values. Intuitively, Id0 allows for the extraction
+of contexts which discriminate in favor of assigning credit!
+Let us report two extracted rules that could be considered as
+instances of unfair favoritism towards men who are singles
+and/or in their 30’s.
+
+were implicitly considered non-discriminatory. Hence, shall
+we not be worried about disclosing them? Next example
+shows that the answer is not obvious.
+Example 3.8. The following PD classification rule is extracted from the German credit dataset for a minimum support of 1%.
+a-good. personal_status=female div/sep/mar
+purpose=used car
+checking_status=no checking
+==> class=good
+-- supp:(0.011) conf:(0.846)
+-- conf_base:(0.963) elift:(0.88)
+
+d1. age=(30.2-41.4]
+existing_credits=(1.6-2.2]
+duration=(31.2-inf)
+savings_status=<100
+==> class=good
+-- supp:(0.010) conf:(0.91) elift:(2.14)
+
+Rule a-good has an extended lift of 0.88. Intuitively, this
+means that good credit class is assigned to non-single women
+less than the average of people that intend to buy an used
+car and have no checking status. As a consequence, one can
+deduce that the bad credit class is assigned more than the
+average of people in the same context. In fact, the following
+‘dual’ rule can be extracted from the dataset.
+
+d2. age=(30.2-41.4]
+personal_status=male single
+checking_status=0<=X<200
+job=high qualif/self emp/mgmt
+==> class=good
+-- supp:(0.010) conf:(0.83) elift:(1.90)
+
+a-bad.
+
+Rule d1 discriminates in favor of people in their 30’s among
+those that have had an account for at least 31.2 months,
+have savings for at most 100 units, and have two existing
+credits already. Rule d2 discriminates in favor of males who
+are single and in their 30’s among those with high qualified
+or self-employed job.
+
+3.5
+
+personal_status=female div/sep/mar
+purpose=used car
+checking_status=no checking
+==> class=bad
+-- supp:(0.002) conf:(0.154)
+-- conf_base:(0.037) elift:(4.15)
+
+Rule a-bad has an extended lift of 4.15.
+It is worth noting that the confidence of rule a-bad in the
+example is equal to 1 minus the confidence of a-good, and
+the same holds for the confidence of base rules. If this property holds in general, the extended lift of a rule A, B →
+class=bad could be calculated starting from the confidence
+of A, B → class=good and the confidence of its base rule
+B → class=good. Therefore, α-discrimination of a classification rule could be deduced starting from an α-protective
+rule (the dual one) and its PND base rule.
+
+Strong Discrimination of PDCR
+
+So far, we have considered as discriminatory those PD classification rules whose extended lift is greater or equal than
+a fixed threshold α. The intuition was to extract contexts
+where the confidence of the rule with discriminatory items
+exceeds by α times the confidence of the base rule. As a
+consequence, PD classification rules with low extended lift
+8
+
+minsup=0.3%
+12
+12
+10
+
+8
+
+max reachable value
+
+max reachable value
+
+10
+
+6
+
+4
+
+8
+
+6
+
+4
+
+2
+
+2
+
+0
+
+0
+0.01
+
+0.02
+
+0.03
+
+0.04
+0.05
+0.06
+min support of PD class. rules
+
+0.07
+
+elift()
+
+0.08
+
+0.09
+
+0.1
+
+2
+
+4
+
+glift()
+
+6
+
+8
+
+10
+12
+size of PD class. rules
+
+14
+
+elift()
+
+16
+
+18
+
+20
+
+glift()
+
+Figure 6: Maximum reachable elif t() and glif t() values at the variation of minimum support (left) and
+maximum rule size (right).
+
+minsupp=1%
+No. of PD class. rules that are strongly α-discriminatory
+
+12
+
+max glift of PD class. rules
+
+10
+
+8
+
+6
+
+4
+
+2
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+0
+
+1
+0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.5
+
+2
+
+2.5
+
+1
+
+minsup=1.0%
+
+minsup=0.5%
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+α
+
+min confidence of base PD class. rules
+
+minconf=40%
+minconf=60%
+
+minconf=0%
+minconf=20%
+
+minsup=0.3%
+
+minconf=80%
+
+Figure 7: Contribution of setting minimum confidence for base rules to the distribution of strongly discriminatory PD classification rules.
+
+3.5.1
+
+to calculate the extended lift of the dual rule A, B → ¬C
+as (1 − γ)/(1 − δ), and then to decide whether or not it
+is α-protective. We tackle this leak of the framework by
+strengthening the notion of α-protection.
+
+Measuring Discrimination
+
+We generalize the intuition behind the last example to binary classes.
+Definition 3.9. For a binary attribute a with dom(a) =
+{v1 , v2 }, we write ¬(a = v1 ) for a = v2 and ¬(a = v2 ) for
+a = v1 .
+
+Definition 3.11. [Strong α-protection] Let c = A, B → C
+be a PD classification rule, where A is a PD and B is a PND
+itemset, and let:
+
+Lemma 3.10. Assume that the class attribute is binary.
+Let A, B → C be a classification rule, and let:
+1>
+
+γ=
+
+conf (A, B → C)
+
+γ
+
+=
+
+conf (A, B → C)
+
+δ=
+
+conf (B → C),
+
+δ
+
+=
+
+conf (B → C) > 0.
+
+We have that conf (B → ¬C) > 0 and:
+
+For a given threshold α ≥ 1, we say that c is strongly αprotective if glif t(γ, δ) < α, where:
+
+conf (A, B → ¬C)
+1−γ
+=
+.
+conf (B → ¬C)
+1−δ
+
+
+
+glif t(γ, δ) =
+As an immediate consequence, the disclosure of a PD classification rule A, B → C with elif t(γ, δ) < α might allow
+
+γ/δ
+if γ ≥ δ
+(1 − γ)/(1 − δ) otherwise
+
+If glif t(γ, δ) ≥ α, we say that c is strongly α-discriminatory.
+9
+
+No. of PD class. rules that are strongly α-discriminatory
+
+minsup=1.0%
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+α
+class=bad
+
+class=good
+
+Figure 8: Distributions of strongly discriminatory PD classification rules for different class items.
+
+The glif t() function ranges over [1, ∞[. If classification rules
+with a minimum support ms > 0 are considered, it ranges
+over [1, 1/ms]. A proof of these statements is reported in
+Appendix A Lemma A.10, which also states that, for 1 >
+δ > 0:
+
+with intermediate size are the vast majority, and then they
+exhibits the higher values.
+Differently from α-protection, acting on minimum confidence
+of the base rule does not turn out to be a control mechanism
+for the glif t() measure, since glif t(γ, δ) is not monotonic
+w.r.t. δ. Figure 7 shows that the distribution of strongly αdiscriminatory rules is minimally affected by the minimum
+confidence of base rules.
+
+glif t(γ, δ) = max{elif t(γ, δ), elif t(1 − γ, 1 − δ)}.
+This property makes it clear that glif t() overcame the leak
+of extended lift by considering both the extended lift of a
+classification rule A, B → C and the extended lift of the
+dual rule A, B → ¬C.
+
+Finally, let us consider in Figure 8 the distributions of αdiscriminatory PD classification rules for the two class items.
+Contrasting the graph with the one in Figure 4 (left hand
+side), we can observe that the distribution of rules with class
+item class=good has now larger values and frequencies than
+the one of rules with class item class=bad, which for α ≥ 1
+remains almost unchanged.
+
+3.5.2 Checking Strong α-protection
+The algorithm at the right hand side of Figure 1 for checking α-protection can be immediately extended to strong αprotection by simply replacing the elif t() function with the
+glif t() function.
+
+4.
+
+3.5.3 The German Credit Dataset
+
+INDIRECT DISCRIMINATION OF PNDCR
+
+Our aim is to offer decision makers a set of classification
+rules that do not allow them to excessively exploit discriminatory items in taking decisions. The natural question is we
+pose now is: the absence of (strongly) α-discriminatory rules
+is a sufficient guarantee of eliminating all discriminatory actions? Consequently, removing (strongly) α-discriminatory
+rules is a sufficient guarantee? We provide a strong negative
+answer to the question. Strong in the precise sense that, even
+by removing all PD classification rules, it is possible to devise
+some strategies of inferring (strong) α-discrimination starting from potentially non-discriminatory rules, i.e. rules that
+do not contain discriminatory items at all, and some background knowledge. Borrowing the terminology from other
+research fields, we call those strategies attack models.
+
+Figure 5 shows the absolute and relative distributions of
+strongly α-discriminatory classification rules for the German
+credit dataset. Lower minimum support leads to higher values of glif t(), and to a larger number and proportion of
+strongly discriminatory rules. Moreover, glif t() assumes
+higher values than those of elif t(). The left hand side graph
+in Figure 6 shows the distributions of the maximum reachable value of glif t() and elif t() w.r.t. minimum support.
+The higher maximal values of glif t() can be exaplained by
+noting that given a set of PD classification rules A and a
+rule A, B → C in A, the dual rule A, B → ¬C does not
+necessarily belongs to A. For instance, rule a-bad in Example 3.8 has a support of 0.2%, which is strictly lower than
+the minimum support of 1% fixed for extracting rule a-good.
+
+4.1
+
+In addition to support, another parameter that can control the maximum reachable glif t() and elif t() values is the
+classification rule size, i.e. the number of items appearing
+in the rule. The right hand side graph of Figure 6 shows
+the distributions w.r.t. rule size. The “bell” shape of the
+distributions follows the distribution of the number of rules,
+which in turn follows the one of frequent itemsets. Rules
+
+Attacks Through Negated Items
+
+We start considering a binary attribute such that one of its
+items is discriminatory and the other is non-discriminatory.
+Even in the case that all PD classification rules are undisclosed, PND classification rules that contain the non-discriminatory item contain hides some information about the
+discriminatory one. This is somewhat similar to what has
+10
+
+ExtractAR()
+C = { class items }
+ForEach k s.t. there exists k-frequent itemsets
+Fk = { k-frequent itemsets }
+ForEach X ∈ Fk with X ∩ Id 6= ∅ and X ∩ C = ∅
+A = X ∩ Id
+B = X\A
+group = |B|
+s x = supp(X)
+If exists B → C ∈ PN Dgroup
+s = supp(B → C)
+c = conf (B → C)
+// equals to supp(B)
+s b = s/c
+conf = s x/s b
+add B → A to ARgroup with confidence conf
+EndIf
+EndForEach
+EndForEach
+
+CheckAlphaPNDNegated(α)
+N = {a = v1 | a = v0 ∈ Id and dom(a) = {v0 , v1 } }
+ForEach group s.t. PN D group 6= ∅
+ForEach X → C ∈ PN D group s.t. X ∩ N 6= ∅
+N = X∩N
+γ = conf (X → C)
+ForEach ¬A ∈ N
+B = X \ ¬A
+δ = conf (B → C) // found in PN D group−1
+β = conf (B → A) // found in ARgroup−1
+n = δ/β + (1 − 1/β)γ
+If glif t(n, δ) ≥ α
+output A, B → C
+EndIf
+EndForEach
+EndForEach
+EndForEach
+
+Figure 9: Left: algorithm for extracting association rules as background knowledge. Right: algorithm for
+checking strong α-discrimination trough PND classification rules containing negated discriminatory items.
+We will show that this information can be used to calculate
+the confidence of getting the good credit scoring for foreign
+workers in the context B, i.e. we can precisely calculate the
+confidence of:
+
+been described in Section 3.5 for binary classes.
+Example 4.1. The following PND classification rules are
+extracted from the German credit dataset by fixing minimum
+support to 0.5%.
+
+ac.
+
+nac. foreign_worker=no
+personal_status=male single
+employment=1<=X<4
+purpose=new car
+housing=rent
+==> class=good -- conf:(1)
+bc.
+
+as: 0.9/0.5 + (1 − 1/0.5)1 = 0.8. This and confidence of bc
+imply elif t(0.8, 0.9) = 0.89 and glif t(0.8, 0.9) = 2.0.
+
+personal_status=male single
+employment=1<=X<4
+purpose=’new car’
+housing=rent
+==> class=good -- conf:(0.9)
+
+4.1.1
+
+Attack Model
+
+The next result formalizes the attack model behind the last
+example. It states that the confidence of an undisclosed PD
+rule containing a binary attribute can be calculated from the
+confidence of the dual rule (γ), the confidence of its base rule
+(δ) and some information about the frequency of the binary
+attribute values in the context of the base rule (β).
+
+Consider the context B of people that are single male, employed since one to four years, intend to buy a new car, and
+have their house for rent. Rule nac states that non-foreign
+workers within the context B are assigned a good credit scoring with confidence 100%. Rule bc states that the average
+confidence of people in context B to get the good scoring is
+slightly less, namely 90%. While the two rules are apparently
+safe with respect to discrimination against foreign workers,
+this is not the case. In fact, it is quite intuitive that the increasing of confidence from 90% to 100% has to be attributed
+to the omission of foreign workers. In order to estimate how
+much foreign workers are discriminated, however, we need
+to know some further information on the proportion of foreign workers in the context B. Assume then that it is background knowledge (e.g., public statistics, news, private data)
+that approximately half of people in the context are foreign
+workers, i.e.:
+ba.
+
+foreign_worker=yes
+personal_status=male single
+employment=1<=X<4
+purpose=new car
+housing=rent
+==> class=good
+-- conf:(0.8) -- elift(0.89) -- glift(2.0)
+
+Theorem 4.2. Assume that the attribute of A ∈ Id is
+binary. Let ¬A, B → C be a PND classification rule, and:
+γ
+
+=
+
+conf (¬A, B → C)
+
+δ
+
+=
+
+conf (B → C) > 0
+
+and assume that β = conf (B → A) > 0 is known. Let:
+n=
+
+1
+δ
++ (1 − )γ
+β
+β
+
+we have that:
+(i) conf (A ∧ B → C) = n,
+
+personal_status=male single
+employment=1<=X<4
+purpose=new car
+housing=rent
+==> foreign_worker=yes -- conf:(0.5)
+
+(ii) for α ≥ 0, the PD classification rule A, B → C is αprotective iff elif t(n, δ) ≤ α,
+(ii) for α ≥ 1, the PD classification rule A, B → C is
+strongly α-protective iff glif t(n, δ) ≤ α.
+11
+
+While Theorem 4.2 assumes that conf (B → A) is known
+exactly, it is quite immediate to extend its conclusions to approximated values. In fact, assume that β ∈ [β1 , β2 ]. By elementary algebra, it is easy to derive lower and upper bounds
+for n:
+δ
+1
+δ
+1
+n2 =
++ (1 −
+)γ ≥ n ≥
++ (1 −
+)γ = n1 ,
+β1
+β2
+β2
+β1
+
+4.1.3
+
+and, for elif t() and glif t():
+elif t(n, δ) ≥ n1 /δ,
+
+
+glif t(n, δ) ≥
+
+n1 /δ
+if n1 ≥ δ
+(1 − n2 )/(1 − δ) if n2 < δ.
+
+4.2
+
+Attacks Through Related Itemsets
+
+As a naive reaction to the results of the last subsection, one
+could be tempted to discard from the underlying dataset any
+binary attribute that contain one and only one discriminatory item, such as personal_status. Even more radically,
+one could discard any attribute that contains any discriminatory item, such as age, personal_status and job for the
+German credit dataset. In other words, we would retain
+PND classification rules only, with no explicit link (such as
+negated items) to PD rules. Would this solve the discrimination issue? Again, the answer is unfortunately no.
+
+Example 4.3. Reconsider Example 4.1. Assume to know
+that the confidence of ba is in the range [0.495, 0.505], i.e.
+0.5 ± 1%. Let us calculate:
+n2 = 0.9/0.495 + (1 − 1/0.505)1 = 0.838
+and then n2 < δ = 0.9 implies:
+glif t(n, δ) ≥ (1 − n2 )/(1 − δ) = 1.62.
+We recall that the actual glif t() value is 2.0.
+
+Example 4.4. Consider again the German credit dataset,
+from which the following PND classification rules are extracted.
+
+A question that naturally arises is the following: how can
+an attacker know (with some approximation) the value of
+conf (B → A) if the association rule B → A or the dataset
+are undisclosed? As it happens in privacy-preserving data
+mining [28, 38], external, publicly available or private, sources
+of data can be exploited to derive information on population
+within a certain context, e.g. about the number of foreign
+workers living in a certain area. Assuming that the distributions of attribute values for the transaction database D
+from which rules are extracted is the same as the one for attribute values of the external sources, at least for the context
+B, allows for the use of statistics derived from the external
+sources as an approximation for the value conf (B → A)
+w.r.t. D. The same argument applies later on for the other
+attack model that will be presented.
+
+4.1.2
+
+The German Credit Dataset
+
+Figure 10 reports the distributions of the PND classification rules that allow to derive strong discrimination of PD
+rules using the attack model of Theorem 4.2. More in detail, the only item in the reference discriminatory set Id
+used throughout this paper is foreign worker = yes. The
+figure reports the absolute and relative count of PND classification rules of the form foreign worker = no, B → C
+that allow for deriving strong discrimination of PD rules
+foreign worker = yes, B → C.
+
+bdc. credit_history=critical/other existing credit
+residence_since=(2.8-inf)
+savings_status=<100
+checking_status=’no checking’
+age=(-inf-30.2]
+==> class=good
+-- supp(0.005) conf:(0.833)
+bc.
+
+credit_history=critical/other existing credit
+residence_since=(2.8-inf)
+savings_status=<100
+checking_status=’no checking’
+==> class=good
+-- supp(0.036) conf:(0.973)
+
+Rule bdc states that young people in the context B of people with critical credit history, residence since 2.8 years at
+least, with savings at most for 100 units, and with no checkings, are assigned the good credit scoring with a confidence
+of 83.3%. Rule bc is obtained from bdc by discarding the
+item age=(-inf-30.2] in the premise, and has a confidence
+of 97.3%. Both rules are PND with respect to Id , so they
+are not checked for strong α-discrimination, for any α.
+
+Checking Attack Model
+
+Let us concentrate now on how to compute the set of PND
+classification rules that allow to infer (strong) discrimination
+of PD rules. We first extract association rules B → A using algorithm ExtractAR() in Figure 9. Actually, notice
+that we can restrict to assuming that B is a PND itemset, A is PD itemset, and there exists a PND classification
+rules B → C, i.e. with premise B. All these assumptions are met by Theorem 4.2, and allows us for restricting
+the set of rules to be extracted1 . Moreover, we group the
+rules based on the number of items in their premise. This
+will improve efficiency of the checking algorithm. The algorithm CheckAlphaPNDNegated(α) scan PND classification rules X → C. For each ¬A in X that is the negation
+of a discriminatory item, the conditions of Theorem 4.2 are
+checked, by looking up the association rule B → C from
+the set of extracted rules.
+
+Assume now to know that in the context B above, the set of
+persons satisfying age=(-inf-30.2] is somewhat related to
+the set of persons satisfying the discriminatory item personal_status=female div/sep/mar. If the two sets were exactly
+the same, we could replace age=(-inf-30.2] in rule bdc
+with the discriminatory item above. This would lead us to a
+rule:
+abc. credit_history=critical/other existing credit
+residence_since=(2.8-inf)
+savings_status=<100
+checking_status=’no checking’
+personal\_status=female div/sep/mar
+==> class=good
+
+1
+
+Actually, we could further restrict to assuming A to be an
+item in Id such that its attribute is binary and its negated
+item is not in Id . However, since the set of extracted association rules will be used later on for other results, we prefer
+to report only one extraction algorithm.
+12
+
+Fraction of PND rules with negated items leading to PD α-discr. rules
+
+No. of PND class. rules leading to PD α-discriminatory rules
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+0.45
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.05
+0
+
+4
+
+1
+
+1.5
+
+2
+
+α
+minsup=1.0%
+
+2.5
+
+3
+
+α
+
+minsup=0.5%
+
+minsup=0.3%
+
+minsup=1.0%
+
+minsup=0.5%
+
+minsup=0.3%
+
+Figure 10: Distributions of PND classification rules containing negation of discriminatory items leading to
+PD rules which are strongly α-discriminatory: absolute count (left) and relative count (right).
+
+γ = 0.8 δ = 0.2 γ /δ = 4
+5.5
+5
+4.5
+4
+3.5
+3
+2.5
+2
+1.5
+0.4
+
+0.5
+
+0.6
+
+0.7
+β2
+
+0.8
+f(γ, δ)/δ
+f(γ, δ)/δ
+(1-f(1-γ, δ))/δ
+(1-f(1-γ, δ))/δ
+
+0.9
+
+1
+
+for β1 = 0.75
+for β1 = 0.95
+for β1 = 0.75
+for β1 = 0.95
+
+Figure 11: Example of lower and upper bounds for elif t(γ, δ) = γ/δ for γ = 0.8 and δ = 0.2.
+
+with glif t() value of glif t(0.833, 0.973) = 6.19, which is considerably high. In case the two sets coincide only to some
+extent, we could however obtain some lower bound for the
+glif t() value above. In particular, assume that 100% of
+young people in the context are women and not single, and
+that they represents 54.5% of all women not single in the
+context. More formally, assume to know (e.g., by background
+knowledge such as public statistics, news, demographics) the
+confidence of the following two associations rules:
+
+savings_status=<100
+checking_status=’no checking’
+age=(-inf-30.2]
+==> personal_status=female div/sep/mar
+-- supp(0.006) conf:(1)
+We show by means of Theorem 4.5 that a lower bound for
+the glif t() value of abc can be calculated as:
+0.545(1 − 0.833)
+= 3.36.
+1 − 0.973
+
+abd. credit_history=critical/other existing credit
+residence_since=(2.8-inf)
+savings_status=<100
+checking_status=’no checking’
+personal_status=female div/sep/mar
+==> age=(-inf-30.2]
+-- supp(0.006) conf:(0.545)
+
+As a consequence, we can state that the rule abc is at least
+3.3-discriminatory. It is worth noting that the actual glif t()
+value for the rule is slightly higher than 3.36, namely 3.37.
+
+4.2.1
+
+Attack Model
+
+The next result states a lower bound that an attacker could
+infer for (strong) α-discrimination of PD classification rules
+given information available in disclosed PND rules (γ, δ)
+
+dba. credit_history=critical/other existing credit
+residence_since=(2.8-inf)
+13
+
+and information available from public or external sources
+(β1 , β2 ).
+
+Assume now that the value of conf (A, B → D) is known
+with an approximation of 5%, i.e. β1 = 0.518 and β2 = 1.
+We have f (x) = 0.518x, and since f (1 − 0.833) = 0.087 >
+1 − 0.973 = 0.027, we obtain glb(0.833, 0.973) = 3.20, i.e.
+the inferred lower bound is proportionally (5%) lower. Finally, assume that conf (D, B → A) is known with an approximation of 5%, i.e. β1 = 0.545 and β2 = 0.95. We
+have f (x) = 0.545/0.95(0.95 + x − 1) = 0.574(x − 0.05).
+Again f (1 − 0.833) = 0.067 > 1 − 0.973 = 0.027 implies
+glb(0.833, 0.973) = 2.49, which is more than proportionally
+lower than 3.36.
+
+Theorem 4.5. Let D, B → C be a PND classification
+rule, and let:
+γ
+
+=
+
+conf (D, B → C)
+
+δ
+
+=
+
+conf (B → C) > 0.
+
+Let A be a PD itemset and let β1 , β2 such that:
+conf (A, B → D)
+
+≥
+
+β1
+
+conf (D, B → A)
+
+≥
+
+β2 > 0.
+
+It is worth noting that the results of Theorem 4.5 are sufficient conditions for checking (strong) α-discrimination. If
+the inferred lower bounds are not as high as α, while the
+PD classification rule is actually α-discriminatory, we cannot conclude that an attacker has no other mean to infer
+α-discrimination of the rule.
+
+Called:
+f (x) =
+
+
+elb(x, y) =
+
+glb(x, y) =
+
+8
+< f (x)/y
+:
+
+β1
+(β2 + x − 1)
+β2
+f (x)/y
+0
+
+f (1 − x)/(1 − y)
+1
+
+if f (x) > 0
+otherwise
+
+4.2.2
+
+Checking Attack Model
+
+Consider now the problem of checking which PND classification rules satisfy the sufficient conditions of Theorem 4.5.
+Basically, for each candidate rule X → C, with X PND
+itemset, we have to enumerate all sub-itemsets D, B ⊆ X
+(which are 2|X| ) such that X can be written as D, B. What
+we will be looking for to speed up the enumeration and
+checking process is some necessary conditions on the inequalities to be checked that restrict the search space. Let us start
+considering necessary conditions for elb(γ, δ) ≥ α. If α = 0
+the expression is always true, so we concentrate on the case
+α > 0. By definition of elb(), elb(γ, δ) ≥ α > 0 happens
+only if f (γ) > 0 and f (γ)/δ ≥ α, which can respectively be
+rewritten as:
+
+if f (x) ≥ y
+elseif f (1 − x) > 1 − y
+otherwise
+
+we have:
+(i) 1 − f (1 − γ) ≥ conf (A, B → C) ≥ f (γ),
+(ii) for α ≥ 0, if elb(γ, δ) ≥ α, the PD classification rule
+A, B → C is α-discriminatory,
+(iii) for α ≥ 1, if glb(γ, δ) ≥ α, the PD classification rule
+A, B → C is strongly α-discriminatory.
+
+(i) β2 > 1 − γ, and
+
+Actually, the first two cases of the glb() function are mutually exclusive, since when f (γ) ≥ δ by conclusion (i) we
+obtain 1 − f (1 − γ) ≥ f (γ) ≥ δ and then f (1 − γ) ≤ 1 − δ.
+Also, in the case f (1 − γ) > 1 − δ, the glb() function is welldefined since the denominator 1 − δ cannot be zero. In fact,
+if δ = 1, we have that also γ = 1. Therefore, the case expressions amounts at β1 /β2 (β2 − 1) > 0 which is impossible,
+since 1 ≥ β1 , β2 ≥ 0. In order to understand more deeply
+the roles of β1 and β2 , we have reported in Figure 11 two
+sample plots of lower and upper bounds for the elif t(γ, δ)
+function, with γ = 0.8 and δ = 0.2. The lower bound is
+f (γ)/δ, while the upper bound is (1 − f (1 − γ))/δ. Both
+of them are immediate from conclusion (i) of Theorem 4.5.
+The two plots show lower and upper bound when β1 = 0.75
+and β1 = 0.95, for β2 in [0.4, 1]. As both β1 and β2 tend to
+1, both the lower and upper bounds tend to γ/δ, i.e. to the
+extended lift. f (γ) is monotonic w.r.t both β1 and β2 : however, an increase of β1 leads to a proportional improvement
+of the precision of lower and upper bounds, while an increase
+of β2 is less than proportional (in the order of −1/β2 ).
+
+(ii) β1 (β2 + γ − 1) ≥ αδβ2 .
+Therefore, (i) is a necessary condition for elb(γ, δ) ≥ α.
+From (ii) and β1 ≤ 1, we can conclude elb(γ, δ) ≥ α only if
+β2 + γ − 1 ≥ αδβ2 , i.e.:
+(iii) β2 (1 − αδ) ≥ 1 − γ.
+Therefore, (iii) is a necessary condition for elb(γ, δ) ≥ α as
+well. The selectivity of conditions (i,iii) lies in the fact that
+checking (iii) involves no lookup at the rule A, B → D; and
+checking (i) involves no lookup at rules B → C. Moreover,
+condition (iii) is monotonic w.r.t β2 , hence if we scan association rules X → A ordered by descending confidence,
+we can stop checking it as soon as it is false. Finally, we
+observe that similar necessary conditions can be derived for
+glb(γ, δ) ≥ α. The generate&test algorithm that incorporates the necessary conditions is shown in Figure 12.
+The algorithm scans PND classification rules X → C for
+each PN D group . We first lookup association rules X → A
+from ARgroup such that the necessary condition (ii) holds.
+We scan such rules by descending confidence. If there is
+at least one of such rules, the candidate contexts B ⊆ X
+are generated such that they satisfy condition (iii). For
+each such rule, the candidate contexts are tested again for
+condition (iii). Due to monotonicity of (iii) w.r.t. β2 , if
+the condition does not hold, the context are removed from
+the set of candidate. Otherwise, glb(γ, δ) (or elb(γ, δ)) must
+be calculated. To this purpose, we still need to retrieve
+
+Example 4.6. Reconsider Example 4.4. We have γ =
+0.833, δ = 0.973, β1 = 0.545, and β2 = 1. The lower bound
+for the glif t() value of rule abc has been calculated as follows. Called:
+0.545
+(1 + x − 1) = 0.545x
+f (x) =
+1
+we have f (1 − 0.833) = 0.091 > 1 − 0.973 = 0.027, and:
+glb(0.833, 0.973) = f (1 − 0.833)/(1 − 0.973) = 3.36.
+14
+
+CheckAlphaPNDCR(α)
+ForEach group s.t. PN D group 6= ∅
+ForEach X → C ∈ PN D group
+γ = conf (X → C)
+generateContexts = true
+(o)
+ForEach X → A ∈ ARgroup order by conf (X → A) descending
+β2 = conf (X → A)
+s = supp(X → A)
+(i)
+If β2 > 1 − γ or β2 > γ
+If generateContexts
+generateContexts = f alse
+V =∅
+ForEach B ⊆ X
+δ = conf (B → C) // found in PN D g with g = |B| ≤ group
+(iii)
+If β2 (1 − αδ) ≥ 1 − γ or β2 (1 − α(1 − δ)) ≥ γ
+V = V ∪ {(B, δ)}
+EndIf
+EndForEach
+EndIf
+ForEach (B, δ) ∈ V
+(iii)
+If β2 (1 − αδ) ≥ 1 − γ or β2 (1 − α(1 − δ)) ≥ γ
+β1 = s/supp(B → A)
+// found in ARg with g = |B| ≤ group
+If glb(γ, δ) ≥ α
+output A, B → C
+EndIf
+Else
+V = V \ {(B, δ)}
+EndIf
+EndForEach
+EndIf
+EndForEach
+EndForEach
+EndForEach
+Figure 12: Algorithm for checking strong α-discrimination inferrable from PND classification rules.
+β1 = conf (A, B → D). However, the rule A, B → D is
+not of the form stored in the ARgroup sets. By noting that:
+β1 =
+
+4.2.3
+
+supp(A, B, D)
+supp(X → A)
+=
+supp(A, B)
+supp(B → A)
+
+we can calculate β1 using rules X → A, already looked up,
+and B → A, which is in the form stored in ARg , with
+g = |B|. We report below the execution times (on a PC
+with Xeon 2.4Ghz and 2Gb main memory) of the checking
+algorithm running on rules for the German credit dataset
+with minimum support of 1% and without/with the necessary condition checkings.
+
+α = 2.0
+α = 1.8
+α = 1.6
+α = 1.4
+
+necessary cond. checks
+no
+yes
+10m21s
+3m12s
+10m21s
+3m15s
+10m21s
+3m23s
+10m21s
+3m49s
+
+The German Credit Dataset
+
+Using the notation of Theorem 4.5, we say that a PD classification rule A, B → C is inferred by the PND classification
+rule D, B → C, or, conversely, that D, B → C leads to
+A, B → C. Figure 13 shows the absolute and relative distributions of PND classification rules that lead to strongly αdiscriminatory PD rules for the German credit dataset. The
+right hand side graph highlights that those PND rules are a
+small percentage of total PND classification rules. The left
+hand side graph, however, warns us that the lower bounds
+inferrable for glif t() can reach considerably high values.
+By observing that a PD rule A, B → C can be inferred
+by more than one PND rule (e.g. from D1 , B → C and
+D2 , B → C), it is also interesting to study the distribution of strongly discriminatory PD rules inferred by PD
+rules. The absolute and relative (w.r.t. the total number of
+strongly α-discriminatory PD rules) distributions are shown
+in Figure 14. While the absolute count does not differ sensibly from the distribution of Figure 13, the relative count
+highlights that the proportion of strongly α-discriminatory
+rules that can be inferred through the attack model of Theorem 4.5 is not negligible even for relatively high values of α.
+As an example, for minimum support of 0.3%, more than the
+10% of the PD classification rules that are 2.2-discriminatory
+can be inferred from PND rules.
+
+ratio
+31.0%
+31.4%
+32.7%
+36.9%
+
+Whilst there is a gain in the execution time, up to 69%, the
+order of magnitude is the same. This can be explained by observing that condition (i) allows for cutting generation&testing of candidates, but condition (iii) allows for cutting only
+testing of candidates.
+15
+
+Fraction of PND class. rules leading to PD strongly α-discr. rules
+
+No. of PND class. rules leading to PD strongly α-discr. rules
+
+1e+008
+
+1e+007
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+1
+
+1.2
+
+1.4
+
+α
+minsup=1.0%
+
+minsup=0.5%
+
+minsup=0.3%
+
+minsup=1.0%
+
+1.6
+α
+
+1.8
+
+minsup=0.5%
+
+2
+
+2.2
+
+minsup=0.3%
+
+Figure 13: Distribution of PND classification rules leading to PD rules that are strongly α-discriminatory:
+absolute (left) and relative (right) count.
+
+Fraction of PD strongly α-discr. class. rules inferred from PND rules
+
+No. of PD strongly α-discr. class. rules inferred from PND rules
+
+1e+008
+
+1e+007
+
+1e+006
+
+100000
+
+10000
+
+1000
+
+100
+
+10
+
+1
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0
+1
+
+α
+minsup=1.0%
+
+minsup=0.5%
+
+1.2
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+α
+minsup=0.3%
+
+minsup=1.0%
+
+minsup=0.5%
+
+minsup=0.3%
+
+Figure 14: Distribution of strongly α-discriminatory PD classification rules inferred from PD rules: absolute
+(left) and relative (right) count.
+
+5. DISCUSSION AND RELATED WORK
+5.1 Other Classification Rule Sets
+
+sets using the ExtractCR() procedure of Figure 1 is baseclosed. Other base-closed sets are the sets of classification
+rules with a specified minimum coverage, where the coverage
+[40] of a classification rule X → C is defined as supp(X).
+Coverage and support have similar uses: they allow to specify a lower bound on the significativeness of a rule.
+
+As a consequence of the generality of the rule-based approach, the theoretical framework introduced in this paper
+applies to a variety of classification models having classification rules at their basis, such as decision trees [31], rulebased classifiers [14], and association rule-based classifiers
+[27, 47]; or that can be translated into classification rules,
+such as support vector machines [29].
+
+The attack checking procedures CheckAlphaPNDNegated() of Figure 9 and CheckAlphaPNDCR() of Figure 12
+require a slightly stronger property.
+
+As far as the algorithms proposed in this paper are concerned, however, we observe that the procedure CheckAlphaPDCR() of Figure 1 for checking (strong) α-protection
+works for any base-closed set of classification rules.
+Definition 5.1. A set A of classification rules is baseclosed if for every PD rule A, B → C in A with A PD
+itemset and B PND itemset, the rule B → C is in A.
+
+Definition 5.2. A set A of classification rules is downward base-closed if for every PD rule A, B → C in A with
+A PD itemset and B PND itemset, for every B0 ⊆ B the
+rule B0 → C is in A.
+The sets of classification rules having a specified minimum
+support or a specified minimum coverage are downward baseclosed.
+
+The set of classification rules extracted from frequent item16
+
+5.2
+
+Related Work
+
+6.
+
+To the best of our knowledge, this paper is the first to address the discrimination problem from the point of view of
+knowledge discovery from databases. Nevertheless, discrimination has been recognized as an issue in the tutorial [12,
+Slide 19] where the danger of building classifiers capable of
+racial discrimination in home loans has been put forward, as
+a common discriminatory behavior of many banks consists
+of mortgage redlining, i.e. of drawing lines around high risk
+minority neighborhoods.
+
+CONCLUSION
+
+Civil rights laws prohibit discrimination in a number of settings, including credit/insurance scoring, lending, personnel
+selection and wage, education and many others. The influence of discriminative behaviors has been the subject of
+studies in economics and social sciences. In this paper, we
+have shown that discrimination may be hidden in knowledge discovery models extracted from databases, and we
+have considered classification rule models.
+Our main contribution is in the introduction of the notion
+of (strong) α-protection, a formal measure of the discriminatory power of a classification rule, which proves to be a
+powerful tool for reasoning about discrimination. On this
+basis, we can formalize and solve the problem of focussing
+on potentially discriminatory rules, for the purpose of explaining the practices that emerge from the historical training set, and to verify the absence of harmful rules before
+putting a model at work for decision-making or prediction
+tasks. We could appreciate from our experiments that the
+combination of the minimum support, of the rule size and of
+the α threshold helps in keeping the number of the resulting discriminatory rules small – enough to enable interactive
+exploration of the set of solutions. This is a promising situation, as the most natural setting for our approach is that
+of an interactive analytical tool, supporting the browsing of
+the space of discriminatory rules.
+
+Technically, we measured discrimination through generalizations and variants of lift, a measure of the statistical significance of a rule [39]. We extended lift to cope with contexts,
+specified as non-discriminatory itemsets: how much does
+a potentially discriminatory condition A increase/decrease
+the precision when added to the non-discriminatory antecedent of a classification rule B → C? In this sense, there
+is a relation with the work of [33], where the notion of
+conditional association rules has been used to analyze a
+dataset of loans. A conditional rule A ⇔ C/B denotes a
+context B in which itemsets A and C are equivalent, namely
+where conf (A, B → C) = 1 and conf (¬A, B → ¬C) = 1.
+However, we can say nothing about conf (B → C), and,
+consequently, about the relative strength of rule with respect to the base classification rule. In addition to ⇔,
+the 4ft-Miner system [33, 34] allows the extraction of conditional rules with other operators. The “above average
+dependence” operator defines rules A ∼+ C/B such that
+supp(A, B, C) ≥ ms, where ms is the minimum support
+threshold, and lif tB (A → C) ≥ 1 + p, where B = {T ∈
+D | B ⊆ T } is the set of transactions verifying B. This is
+equivalent to check whether the extended lift of A, B → C
+is greater or equal than 1 + p, i.e. whether the rule is 1 + pdiscriminatory. However, the 4ft-Miner system assumes that
+itemsets A, B and C are defined starting from specified sets
+of attributes, not from sets of items. Also, the system adopts
+a rule extraction algorithm that is general enough to extract
+rules for operators defined on the 4-fold contingency table of
+transactions satisfying or not satisfying A and/or C. On the
+one hand, that allows for a general system of rule extraction
+w.r.t. several operators. On the other hand, the procedure
+in Figure 1 exploits the efficiency of the state-of-the art algorithms for the extraction of frequent patterns.
+
+In addition, we have considered indirect discrimination by
+dealing with two attack models that allow the discovery of
+discriminatory classification rules starting from rules that
+do not contain discriminatory items at all. The first attack
+model exploits information on discriminatory items conveyed
+by their negated item. The second one consists of exploiting
+known relations from background knowledge. This possibility is relevant in tackling subtle issues, such as redlining in
+credit approval: a rule stating that the residents in a specific
+neighborhood asking for a car loan are given bad credit is
+not a discriminatory rule per se, but it entails a discriminatory rule if the background knowledge tells us that being a
+resident in that neighborhood is strongly correlated to with
+some discriminatory condition, such as being a member of
+an ethnic minority. We have proposed an approach, based
+on Theorem 4.2 and Theorem 4.5, that allows to identify
+such situations.
+
+Finally, we mention that the issue of indirect discrimination through attack models resembles a privacy-preserving
+problem [26, 28], where simply hiding a subset of rules – e.g.,
+those with very low support – does not necessarily guarantee
+privacy protection from an attacker. The privacy-preserving
+literature contains several approaches to tackle this problem, that are all confronted with the trade-off between providing accurate models (rules) and preserving the privacy
+of individuals. In our specific framework, the problem is
+not privacy protection, but providing instead that decisions
+are taken without any bias given by discriminatory items.
+Therefore, it remains an open problem whether some of the
+existing approaches for privacy-preserving can be effective in
+our context as well, including data sanitization by distorting
+[18] or by blocking the data sets [42], or by hierarchy-based
+generalization approaches [38, 45].
+
+Clearly, many issues in discrimination-aware data mining
+remain open for future investigation, including a more comprehensive assessment over realistic datasets. We mention
+here the problem of automatic enforcement of α-protection,
+i.e. how to transform the training dataset in such a way that
+the discriminatory rules are removed from the output of the
+mining task, by means of controlled distortion of the source
+data.
+
+17
+
+7.
+
+REFERENCES
+
+[1] Sex Discrimination Act 1975. U.K. Legislation,
+http://www.statutelaw.gov.uk.
+[2] Race Relation Act 1976. U.K. Legislation,
+http://www.statutelaw.gov.uk.
+[3] Equal Opportunity Act 1995. Victoria State Legislation,
+http://www.austlii.edu.au.
+[4] Equal Credit Opportunity Act. U.S. Federal Legislation,
+http://www.usdoj.gov.
+[5] Equal Pay Act. U.S. Federal Legislation,
+http://www.usdoj.gov.
+[6] Fair Housing Act. U.S. Federal Legislation,
+http://www.usdoj.gov.
+[7] Pregnancy Discrimination Act. U.S. Federal Legislation,
+http://www.usdoj.gov.
+[8] R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules in large databases. In Proc. of VLDB
+1994, pages 487–499, 1994.
+[9] B. Baesens, T. Van Gestel, S. Viaene, M. Stepanova,
+J. Suykens, and J. Vanthienen. Benchmarking
+state-of-the-art classification algorithms for credit scoring.
+Journal of the Operational Research Society,
+54(6):627–635, 2003.
+[10] G. S. Becker. The Economics of Discrimination. University
+of Chicago Press, 1957.
+[11] C.-F. Chien and L.F. Chen. Data mining to improve
+personnel selection and enhance human capital: A case
+study in high-technology industry. Expert Systems with
+Applications, 34(1):280–290, 2008.
+[12] C. Clifton. Privacy preserving data mining: How do we
+mine data when we aren’t allowed to see it? In Proc. of the
+9th Int.’l Conf. on Knowledge Discovery and Data Mining
+(KDD 2003), Tutorial, 2003. http://www.cs.purdue.edu/homes/clifton/DistDM/Clifton PPDM.ppt.
+[13] Code of conduct and professional practice applying to
+information systems managed by private entities with
+regard to consumer credit, reliability, and timeliness of
+payments. Italian authority for personal data privacy, 2004.
+http://www.garanteprivacy.it.
+[14] W. W. Cohen. Fast effective rule induction. In Proc. of the
+12th Int.’l Conference on Machine Learning (ICML 1995),
+pages 115–123. Morgan Kaufmann, 1995.
+[15] Intentional Employment Discrimination. U.S. Federal
+Legislation, http://www.usdoj.gov.
+[16] D. J. Hand. Modelling consumer credit risk. IMA Journal
+of Management mathematics, 12:139–155, 2001.
+[17] D. J. Hand and W. E. Henley. Statistical classification
+methods in consumer credit scoring: a review. Journal of
+the Royal Statistical Society, Series A (Statistics in
+Society), 160:523–541, 1997.
+[18] A. A. Hintoglu, A. Inan, Y. Saygin, and M. Keskinöz.
+Suppressing data sets to prevent discovery of association
+rules. In Proc. of the 5th IEEE Int.’l Conference on Data
+Mining (ICDM 2005), pages 645–648. IEEE Computer
+Society, 2005.
+[19] H. Holzer, S. Raphael, and M. Stoll. Black job applicants
+and the hiring officer’s race. Industrial and Labor Relations
+Review, 57(2):267–287, 2004.
+[20] R. Hunter. Indirect Discrimination in the Workplace. The
+Federation Press, 1992.
+[21] D.H. Kaye and M. Aickin, editors. Statistical Methods in
+Discrimination Litigation. Marcel Dekker, Inc., 1992.
+[22] R. Knopff. On proving discrimination: Statistical methods
+and unfolding policy logics. Canadian Public Policy,
+12:573–583, 1986.
+[23] D.E. Knuth. Fundamental Algorithms. Addison-Wesley,
+1997.
+[24] P. Kuhn. Sex discrimination in labor markets: The role of
+statistical evidence. The American Economic Review,
+77:567–583, 1987.
+[25] M. LaCour-Little. Discrimination in mortgage lending: A
+
+[26]
+
+[27]
+
+[28]
+[29]
+
+[30]
+[31]
+[32]
+[33]
+[34]
+[35]
+[36]
+[37]
+
+[38]
+[39]
+[40]
+[41]
+[42]
+[43]
+
+[44]
+[45]
+
+[46]
+[47]
+
+18
+
+critical review of the literature. Journal of Real Estate
+Literature, 7:15–50, 1999.
+N. Li, T. Li, and S. Venkatasubramanian. t-closeness:
+Privacy beyond k-anonymity and l-diversity. In Proc. of the
+23nd Int.’l Conference on Data Engineering (ICDE 2007),
+pages 106–115. IEEE Computer Society, 2007.
+B. Liu, W. Hsu, and Y. Ma. Integrating classification and
+association rule mining. In Proc. of the 4th Int.’l
+Conference on Knowledge Discovery and Data Mining
+(KDD 1998), pages 80–86, 1998.
+K. Liu. Privacy preserving data mining bibliography, 2006.
+http://www.csee.umbc.edu/∼kunliu1/research/privacyreview.html.
+D. Martens, B. Baesens, T. Van Gestel, and J. Vanthienen.
+Comprehensible credit scoring models using rule extraction
+from support vector machines. European Journal of
+Operational Research, 183(3):1466–1476, 2007.
+D.J. Newman, S. Hettich, C.L. Blake, and C.J. Merz. UCI
+repository of machine learning databases, 1998.
+http://www.ics.uci.edu/∼mlearn/MLRepository.html.
+J. R. Quinlan. C4.5: Programs for Machine Learning.
+Morgan Kaufmann, San Mateo, CA, 1993.
+J. Rauch. Logic of association rules. Appl. Intell.,
+22(1):9–28, 2005.
+J. Rauch and M. Simunek. Mining for association rules by
+4ft-Miner. In Proc. of the 14th International Conference on
+Applications of Prolog (INAP 2001), pages 285–295, 2001.
+J. Rauch and M. Simunek. 4-ft Miner Procedure, Visited on
+September 2007. http://lispminer.vse.cz.
+Frequent Itemset Mining Implementations Repository. B.
+Goethals, http://fimi.cs.helsinki.fi.
+G. D. Squires. Racial profiling, insurance style: Insurance
+redlining and the uneven development of metropolitan
+areas. Journal of Urban Affairs, 25(4):391–410, 2003.
+R. Srikant and R. Agrawal. Mining generalized association
+rules. In VLDB’95, Proceedings of 21th International
+Conference on Very Large Data Bases, pages 407–419.
+Morgan Kaufmann, 1995.
+L. Sweeney. Achieving k-anonymity privacy protection
+using generalization and suppression. Int. J. Uncertain.
+Fuzziness Knowl.-Based Syst., 10(5):571–588, 2002.
+P.-N. Tan, V. Kumar, and J. Srivastava. Selecting the right
+objective measure for association analysis. Inf. Syst.,
+29(4):293–313, 2004.
+P.-N. Tan, M. Steinbach, and V. Kumar. Introduction to
+Data Mining. Addison-Wesley, 2006.
+L. C. Thomas. A survey of credit and behavioural scoring:
+forecasting financial risk of lending to consumers.
+International Journal of Forecasting, 16:149–172, 2000.
+V. S. Verykios, A. K. Elmagarmid, E. Bertino, Y. Saygin,
+and E. Dasseni. Association rule hiding. IEEE Trans.
+Knowl. Data Eng., 16(4):434–447, 2004.
+S. Viaene, R. A. Derrig, B. Baesens, and G. Dedene. A
+comparison of state-of-the-art classification techniques for
+expert automobile insurance claim fraud detection. Journal
+of Risk & Insurance, 69(3):373–421, 2001.
+M. Vojtek and E. Kočenda. Credit scoring methods.
+Journal of Economics and Finance, 56:152–167, 2006.
+K. Wang, B. C. M. Fung, and P. S. Yu. Template-based
+privacy preservation in classification problems. In Proc. of
+the 5th IEEE International Conference on Data Mining
+(ICDM 2005), pages 466–473. IEEE Computer Society,
+2005.
+X. Wu, C. Zhang, and S. Zhang. Efficient mining of both
+positive and negative association rules. ACM Trans. Inf.
+Syst., 22(3):381–405, 2004.
+X. Yin and J. Han. CPAR: Classification based on
+Predictive Association Rules. In Proc. of the 3rd SIAM
+International Conference on Data Mining, 2003.
+
+APPENDIX
+A. PROOFS
+
+Example A.1. (Modelling hierarchies) Consider a hierarchy on attribute age with a level including values young,
+adult and elder; and a second level mapping young in the
+domain values 0 . . . 18, adult in the domain values 19 . . . 60,
+and elder into 61 . . . 99. While age = adult is not an item
+(since adult is not in the domain of age), it can be considered as a shorthand for the expression age = 19 ∨ . . . ∨ age
+= 60.
+
+Proofs are provided in a general setting, which extends the
+standard definition of [8] beyond itemsets. We refer the
+reader to [32] for a general logic calculi of association rules.
+
+A.1
+
+Association and Classification Rules
+
+A pattern expression X is a boolean expression over items.
+We allow conjunction (∧) and disjunction (∨) operators, and
+the constants true and false. For a transaction T , we say
+that T verifies X, and write T |= X, iff:
+•
+•
+•
+•
+
+X
+X
+X
+X
+
+is
+is
+is
+is
+
+Example A.2. (Negated items) Consider the attribute
+gender and assume that its domain is binary, i.e.:
+dom(gender) = {male, female}.
+
+a = v and a = v belongs to T ;
+true;
+X1 ∧ X2 and both T |= X1 and T |= X2 ;
+X1 ∨ X2 and T |= X1 or T |= X2 .
+
+The expression ¬ gender = female is a syntactic abbreviation for gender = male. Assume now that:
+dom(gender) = {male, female, null}.
+This assumption is realistic when transactions admit unknown/unspecified values, or for variable-length transactions,
+i.e. transactions that include at-most one a-item for every
+attribute a. In this case, ¬ gender = female is a shorthand
+for gender = male ∨ gender = null.
+
+With this semantics in mind, an itemset {i1 , . . . , in } can be
+interpreted as the pattern expression i1 ∧ . . . , in (which
+reduces to true when n = 0). Moreover, since the domains
+of attributes are finite, negated items such as ¬(a = v) (also
+written, a 6= v) can be introduced as a shorthand for a =
+v1 ∨ . . . ∨ a = vn , where {v1 , . . . , vn } = dom(a) \ {v}. This
+is consistent with Definition 3.9. Negation can be extended
+to expressions by the De Morgan’s laws:
+
+We start by stating a general relation which comes from the
+third-excluded principle of boolean logic.
+Lemma A.3. For X, Y pattern expressions, we have:
+(i) supp(X) = supp(X ∧ Y) + supp(X ∧ ¬Y)
+
+• ¬(X ∨ Y) is ¬X ∧ ¬Y,
+• ¬(X ∧ Y) is ¬X ∨ ¬Y,
+• ¬true is false and ¬false is true.
+
+(ii) supp(X) ≥ supp(X ∧ Y).
+Proof. (i) follows directly from observing that, for a
+transaction T , it turns out that T |= X iff T |= X ∧ Y or
+T |= X ∧ ¬Y. (ii) is an immediate consequence of (i).
+
+For any transaction T , we have that T |= ¬X iff T |= X
+does not hold. A pattern expression X is valid if T |= X for
+every transaction T . The support of a pattern expression X
+w.r.t. a non-empty transaction database D is the ratio of
+transactions in D verifying X:
+
+Let us now relate confidence of an association rule to the
+confidence of the rule with negated consequence.
+
+suppD (X) = |{ T ∈ D | T |= X }|/|D|
+
+Lemma A.4. Let X → Y be an association rule. We
+have:
+
+where | | is the cardinality operator. An association rule is an
+expression X → Y, where X and Y are pattern expressions.
+X is called the premise and Y is called the consequence of
+the association rule. We say that it is a classification rule if
+Y is a class item and no class item appears in X. We say
+that X → Y is a positive association rule if X and Y are
+conjunctions of items with no item appearing in both. In
+other words, association and classification rules for itemsets
+are a special case of association and classification rules for
+pattern expressions.
+
+conf (X → Y) = 1 − conf (X → ¬Y)
+Proof. Let us calculate:
+=
+=
+
+conf (X → Y)
+supp(X ∧ Y)/supp(X)
+{ Lemma A.3 (i) }
+(supp(X) − supp(X ∧ ¬Y))/supp(X)
+
+= 1 − supp(X ∧ ¬Y)/supp(X)
+
+The support of X → Y w.r.t. D is defined as:
+
+= 1 − conf (X → ¬Y).
+
+suppD (X → Y) = suppD (X ∧ Y).
+The confidence of X → Y, defined when suppD (X) > 0, is:
+confD (X → Y) = suppD (X ∧ Y)/suppD (X).
+
+We conclude by reformulating the well-known principle of
+Inclusion-Exclusion [23] in the context of pattern expressions.
+
+Support and confidence range over [0, 1]. We omit the subscripts in suppD () and confD () when clear from the context.
+The formulation of association rules in terms of pattern expressions (instead of itemsets, i.e. conjunctions of items)
+allows us to model in a unified framework several extensions
+of standard association rules, including negative association
+rules [46] and hierarchies [37].
+
+Lemma A.5 (Inclusion-Exclusion Principle). Let A,
+B, C, and D be pattern expressions. Then:
+supp(A)
+
+19
+
+≥
+
+supp(A ∧ B) + supp(A ∧ C)
+−supp(A ∧ B ∧ C).
+
+Proof. For (i), we calculate:
+
+Proof. We have:
+supp(A ∧ B)
+= { Lemma A.3 (i) }
+supp(A ∧ B ∧ C) + supp(A ∧ B ∧ ¬C)
+
+=
+
+≤ { Lemma A.3 (ii) }
+supp(A ∧ B ∧ C) + supp(A ∧ ¬C)
+
+=
+=
+
+= { Lemma A.3 (i) }
+supp(A ∧ B ∧ C) + supp(A) − supp(A ∧ C).
+
+For (ii), we calculate:
+
+=
+
+A.2
+
+=
+
+Extended Lift
+
+The following lemma states the range of variability of extended lift.
+
+=
+=
+
+Lemma A.6. Let A ∧ B → C be an association rule such
+that:
+s
+
+=
+
+supp(A ∧ B → C) ≥ ms > 0
+
+γ
+
+=
+
+conf (A ∧ B → C)
+
+δ
+
+=
+
+conf (B → C) > 0.
+
+confD (X ∧ B → Y)
+suppD (X ∧ B ∧ Y)
+suppD (X ∧ B)
+{ (i) }
+suppB (X ∧ Y)suppD (B)
+suppB (X)suppD (B)
+confB (X → Y).
+
+We are now in the position to relate extended lift to standard
+lift [39], which we define for pattern expressions as follows:
+lif tD (A → C) = confD (A → C)/suppD (C).
+
+We have that:
+
+Lemma A.8. Let A ∧ B → C be an association rule such
+that confD (B → C) > 0. We have:
+
+(i) γ/δ belongs to the range [0, 1/ms],
+(ii) if δ ≥ mc then γ/δ belongs to [0, 1/mc].
+
+confD (A ∧ B → C)
+confD (B → C)
+
+Proof. The lower-bounds of zero are immediate due to
+the fact that γ, δ ≥ 0. As for the upper-bounds, for (i) we
+calculate:
+γ/δ
+
+suppD (X ∧ B)
+|{ T ∈ D | T |= X ∧ B }|
+|D|
+|{ T ∈ B | T |= X }||B|
+|D||B|
+suppB (X) suppD (B).
+
+=
+
+lif tB (A → C)
+
+where B = {T ∈ D |T |= B}.
+Proof.
+
+supp(A ∧ B ∧ C)/supp(A ∧ B)
+supp(B ∧ C)/supp(B)
+supp(B)
+supp(A ∧ B ∧ C)
+=
+supp(B ∧ C)
+supp(A ∧ B)
+≤ { Lemma A.3 (ii) }
+=
+
+=
+
+≤
+
+supp(B)/supp(A ∧ B)
+1/supp(A ∧ B)
+
+=
+
+≤
+≤
+
+{ Lemma A.3 (ii) }
+1/s ≤ 1/ms.
+
+=
+
+confD (A ∧ B → C)
+confD (B → C)
+{ Lemma A.7 (i) }
+confD (A ∧ B → C)
+suppB (C)
+{ Lemma A.7 (ii) }
+confB (A → C)
+= lif tB (A → C).
+suppB (C)
+
+Concerning (ii), we have: γ/δ ≤ 1/δ ≤ 1/mc.
+Lemma 2.2 is a special case of this result.
+Next result relates support and confidence of conjuncts in
+pattern expressions and association rules to the underlying
+database of transactions.
+
+A.3
+
+Strong Discrimination of PDCR
+
+Let us show next (a generalization of) Lemma 3.10.
+
+Lemma A.7. Let X, Y and B be pattern expressions. Then:
+(i) suppD (X ∧ B) = suppB (X) suppD (B),
+
+Lemma A.9. Let A ∧ B → C be an association rule,
+and let:
+1>
+
+(ii) confD (X ∧ B → Y) = confB (X → Y).
+
+γ=
+
+conf (A ∧ B → C)
+
+δ=
+
+conf (B → C).
+
+We have conf (B → ¬C) > 0 and
+conf (A ∧ B → ¬C)
+1−γ
+=
+.
+conf (B → ¬C)
+1−δ
+
+where B = {T ∈ D | T |= B}.
+20
+
+Lemma A.11. Let A ∧ B → C be an association rule
+with supp(B → C) > 0 and supp(B → A) > 0. Then:
+
+Proof. By Lemma A.4,
+conf (B → ¬C) = 1 − conf (B → C) = 1 − δ > 0,
+
+conf (A ∧ B → C)
+conf (B ∧ C → A)
+=
+conf (B → C)
+conf (B → A)
+
+since δ < 1. Moreover:
+
+=
+
+=
+
+conf (A ∧ B → ¬C)
+conf (B → ¬C)
+{ Lemma A.4 }
+1 − conf (A ∧ B → ¬C)
+1 − conf (B → ¬C)
+1−γ
+.
+1−δ
+
+Proof.
+
+=
+=
+=
+
+The following result shows that the glif t() function of Definition 3.11 ranges over [1, 1/ms], where ms is the minimum
+support of a rule.
+
+Theorem 4.2 (i) is an instance of the following result, by
+considering C to be a class item, A a PD item over a binary
+predicate, and ¬A a PND item.
+Theorem A.12. Let A ∧ B → C be an association rule
+such that:
+
+Lemma A.10. Let A ∧ B → C be an association rule
+such that:
+s
+
+=
+
+supp(A ∧ B → C) ≥ ms > 0
+
+γ
+
+=
+
+conf (A ∧ B → C)
+
+δ
+
+=
+
+conf (B → C) > 0.
+
+conf (A ∧ B → C)
+conf (B → C)
+supp(A ∧ B ∧ C)/supp(A ∧ B)
+supp(B ∧ C)/supp(B)
+supp(A ∧ B ∧ C)/supp(B ∧ C)
+supp(A ∧ B)/supp(B)
+conf (B ∧ C → A)
+.
+conf (B → A)
+
+We have that: glif t(γ, δ) ∈ [1, 1/ms], and for 1 > δ:
+glif t(γ, δ) = max{elif t(γ, δ), elif t(1 − γ, 1 − δ)}.
+
+γ
+
+=
+
+conf (¬A ∧ B → C)
+
+δ
+
+=
+
+conf (B → C) > 0
+
+β
+
+=
+
+conf (B → A) > 0.
+
+We have that:
+Proof. First, we observe that δ = 1 implies γ = 1. In
+fact, when supp(B ∧ C) = supp(B), i.e. all transaction
+verifying B also verify C, we have supp(A ∧ B ∧ C) =
+supp(A ∧ B), i.e. γ = 1. As a consequence, when δ = 1,
+we have glif t(γ, δ) = γ/δ = 1 ∈ [1, 1/ms]. Consider now
+the remaining case 1 > δ > 0. Since the following property
+holds by elementary algebra:
+γ/δ ≥ 1
+
+iff
+
+conf (A ∧ B → C) =
+
+Proof. We calculate:
+δ
+1
++ (1 − )γ
+β
+β
+= { Definition of β }
+supp(B ∧ A) − supp(B)
+supp(B)
++(
+)γ
+δ
+supp(B ∧ A)
+supp(B ∧ A)
+= { Lemma A.3 (i) }
+supp(B)
+supp(B ∧ ¬A)
+δ
+−
+γ
+supp(B ∧ A)
+supp(B ∧ A)
+= { Definition of δ, γ }
+supp(B ∧ C)
+supp(¬A ∧ B ∧ C)
+−
+supp(B ∧ A)
+supp(B ∧ A)
+supp(B ∧ C) − supp(¬A ∧ B ∧ C)
+=
+supp(B ∧ A)
+= { Lemma A.3 (i) }
+supp(A ∧ B ∧ C)
+=
+supp(B ∧ A)
+= conf (A ∧ B → C).
+
+(1 − γ)/(1 − δ) ≤ 1.
+
+we obtain glif t(γ, δ) ≥ 1 and:
+glif t(γ, δ) = max{elif t(γ, δ), elif t(1 − γ, 1 − δ)}.
+Let us show now the upper bound. By Lemma A.6 (i),
+elif t(γ, δ) ≤ 1/ms. Moreover:
+elif t(1 − γ, 1 − δ)
+
+=
+
+{ Lemma A.9 }
+supp(A ∧ B ∧ C)/supp(A ∧ B)
+=
+supp(B ∧ C)/supp(B)
+supp(A ∧ B ∧ C)
+supp(B)
+=
+supp(B ∧ C)
+supp(A ∧ B)
+≤ { Lemma A.3 (ii) }
+≤
+
+supp(B)/supp(A ∧ B)
+1/supp(A ∧ B)
+
+=
+
+{ Lemma A.7 (ii) }
+
+≤
+
+1/s ≤ 1/ms.
+
+δ
+1
++ (1 − )γ.
+β
+β
+
+Theorem 4.2 follows immediately.
+
+Therefore, glif t(γ, δ) ≤ 1/ms.
+
+Proof of Theorem 4.2.
+
+A.4
+
+Proof. (i) is an instance of Theorem A.12. Conclusions
+(ii,iii) are immediate consequences of (i) and the definition
+of (strong) α-protection.
+
+Indirect Discrimination of PNDCR
+
+The extended lift is a symmetric measure, in the sense that
+the roles of A and C are dual, as it is made clear by the
+following lemma.
+21
+
+Next result provides upper and lower bounds for confidence
+of an association rule D → C given the confidence of A → C
+and some (background) knowledge about the relations between expressions D and A.
+
+Theorem 4.5 follows from Lemma A.13.
+Proof of Theorem 4.5.
+Proof. Let B = {T ∈ D | T |= B}. By Lemma A.7 (ii),
+we have:
+
+Lemma A.13. Let A, D, C be pattern expressions, and:
+γ
+
+=
+
+conf (D → C)
+
+conf (A → D)
+
+≥
+
+β1
+
+conf (D → A)
+
+≥
+
+β2 > 0.
+
+γ
+
+=
+
+confB (D → C)
+
+confB (A → D)
+confB (D → A)
+
+≥
+≥
+
+β1
+β2 > 0.
+
+By Lemma A.13, we obtain:
+We have that:
+β1
+β1
+1−
+(β2 − γ) ≥ conf (A → C) ≥
+(β2 + γ − 1).
+β2
+β2
+
+1−
+
+which, by definition of f , can be rewritten as:
+1 − f (1 − γ) ≥ confB (A → C) ≥ f (γ)
+
+Proof. Let us call: β 1 = conf (A → D) and β 2 =
+conf (D → A). We have:
+
+and, again by Lemma A.7 (ii), yields:
+
+supp(A ∧ C)
+supp(A)
+supp(A ∧ C ∧ D)
+supp(A)
+
+1 − f (1 − γ) ≥ conf (A, B → C) ≥ f (γ).
+
+conf (A → C) =
+≥
+
+β1
+β1
+(β2 − γ) ≥ confB (A → C) ≥
+(β2 + γ − 1).
+β2
+β2
+
+This shows conclusion (i). Consider now conclusion (ii). By
+dividing by δ = conf (B → C) both sides of the inequality
+conf (A, B → C) ≥ f (γ) from (1), we can conclude that
+elb(γ, δ) is a lower bound for the extended lift of A, B → C.
+Finally, consider conclusion (iii). Let us call:
+
+= { β 1 /β 2 = supp(D)/supp(A) }
+β 1 supp(A ∧ C ∧ D)
+supp(D)
+β2
+≥ { Inclusion-Exclusion Lemma A.5 }
+
+=
+
+γ 0 = conf (A ∧ B → C).
+If f (γ) ≥ δ, by (1) we have:
+
+β 1 (supp(D ∧ A) + supp(D ∧ C) − supp(D))
+supp(D)
+β2
+=
+
+γ 0 ≥ f (γ) ≥ δ
+and then:
+
+β1
+(β 2 + γ − 1)
+β2
+
+glif t(γ 0 , δ) = γ 0 /δ ≥ f (γ)/δ = glb(γ, δ) ≥ α
+which implies that A ∧ B → C is not strongly α-protective.
+If f (1 − γ) > 1 − δ, again by (1) we have:
+
+≥ { β 1 ≥ β1 , β 2 ≥ β 2 , γ ≤ 1 }
+β1
+(β2 + γ − 1).
+β2
+
+γ 0 ≤ 1 − f (1 − γ) < δ
+
+Moreover:
+
+and then:
+
+supp(A ∧ C)
+conf (A → C) =
+supp(A)
+≤ { Inclusion-Exclusion Lemma A.5 }
+supp(A) + supp(A ∧ D ∧ C) − supp(A ∧ D)
+=
+supp(A)
+supp(A ∧ D) − supp(A ∧ D ∧ C)
+= 1−
+supp(A)
+=
+
+(1)
+
+glif t(γ 0 , δ) = (1−γ 0 )/(1−δ) ≥ f (1−γ)/(1−δ) = glb(γ, δ) ≥ α
+which implies that A, B → C is not strongly α-protective.
+The last case of glb() is trivial since glif t(γ 0 , δ) is always
+greater or equal than 1.
+
+{ β 1 /β 2 = supp(D)/supp(A) }
+
+=
+
+β 1 supp(A ∧ D) − supp(A ∧ D ∧ C)
+supp(D)
+β2
+{ Lemma A.3 (i) }
+
+≤
+
+1−
+
+β 1 supp(A ∧ D) − supp(D ∧ C)
+supp(D)
+β2
+
+=
+
+1−
+
+β1
+(β 2 − γ)
+β2
+
+= 1−
+
+≤ { β 1 ≥ β1 , β 2 ≥ β2 , γ ≤ 1 }
+β1
+1−
+(β2 − γ).
+β2
+
+22
+
+

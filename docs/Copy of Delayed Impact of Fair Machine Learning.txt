@@ -1,0 +1,3235 @@
+Delayed Impact of Fair Machine Learning
+Lydia T. Liu∗
+
+Sarah Dean∗
+
+Esther Rolf∗
+
+Max Simchowitz∗
+
+Moritz Hardt∗
+
+arXiv:1803.04383v2 [cs.LG] 7 Apr 2018
+
+April 10, 2018
+
+Abstract
+Fairness in machine learning has predominantly been studied in static classification settings
+without concern for how decisions change the underlying population over time. Conventional
+wisdom suggests that fairness criteria promote the long-term well-being of those groups they
+aim to protect.
+We study how static fairness criteria interact with temporal indicators of well-being, such
+as long-term improvement, stagnation, and decline in a variable of interest. We demonstrate
+that even in a one-step feedback model, common fairness criteria in general do not promote
+improvement over time, and may in fact cause harm in cases where an unconstrained objective
+would not. We completely characterize the delayed impact of three standard criteria, contrasting
+the regimes in which these exhibit qualitatively different behavior. In addition, we find that
+a natural form of measurement error broadens the regime in which fairness criteria perform
+favorably.
+Our results highlight the importance of measurement and temporal modeling in the evaluation of fairness criteria, suggesting a range of new challenges and trade-offs.
+
+1
+
+Introduction
+
+Machine learning commonly considers static objectives defined on a snapshot of the population
+at one instant in time; consequential decisions, in contrast, reshape the population over time.
+Lending practices, for example, can shift the distribution of debt and wealth in the population.
+Job advertisements allocate opportunity. School admissions shape the level of education in a
+community.
+Existing scholarship on fairness in automated decision-making criticizes unconstrained machine
+learning for its potential to harm historically underrepresented or disadvantaged groups in the
+population [Executive Office of the President, 2016, Barocas and Selbst, 2016]. Consequently, a
+variety of fairness criteria have been proposed as constraints on standard learning objectives. Even
+though, in each case, these constraints are clearly intended to protect the disadvantaged group by
+an appeal to intuition, a rigorous argument to that effect is often lacking.
+In this work, we formally examine under what circumstances fairness criteria do indeed promote
+the long-term well-being of disadvantaged groups measured in terms of a temporal variable of
+interest. Going beyond the standard classification setting, we introduce a one-step feedback model
+of decision-making that exposes how decisions change the underlying population over time.
+∗
+
+Department of Electrical Engineering and Computer Sciences, University of California, Berkeley
+
+1
+
+Our running example is a hypothetical lending scenario. There are two groups in the population
+with features described by a summary statistic, such as a credit score, whose distribution differs
+between the two groups. The bank can choose thresholds for each group at which loans are offered.
+While group-dependent thresholds may face legal challenges [Ross and Yinger, 2006], they are
+generally inevitable for some of the criteria we examine. The impact of a lending decision has
+multiple facets. A default event not only diminishes profit for the bank, it also worsens the financial
+situation of the borrower as reflected in a subsequent decline in credit score. A successful lending
+outcome leads to profit for the bank and also to an increase in credit score for the borrower.
+When thinking of one of the two groups as disadvantaged, it makes sense to ask what lending
+policies (choices of thresholds) lead to an expected improvement in the score distribution within
+that group. An unconstrained bank would maximize profit, choosing thresholds that meet a breakeven point above which it is profitable to give out loans. One frequently proposed fairness criterion,
+sometimes called demographic parity, requires the bank to lend to both groups at an equal rate.
+Subject to this requirement the bank would continue to maximize profit to the extent possible.
+Another criterion, originally called equality of opportunity, equalizes the true positive rates between
+the two groups, thus requiring the bank to lend in both groups at an equal rate among individuals
+who repay their loan. Other criteria are natural, but for clarity we restrict our attention to these
+three.
+Do these fairness criteria benefit the disadvantaged group? When do they show a clear advantage
+over unconstrained classification? Under what circumstances does profit maximization work in the
+interest of the individual? These are important questions that we begin to address in this work.
+
+1.1
+
+Contributions
+
+We introduce a one-step feedback model that allows us to quantify the long-term impact of classification on different groups in the population. We represent each of the two groups A and B by a
+score distribution π A and π B , respectively. The support of these distributions is a finite set X corresponding to the possible values that the score can assume. We think of the score as highlighting
+one variable of interest in a specific domain such that higher score values correspond to a higher
+probability of a positive outcome. An institution chooses selection policies τ A , τ B : X → [0, 1] that
+assign to each value in X a number representing the rate of selection for that value. In our example,
+these policies specify the lending rate at a given credit score within a given group. The institution
+will always maximize their utility (defined formally later) subject to either (a) no constraint, or (b)
+equality of selection rates, or (c) equality of true positive rates.
+We assume the availability of a function ∆ : X → R such that ∆(x) provides the expected
+change in score for a selected individual at score x. The central quantity we study is the expected
+difference in the mean score in group j ∈ {A, B} that results from an institutions policy, ∆µj
+defined formally in Equation (2). When modeling the problem, the expected mean difference can
+also absorb external factors such as “reversion to the mean” so long as they are mean-preserving.
+Qualitatively, we distinguish between long-term improvement (∆µj > 0), stagnation (∆µj = 0),
+and decline (∆µj < 0). Our findings can be summarized as follows:
+1. Both fairness criteria (equal selection rates, equal true positive rates) can lead to all possible
+outcomes (improvement, stagnation, and decline) in natural parameter regimes. We provide
+a complete characterization of when each criterion leads to each outcome in Section 3.
+
+2
+
+• There are a class of settings where equal selection rates cause decline, whereas equal
+true positive rates do not (Corollary 3.5),
+• Under a mild assumption, the institution’s optimal unconstrained selection policy can
+never lead to decline (Proposition 3.1).
+2. We introduce the notion of an outcome curve (Figure 1) which succinctly describes the different regimes in which one criterion is preferable over the others.
+3. We perform experiments on FICO credit score data from 2003 and show that under various
+models of bank utility and score change, the outcomes of applying fairness criteria are in line
+with our theoretical predictions.
+4. We discuss how certain types of measurement error (e.g., the bank underestimating the repayment ability of the disadvantaged group) affect our comparison. We find that measurement
+error narrows the regime in which fairness criteria cause decline, suggesting that measurement
+should be a factor when motivating these criteria.
+5. We consider alternatives to hard fairness constraints.
+• We evaluate the optimization problem where fairness criterion is a regularization term
+in the objective. Qualitatively, this leads to the same findings.
+• We discuss the possibility of optimizing for group score improvement ∆µj directly subject
+to institution utility constraints. The resulting solution provides an interesting possible
+alternative to existing fairness criteria.
+We focus on the impact of a selection policy over a single epoch. The motivation is that the
+designer of a system usually has an understanding of the time horizon after which the system
+is evaluated and possibly redesigned. Formally, nothing prevents us from repeatedly applying our
+model and tracing changes over multiple epochs. In reality, however, it is plausible that over greater
+time periods, economic background variables might dominate the effect of selection.
+Reflecting on our findings, we argue that careful temporal modeling is necessary in order to
+accurately evaluate the impact of different fairness criteria on the population. Moreover, an understanding of measurement error is important in assessing the advantages of fairness criteria relative
+to unconstrained selection. Finally, the nuances of our characterization underline how intuition
+may be a poor guide in judging the long-term impact of fairness constraints.
+
+1.2
+
+Related work
+
+Recent work by Hu and Chen [2018] considers a model for long-term outcomes and fairness in
+the labor market. They propose imposing the demographic parity constraint in a temporary labor
+market in order to provably achieve an equitable long-term equilibrium in the permanent labor
+market, reminiscent of economic arguments for affirmative action [Foster and Vohra, 1992]. The
+equilibrium analysis of the labor market dynamics model allows for specific conclusions relating
+fairness criteria to long term outcomes. Our general framework is complementary to this type of
+domain specific approach.
+Fuster et al. [2017] consider the problem of fairness in credit markets from a different perspective.
+Their goal is to study the effect of machine learning on interest rates in different groups at an
+equilibrium, under a static model without feedback.
+3
+
+Ensign et al. [2017] consider feedback loops in predictive policing, where the police more heavily
+monitor high crime neighborhoods, thus further increasing the measured number of crimes in those
+neighborhoods. While the work addresses an important temporal phenomenon using the theory of
+urns, it is rather different from our one-step feedback model both conceptually and technically.
+Demographic parity and its related formulations have been considered in numerous papers [e.g.
+Calders et al., 2009, Zafar et al., 2017]. Hardt et al. [2016] introduced the equality of opportunity
+constraint that we consider and demonstrated limitations of a broad class of criteria. Kleinberg
+et al. [2017] and Chouldechova [2016] point out the tension between “calibration by group” and
+equal true/false positive rates. These trade-offs carry over to some extent to the case where we
+only equalize true positive rates [Pleiss et al., 2017].
+A growing literature on fairness in the “bandits” setting of learning [see Joseph et al., 2016,
+et sequelae] deals with online decision making that ought not to be confused with our one-step
+feedback setting. Finally, there has been much work in the social sciences on analyzing the effect
+of affirmative action [see e.g., Keith et al., 1985, Kalev et al., 2006].
+
+1.3
+
+Discussion
+
+In this paper, we advocate for a view toward long-term outcomes in the discussion of “fair” machine
+learning. We argue that without a careful model of delayed outcomes, we cannot foresee the impact
+a fairness criterion would have if enforced as a constraint on a classification system. However, if
+such an accurate outcome model is available, we show that there are more direct ways to optimize
+for positive outcomes than via existing fairness criteria. We outline such an outcome-based solution
+in Section 4.3. Specifically, in the credit setting, the outcome-based solution corresponds to giving
+out more loans to the protected group in a way that reduces profit for the bank compared to
+unconstrained profit maximization, but avoids loaning to those who are unlikely to benefit, resulting
+in a maximally improved group average credit score. The extent to which such a solution could
+form the basis of successful regulation depends on the accuracy of the available outcome model.
+This raises the question if our model of outcomes is rich enough to faithfully capture realistic
+phenomena. By focusing on the impact that selection has on individuals at a given score, we model
+the effects for those not selected as zero-mean. For example, not getting a loan in our model
+has no negative effect on the credit score of an individual.1 This does not mean that wrongful
+rejection (i.e., a false negative) has no visible manifestation in our model. If a classifier has a
+higher false negative rate in one group than in another, we expect the classifier to increase the
+disparity between the two groups (under natural assumptions). In other words, in our outcomebased model, the harm of denied opportunity manifests as growing disparity between the groups.
+The cost of a false negative could also be incorporated directly into the outcome-based model by a
+simple modification (see Footnote 2). This may be fitting in some applications where the immediate
+impact of a false negative to the individual is not zero-mean, but significantly reduces their future
+success probability.
+In essence, the formalism we propose requires us to understand the two-variable causal mechanism that translates decisions to outcomes. This can be seen as relaxing the requirements compared
+with recent work on avoiding discrimination through causal reasoning that often required stronger
+assumptions [Kusner et al., 2017, Nabi and Shpitser, 2017, Kilbertus et al., 2017]. In particular,
+these works required knowledge of how sensitive attributes (such as gender, race, or proxies thereof)
+1
+
+In reality, a denied credit inquiry may lower one’s credit score, but the effect is small compared to a default event.
+
+4
+
+causally relate to various other variables in the data. Our model avoids the delicate modeling step
+involving the sensitive attribute, and instead focuses on an arguably more tangible economic mechanism. Nonetheless, depending on the application, such an understanding might necessitate greater
+domain knowledge and additional research into the specifics of the application. This is consistent
+with much scholarship that points to the context-sensitive nature of fairness in machine learning.
+
+2
+
+Problem Setting
+
+We consider two groups A and B, which comprise a gA and gB = 1 − gA fraction of the total
+population, and an institution which makes a binary decision for each individual in each group,
+called selection. Individuals in each group are assigned scores in X := [C], and the scores for
+group j ∈ {A, B} are distributed according π j ∈ SimplexC−1 . The institution selects a policy
+τ := (τ A , τ B ) ∈ [0, 1]2C , where τ j (x) corresponds to the probability the institution selects an
+individual in group j with score x. One should think of a score as an abstract quantity which
+summarizes how well an individual is suited to being selected; examples are provided at the end of
+this section.
+We assume that the institution is utility-maximizing, but may impose certain constraints to
+ensure that the policy τ is fair, in a sense described in Section 2.2. We assume that there exists a
+function u : C → R, such that the institution’s expected utility for a policy τ is given by
+P
+P
+U(τ ) = j∈{A,B} gj x∈X τ j (x)π j (x)u(x).
+(1)
+Novel to this work, we focus on the effect of the selection policy τ on the groups A and B. We
+quantify these outcomes in terms of an average effect that a policy τ j has on group j. Formally, for
+a function ∆(x) : X → R, we define the average change of the mean score µj for group j
+P
+(2)
+∆µj (τ ) := x∈X π j (x)τ j (x)∆(x) .
+We remark that many of our results also go through if ∆µj (τ ) simply refers to an abstract change
+in well-being, not necessarily a change in the mean score. Furthermore, it is possible to modify the
+definition of ∆µj (τ ) such that it directly considers outcomes of those who are not selected.2 Lastly,
+we assume that the success of an individual is independent of their group given the score; that is,
+the score summarizes all relevant information about the success event, so there exists a function
+ρ : X → [0, 1] such that individuals of score x succeed with probability ρ(x).
+We now introduce the specific domain of credit scores as a running example in the rest of
+the paper, after which we present two more examples showing the general applicability of our
+formulation to many domains.
+Example 2.1 (Credit scores). In the setting of loans, scores x ∈ [C] represent credit scores, and the
+bank serves as the institution. The bank chooses to grant or refuse loans to individuals according
+to a policy τ . Both bank and personal utilities are given as functions of loan repayment, and
+2
+
+If we consider functions ∆p (x) : X → P
+R and ∆n (x) : X → R to represent the average effect of selection and
+non-selection respectively, then ∆µj (τ ) :=
+model corresponds
+x∈X π j (x) (τ j (x)∆p (x) + (1 − τ j (x))∆n (x)). This P
+to replacing ∆(x) in the original outcome definition with ∆p (x) − ∆n (x), and adding a offset x∈X π j (x)∆n (x).
+Under the assumption that ∆p (x) − ∆n (x) increases in x, this model gives rise to outcomes curves resembling those
+in Figure 1 up to vertical translation. All presented results hold unchanged under the further assumption that
+∆µ(β MaxUtil ) ≥ 0.
+
+5
+
+therefore depend on the success probabilities ρ(x), representing the probability that any individual
+with credit score x can repay a loan within a fixed time frame. The expected utility to the bank
+is given by the expected return from a loan, which can be modeled as an affine function of ρ(x):
+u(x) = u+ ρ(x) + u− (1 − ρ(x)), where u+ denotes the profit when loans are repaid and u− the loss
+when they are defaulted on. Individual outcomes of being granted a loan are based on whether
+or not an individual repays the loan, and a simple model for ∆(x) may also be affine in ρ(x):
+∆(x) = c+ ρ(x) + c− (1 − ρ(x)), modified accordingly at boundary states. The constant c+ denotes
+the gain in credit score if loans are repaid and c− is the score penalty in case of default.
+Example 2.2 (Advertising). A second illustrative example is given by the case of advertising
+agencies making decisions about which groups to target. An individual with product interest score
+x responds positively to an ad with probability ρ(x). The ad agency experiences utility u(x) related
+to click-through rates, which increases with ρ(x). Individuals who see the ad but are uninterested
+may react negatively (becoming less interested in the product), and ∆(x) encodes the interest
+change. If the product is a positive good like education or employment opportunities, interest can
+correspond to well-being. Thus the advertising agency’s incentives to only show ads to individuals
+with extremely high interest may leave behind groups whose interest is lower on average. A related
+historical example occurred in advertisements for computers in the 1980s, where male consumers
+were targeted over female consumers, arguably contributing to the current gender gap in computing.
+Example 2.3 (College Admissions). The scenario of college admissions or scholarship allotments
+can also be considered within our framework. Colleges may select certain applicants for acceptance
+according to a score x, which could be thought encode a “college preparedness” measure. The students who are admitted might “succeed” (this could be interpreted as graduating, graduating with
+honors, finding a job placement, etc.) with some probability ρ(x) depending on their preparedness.
+The college might experience a utility u(x) corresponding to alumni donations, or positive rating
+when a student succeeds; they might also show a drop in rating or a loss of invested scholarship
+money when a student is unsuccessful. The student’s success in college will affect their later success,
+which could be modeled generally by ∆(x). In this scenario, it is challenging to ensure that a single
+summary statistic x captures enough information about a student; it may be more appropriate to
+consider x as a vector as well as more complex forms of ρ(x).
+While a variety of applications are modeled faithfully within our framework, there are limitations
+to the accuracy with which real-life phenomenon can be measured by strictly binary decisions and
+success probabilities. Such binary rules are necessary for the definition and execution of existing
+fairness criteria, (see Sec. 2.2) and as we will see, even modeling these facets of decision making as
+binary allows for complex and interesting behavior.
+
+2.1
+
+The Outcome Curve
+
+We now introduce important outcome regimes, stated in terms of the change in average group
+score. A policy (τ A , τ B ) is said to cause active harm to group j if ∆µj (τ j ) < 0, stagnation if
+∆µj (τ j ) = 0, and improvement if ∆µj (τ j ) > 0. Under our model, MaxUtil policies can be chosen
+in a standard fashion which applies the same threshold τ MaxUtil for both groups, and is agnostic to
+the distributions π A and π B . Hence, if we define
+∆µMaxUtil
+:= ∆µj (τ MaxUtil )
+j
+6
+
+(3)
+
+OUTCOME CURVE
+Relative Improvement
+Relative Harm
+Active Harm
+
+0
+
+Selection Rate
+
+1
+
+(b)
+
+0
+
+1
+
+*
+
+0
+
+Selection Rate
+
+1
+
+Selection Rate
+(c)
+
+(a)
+
+Figure 1: The above figure shows the outcome curve. The horizontal axis represents the selection
+rate for the population; the vertical axis represents the mean change in score. (a) depicts the full
+spectrum of outcome regimes, and colors indicate regions of active harm, relative harm, and no
+harm. In (b): a group that has much potential for gain, in (c): a group that has no potential for
+gain.
+we say that a policy causes relative harm to group j if ∆µj (τ j ) < ∆µMaxUtil
+, and relative imj
+MaxUtil
+provement if ∆µj (τ j ) > ∆µj
+. In particular, we focus on these outcomes for a disadvantaged
+group, and consider whether imposing a fairness constraint improves their outcomes relative to the
+MaxUtil strategy. From this point forward, we take A to be disadvantaged or protected
+group.
+P
+Figure 1 displays the important outcome regimes in terms of selection rates βj := x∈X π j (x)τ j (x).
+This succinct characterization is possible when considering decision rules based on (possibly randomized) score thresholding, in which all individuals with scores above a threshold are selected. In
+Section 5, we justify the restriction to such threshold policies by showing it preserves optimality.
+In Section 5.1, we show that the outcome curve is concave, thus implying that it takes the shape
+depicted in Figure 1. To explicitly connect selection rates to decision policies, we define the rate
+function rπ (τ j ) which returns the proportion of group j selected by the policy. We show that this
+function is invertible for a suitable class of threshold policies, and in fact the outcome curve is
+−1 (β)). Next, we define
+precisely the graph of the map from selection rate to outcome β 7→ ∆µA (rπ
+A
+the values of β that mark boundaries of the outcome regions.
+Definition 2.1 (Selection rates of interest). Given the protected group A, the following selection
+rates are of interest in distinguishing between qualitatively different classes of outcomes (Figure
+1). We define β MaxUtil as the selection rate for A under MaxUtil; β0 as the harm threshold, such
+−1 (β )) = 0; β ∗ as the selection rate such that ∆µ is maximized; β as the outcomethat ∆µA (rπ
+0
+A
+A
+−1 (β)) = ∆µ (r −1 (β MaxUtil )) with β > β MaxUtil .
+complement of the MaxUtil selection rate, ∆µA rπ
+A πA
+A
+
+7
+
+2.2
+
+Decision Rules and Fairness Criteria
+
+We will consider policies that maximize the institution’s total expected utility, potentially subject
+to a constraint: τ ∈ C ∈ [0, 1]2C which enforces some notion of “fairness”. Formally, the institution
+selects τ∗ ∈ argmax U(τ ) s.t. τ ∈ C. We consider the three following constraints:
+Definition 2.2 (Fairness criteria). The maximum utility (MaxUtil) policy corresponds to the nullconstraint C = [0, 1]2C , so that the institution is free to focus solely on utility. The demographic
+parity (DemParity)
+rates between
+both groups. Formally, the
+ policy results
+	
+P in equal selection
+P
+constraint is C = (τ A , τ B ) : x∈X π A (x)τ A = x∈X π B (x)τ B . The equal opportunity (EqOpt)
+policy resultsPin equal true positive rates (TPR) between both group, where TPR is defined as
+x∈X π j (x)ρ(x)τ (x)
+TPRj (τ ) := P
+. EqOpt ensures that the conditional probability of selection given
+x∈X π j (x)ρ(x)
+that the individual will be successful is independent of the population, formally enforced by the
+constraint C = {(τ A , τ B ) : TPRA (τ A ) = TPRB (τ B )} .
+Just as the expected outcome ∆µ can be expressed in terms of selection rate for threshold
+policies, so can the total utility U. In the unconstrained cause, U varies independently over the
+selection rates for group A and B; however, in the presence of fairness constraints the selection rate
+for one group determines the allowable selection rate for the other. The selection rates must be equal
+for DemParity, but for EqOpt we can define a transfer function, G(A→B) , which for every loan rate
+β in group A gives the loan rate in group B that has the same true positive rate. Therefore, when
+considering threshold policies, decision rules amount to maximizing functions of single parameters.
+This idea is expressed in Figure 2, and underpins the results to follow.
+
+3
+
+Results
+
+In order to clearly characterize the outcome of applying fairness constraints, we make the following
+assumption.
+Assumption 1 (Institution utilities). The institution’s individual utility function is more stringent
+than the expected score changes, u(x) > 0 =⇒ ∆(x) > 0. (For the linear form presented in
+Example 2.1, uu−
+< cc−
+is necessary and sufficient.)
++
++
+This simplifying assumption quantifies the intuitive notion that institutions take a greater risk
+by accepting than the individual does by applying. For example, in the credit setting, a bank loses
+the amount loaned in the case of a default, but makes only interest in case of a payback. Using
+Assumption 1, we can restrict the position of MaxUtil on the outcome curve in the following sense.
+Proposition 3.1 (MaxUtil does not cause active harm). Under Assumption 1, 0 ≤ ∆µMaxUtil ≤
+∆µ∗ .
+We direct the reader to Appendix C for the proof of the above proposition, and all subsequent
+results presented in this section. The results are corollaries to theorems presented in Section 6.
+
+3.1
+
+Prospects and Pitfalls of Fairness Criteria
+
+We begin by characterizing general settings under which fairness criteria act to improve outcomes
+over unconstrained MaxUtil strategies. For this result, we will assume that group A is disadvantaged
+8
+
+1
+
+0
+
+MU
+DP
+EO
+
+0
+
+1
+Selection Rate
+
+Figure 2: Both outcomes ∆µ and institution utilities U can be plotted as a function of selection
+rate for one group. The maxima of the utility curves determine the selection rates resulting from
+various decision rules.
+in the sense that the MaxUtil acceptance rate for B is large compared to relevant acceptance rates
+for A.
+Corollary 3.2 (Fairness Criteria can cause Relative Improvement). (a) Under the assumption that
+βAMaxUtil < β and βBMaxUtil > βAMaxUtil , there exist population proportions g0 < g1 < 1 such that, for
+DemParity
+< β. That is, DemParity causes relative improvement.
+all gA ∈ [g0 , g1 ], βAMaxUtil < βA
+(b) Under the assumption that there exist βAMaxUtil < β < β 0 < β such that βBMaxUtil >
+G(A→B) (β), G(A→B) (β 0 ), there exist population proportions g2 < g3 < 1 such that, for all gA ∈
+EqOpt
+< β. That is, EqOpt causes relative improvement.
+[g2 , g3 ], βAMaxUtil < βA
+This result gives the conditions under which we can guarantee the existence of settings in which
+fairness criteria cause improvement relative to MaxUtil. Relying on machinery proved in Section 6,
+the result follows from comparing the position of optima on the utility curve to the outcome curve.
+Figure 2 displays a illustrative example of both the outcome curve and the institutions’ utility U
+as a function of the selection rates in group A. In the utility function (1), the contributions of each
+group are weighted by their population proportions gj , and thus the resulting selection rates are
+sensitive to these proportions.
+As we see in the remainder of this section, fairness criteria can achieve nearly any position
+along the outcome curve under the right conditions. This fact comes from the potential mismatch
+between the outcomes, controlled by ∆, and the institution’s utility u.
+The next theorem implies that DemParity can be bad for long term well-being of the protected
+group by being over-generous, under the mild assumption that ∆µA (βBMaxUtil ) < 0:
+Corollary 3.3 (DemParity can cause harm by being over-eager). Fix a selection rate β. Assume
+that βBMaxUtil > β > βAMaxUtil . Then, there exists a population proportion g0 such that, for all
+DemParity
+gA ∈ [0, g0 ], βA
+> β. In particular, when β = β0 , DemParity causes active harm, and when
+β = β, DemParity causes relative harm.
+9
+
+The assumption ∆µA (βBMaxUtil ) < 0 implies that a policy which selects individuals from group
+A at the selection rate that MaxUtil would have used for group B necessarily lowers average score
+in A. This is one natural notion of protected group A’s ‘disadvantage’ relative to group B. In this
+case, DemParity penalizes the scores of group A even more than a naive MaxUtil policy, as long as
+group proportion gA is small enough. Again, small gA is another notion of group disadvantage.
+Using credit scores as an example, Corollary 3.3 tells us that an overly aggressive fairness
+criterion will give too many loans to people in a protected group who cannot pay them back,
+hurting the group’s credit scores on average. In the following theorem, we show that an analogous
+result holds for EqOpt.
+Corollary 3.4 (EqOpt can cause harm by being over-eager). Suppose that βBMaxUtil > G(A→B) (β)
+and β > βAMaxUtil . Then, there exists a population proportion g0 such that, for all gA ∈ [0, g0 ],
+EqOpt
+βA
+> β. In particular, when β = β0 , EqOpt causes active harm, and when β = β, EqOpt
+causes relative harm.
+We remark that in Corollary 3.4, we rely on the transfer function, G(A→B) , which for every loan
+rate β in group A gives the loan rate in group B that has the same true positive rate. Notice that
+if G(A→B) were the identity function, Corollary 3.3 and Corollary 3.4 would be exactly the same.
+Indeed, our framework (detailed in Section 6 and Appendix B) unifies the analyses for a large class
+of fairness constraints that includes DemParity and EqOpt as specific cases, and allows us to derive
+results about impact on ∆µ using general techniques. In the next section, we present further results
+that compare the fairness criteria, demonstrating the usefulness of our technical framework.
+
+3.2
+
+Comparing EqOpt and DemParity
+
+Our analysis of the acceptance rates of EqOpt and DemParity in Section 6 suggests that it is
+difficult to compare DemParity and EqOpt without knowing the full distributions π A , π B , which is
+necessary to compute the transfer function G(A→B) . In fact, we have found that settings exist both
+in which DemParity causes harm while EqOpt causes improvement and in which DemParity causes
+improvement while EqOpt causes harm. There cannot be one general rule as to which fairness
+criteria provides better outcomes in all settings. We now present simple sufficient conditions on the
+geometry of the distributions for which EqOpt is always better than DemParity in terms of ∆µA .
+Corollary 3.5 (EqOpt may avoid active harm where DemParity fails). Fix a selection rate β.
+Suppose π A , π B are identical up to a translation with µA < µB , i.e. π A (x) = π B (x + (µB − µA )).
+For simplicity, take ρ(x) to be linear in x. Suppose
+X
+β>
+πA.
+x>µA
+
+Then there exists an interval [g1 , g2 ] ⊆ [0, 1], such that ∀gA > g1 , β EqOpt < β while ∀gA < g2 ,
+β DemParity > β. In particular, when β = β0 , this implies DemParity causes active harm but EqOpt
+causes improvement for gA ∈ [g1 , g2 ], but for any gA such that DemParity causes improvement,
+EqOpt also causes improvement.
+ToPinterpret the conditions under which Corollary
+3.5 holds, consider when we might have
+P
+β0 > x>µA π A . This is precisely when ∆µA ( x>µA π A ) > 0, that is, ∆µA > 0 for a policy that
+selects every individual whose score is above the group A mean, which is reasonable in reality.
+10
+
+Indeed, the converse would imply that group A has such low scores that even selecting all above
+average individuals in A would hurt the average score. In such a case, Corollary 3.5 suggests that
+EqOpt is better than DemParity at avoiding active harm, because it is more conservative. A natural
+question then is: can EqOpt cause relative harm by being too stingy?
+Corollary 3.6 (DemParity never loans less than MaxUtil, but EqOpt might). Recall the definition
+of the TPR functions TPRj , and suppose that the MaxUtil policy τ MaxUtil is such that
+βAMaxUtil < βBMaxUtil and TPRA (τ MaxUtil ) > TPRB (τ MaxUtil )
+EqOpt
+
+DemParity
+
+Then βA
+< βAMaxUtil < βA
+lower than MaxUtil.
+
+(4)
+
+. That is, EqOpt causes relative harm by selecting at a rate
+
+The above theorem shows that DemParity is never stingier than MaxUtil to the protected group
+A, as long as a A is disadvantaged in the sense that MaxUtil selects a larger proportion of B than A.
+On the other hand, EqOpt can select less of group A than MaxUtil, and by definition, cause relative
+harm. This is a surprising result about EqOpt, and this phenomenon arises from high levels of ingroup inequality for group A. Moreover, we show in Appendix C that there are parameter settings
+where the conditions in Corollary 3.6 are satisfied even under a stringent notion of disadvantage
+we call CDF domination, described therein.
+
+4
+4.1
+
+Relaxations of Constrained Fairness
+Regularized fairness
+
+In many cases, it may be unrealistic for an institution to ensure that fairness constraints are met
+exactly. However, one can consider “soft” formulations of fairness constraints which either penalized
+the differences in acceptance rate (DemParity) or the differences in TPR (EqOpt). In Appendix B,
+we formulate these soft constraints as regularized objectives. For example, a soft-DemParity can
+be rendered as
+max U(τ ) − λΦ(hπ A , τ A i − hπ B , τ B i) ,
+
+τ :=τ A ,τ B
+
+(5)
+
+where λ > 0 is a regularization parameter, and Φ(t) is a convex regularization function. We show
+that the solutions to these objectives are threshold policies, and can be fully characterized in terms
+of the group-wise selection rate. We also make rigorous the notion that policies which solve the softconstraint objective interpolate between MaxUtil policies at λ = 0 and hard-constrained policies
+(DemParity or EqOpt) as λ → ∞. This fact is clearly demonstrated by the form of the solutions in
+the special case of the regularization function Φ(t) = |t|, provided in the appendix.
+
+4.2
+
+Fairness Under Measurement Error
+
+Next, consider the implications of an institution with imperfect knowledge of scores. Under a
+simple model in which the estimate of an individual’s score X ∼ π is prone to errors e(X) such
+b ∼ π
+b . Constraining the error to be negative results in the setting
+that X + e(X) := X
+that scores are systematically underestimated. In this setting, it is equivalent to consider the
+b to be dominated by the CDF true distribution π, that is
+CDF of underestimated distribution π
+11
+
+P
+
+P
+≤ x≥c π(x) for all c ∈ [C]. Then we can compare the institution’s behavior under
+this estimation to its behavior under the truth.
+b (x)
+x≥c π
+
+Proposition 4.1 (Underestimation causes underselection). Fix the distribution of B as π B and let
+β be the acceptance rate of A when the institution makes the decision using perfect knowledge of
+b A . Then
+the distribution π A . Denote βb as the acceptance rate when the group is instead taken as π
+DemParity
+DemParity
+βAMaxUtil > βbAMaxUtil and βA
+> βbA
+. If the errors are further such that the true TPR
+EqOpt
+EqOpt
+dominates the estimated TPR, it is also true that βA
+> βbA
+.
+Because fairness criteria encourage a higher selection rate for disadvantaged groups (Corollary 3.2), systematic underestimation widens the regime of their applicability. Furthermore, since
+the estimated MaxUtil policy underloans, the region for relative improvement in the outcome curve
+(Figure 1) is larger, corresponding to more regimes under which fairness criteria can yield favorable
+outcomes. Thus the potential for measurement error should be a factor when motivating these
+criteria.
+
+4.3
+
+Outcome-based alternative
+
+As explained in the preceding sections, fairness criteria may actively harm disadvantaged groups.
+It is thus natural to consider a modified decision rule which involves the explicit maximization of
+∆µA . In this case, imagine that the institution’s primary goal is to aid the disadvantaged group,
+subject to a limited profit loss compared to the maximum possible expected profit U MaxUtil . The
+corresponding problem is as follows.
+max ∆µA (τ A ) s.t. UAMaxUtil − U(τ ) < δ .
+τA
+
+(6)
+
+Unlike the fairness constrained objective, this objective no longer depends on group B and instead
+depends on our model of the mean score change in group A, ∆µA .
+Proposition 4.2 (Outcome-based solution). In the above setting, the optimal bank policy τ A is a
+threshold policy with selection rate β = min{β ∗ , β max }, where β ∗ is the outcome-optimal loan rate
+and β max is the maximum loan rate under the bank’s “budget”.
+The above formulation’s advantage over fairness constraints is that it directly optimizes the
+outcome of A and can be approximately implemented given reasonable ability to predict outcomes.
+Importantly, this objective shifts the focus to outcome modeling, highlighting the importance of
+domain specific knowledge. Future work can consider strategies that are robust to outcome model
+errors.
+
+5
+
+Optimality of Threshold Policies
+
+Next, we move towards statements of the main theorems underlying the results presented in Section 3. We begin by establishing notation which we shall use throughout. Recall that ◦ denotes
+the Hadamard product between vectors. We identify functions mapping X → R with vectors in
+RC . We also define the group-wise utilities
+X
+Uj (τ j ) :=
+π j (x)τ j (x)u(x) ,
+(7)
+x∈X
+
+12
+
+so that for τ = (τ A , τ B ), U(τ ) := gA UA (τ A ) + gB UB (τ B ).
+First, we formally describe threshold policies, and rigorously justify why we may always assume
+without loss of generality that the institution adopts policies of this form.
+Definition 5.1 (Threshold selection policy). A single group selection policy τ ∈ [0, 1]C is called a
+threshold policy if it has the form of a randomized threshold on score:
+
+
+1, x > c
+τ c,γ = γ, x = c , for some c ∈ [C] and γ ∈ (0, 1] .
+(8)
+
+
+0, x < c
+As a technicality, if no members of a population have a given score x ∈ X , there may be
+multiple threshold policies which yield equivalent selection rates for a given population. To avoid
+0
+0
+redundancy, we introduce the notation τ j ∼
+=πP
+j τ j to mean that the set of scores on which τ j and τ j
+differ has probability 0 under π j ; formally, x:τ j (x)6=τ j (x) π j (x) = 0. For any distribution π j , ∼
+=πj
+0
+0
+∼
+is an equivalence relation. Moreover, we see that if τ j =πj τ j , then τ j and τ j both provide the
+same utility for the institution, induce the same outcomes for individuals in group j, and have the
+same selection and true positive rates. Hence, if (τ A , τ B ) is an optimal solution to any of MaxUtil,
+EqOpt, or DemParity, so is any (τ 0A , τ 0B ) for which τ A ∼
+=πA τ 0A and τ B ∼
+=πB τ 0B .
+∼
+For threshold policies in particular, their equivalence class under =πj is uniquely determined by
+the selection rate function,
+X
+rπj (τ j ) :=
+π j (x)τ j (x) ,
+(9)
+x∈X
+
+which denotes the fraction of group j which is selected. Indeed, we have the following lemma (proved
+in Appendix A.1):
+Lemma 5.1. Let τ j and τ 0j be threshold policies. Then τ j ∼
+=πj τ 0j if and only if rπj (τ j ) = rπj (τ 0j ).
+Further, rπj (τ j ) is a bijection from Tthresh (π j ) to [0, 1], where Tthresh (π j ) is the set of equivalence
+−1 (β ) is well defined.
+classes between threshold policies under ∼
+=πj . Finally, π j ◦ rπ
+j
+j
+−1 (β ) is an equivalence class rather than a single policy. However, π ◦ r −1 (τ ) is
+Remark that rπ
+j
+j
+j
+πj
+j
+well defined, meaning that π j ◦ τ j = π j ◦ τ 0j for any two policies in the same equivalence class. Since
+all quantities of interest will only depend on policies τ j through π j ◦ τ j , it does not matter which
+−1 (β ) we pick. Hence, abusing notation slightly, we shall represent T
+representative of rπ
+j
+thresh (π j )
+j
+3
+∼
+by choosing one representative from each equivalence class under =πj .
+It turns out the policies which arise in this away are always optimal in the sense that, for a
+−1 (β ) is the (essentially unique) policy which maximizes
+given loan rate βj , the threshold policy rπ
+j
+j
+both the institution’s utility and the utility of the group. Defining the group-wise utility,
+X
+Uj (τ j ) :=
+u(x)π j (x)τ j (x) ,
+(10)
+x∈X
+
+we have the following result:
+3
+
+One way to do this is to consider the set of all threshold policies τ c,γ such that, γ = 1 if π j (c) = 0 and π j (c−1) > 0
+if γ = 1 and c > 1.
+
+13
+
+Proposition 5.1 (Threshold policies are preferable). Suppose that u(x) and ∆(x) are strictly
+increasing in x. Given any loaning policy τ j for population with distribution π j , then the policy
+−1 (r (τ )) ∈ T
+τ thresh
+:= rπ
+πj
+j
+thresh (π j ) satisfies
+j
+j
+∆µj (τ thresh
+) ≥ ∆µj (τ j ) and Uj (τ thresh
+) ≥ Uj (τ j ) .
+j
+j
+
+(11)
+
+Moreover, both inequalities hold with equality if and only if τ j ∼
+.
+=πj τ thresh
+j
+−1 (r (τ )) can be thought of transforming an arbitrary policy τ into a
+The map τ j 7→ rπ
+πj
+j
+j
+j
+threshold policy with the same selection rate. In this language, the above proposition states that
+this map never reduces institution utility or individual outcomes. We can also show that optimal
+MaxUtil and DemParity policies are threshold policies, as well as all EqOpt policies under an
+additional assumption:
+
+Proposition 5.2 (Existance of optimal threshold policies under fairness constraints). Suppose
+that u(x) is strictly increasing in x. Then all optimal MaxUtil policies (τ A , τ B ) satisfy τ j ∼
+=πj
+−1 r (τ ) for j ∈ {A, B}. The same holds for all optimal DemParity policies, and if in addition
+rπ
+πj
+j
+j
+u(x)/ρ(x) is increasing, the same is true for all optimal EqOpt policies.
+To prove proposition 5.1, we invoke the following general lemma which is proved using standard
+convex analysis arguments (in Appendix A.2):
+Lemma 5.2. Let v ∈ RC , and let w ∈ RC
+>0 , and suppose either that v(x) is increasing
+P in x, and
+C−1
+v(x)/w(x) is increasing or, ∀x ∈ X , w(x) = 0. Let π ∈ Simplex
+and fix t ∈ [0, x∈X π(x) ·
+w(x)]. Then any
+τ ∗ ∈ arg max hv ◦ π, τ i
+τ ∈[0,1]C
+
+s.t.
+
+hπ ◦ w, τ i = t
+
+(12)
+
+−1 (r (τ ∗ )). Moreover, at least one maximizer τ ∗ ∈ T
+satisfies τ ∗ ∼
+=π rπ
+π
+thresh (π) exists.
+
+Proof of Proposition 5.1. We will first prove Proposition 5.1 for the function Uj . Given our nominal policy τ j , let βj = rπj (τ j ). We now apply Lemma 5.2 with v(x) = u(x) and w(x) =
+1. For this choice of v and w, hv, τ i = Uj (τ ) and that hπ j ◦ w, τ = rπj (τ ). Then, if τ j ∈
+−1 (r (τ )).
+arg maxτ Uj (τ ) s.t. rπj (τ ) = βj , Lemma 12 implies that τ j ∼
+=πj rπ
+πj
+j
+j
+
+−1
+−1
+∼
+On the other hand, assume that τ j =πj rπj rπj (τ j ) . We show that rπj (rπj (τ j )) is a maximizer;
+−1 (r (τ )) implies that U (τ ) = τ ∼
+which will imply that τ j is a maximizer since τ j ∼
+=πj rπ
+πj
+j
+j j
+j =π j
+j
+−1
+rπj (rπj (τ j )). By Lemma 5.2 there exists a maximizer τ ∗j ∈ Tthresh (π), which means that τ ∗j =
+−1 (r (τ ∗ )). Since τ ∗ is feasible, we must have r (τ ∗ ) = r (τ ), and thus τ ∗ = r −1 (r (τ )),
+rπ
+πj
+πj
+πj
+πj
+j
+j
+πj
+j
+j
+j
+j
+j
+as needed. The same argument follows verbatim if we instead choose v(x) = ∆(x), and compute
+hv, τ i = ∆µj (τ ).
+We now argue Proposition 5.2 for MaxUtil, as it is a straightforward application of Lemma 5.2.
+We will prove Proposition 5.2 for DemParity and EqOpt separately in Sections 6.1 and 6.2.
+Proof of Proposition 5.2 for MaxUtil. MaxUtil follows from lemma 5.2 with v(x) = u(x), and
+t = 0 and w = 0.
+
+14
+
+5.1
+
+Quantiles and Concavity of the Outcome Curve
+
+To further our analysis, we now introduce left and right quantile functions, allowing us to specify
+thresholds in terms of both selection rate and score cutoffs.
+Definition 5.2 (Upper quantile function). Define Q to be the upper quantile function corresponding to π, i.e.
+Qj (β) = argmax{c :
+
+C
+X
+
+π j (x) > β}
+
+Q+
+j (β) := argmax{c :
+
+and
+
+x=c
+
+C
+X
+
+π j (x) ≥ β} .
+
+(13)
+
+x=c
+
+Crucially Q(β) is continuous from the right, and Q+ (β) is continuous from the left. Further,
+Q(·) and Q+ (·) allow us to compute derivatives of key functions, like the mapping from selection
+rate β to the group outcome associated with a policy of that rate, ∆µ(rπ−1 (β)). Because we take
+π to have discrete support, all functions in this work are piecewise linear, so we shall need to
+distinguish between the left and right derivatives, defined as follows
+∂− f (x) := lim
+
+t→0−
+
+f (x + t) − f (x)
+t
+
+and ∂+ f (y) := lim
+
+t→0+
+
+f (y + t) − f (y)
+.
+t
+
+(14)
+
+For f supported on [a, b], we say that f is left- (resp. right-) differentiable if ∂− f (x) exists for
+all x ∈ (a, b] (resp. ∂+ f (y) exists for all y ∈ [a, b)). We now state the fundamental derivative
+computation which underpins the results to follow:
+Lemma 5.3. Let ex denote the vector such that ex (x) = 1, and ex (x0 ) = 0 for x0 6= x. Then
+−1 (β) : [0, 1] → [0, 1]C is continuous, and has left and right derivatives
+π j ◦ rπ
+j
+
+
+−1
+∂+ π j ◦ rπ
+(β)
+= eQ(β)
+j
+
+and
+
+
+
+−1
+∂− π j ◦ rπ
+(β)
+= eQ+ (β) .
+j
+
+(15)
+
+The above lemma is proved in Appendix A.3. Moreover, Lemma 5.3 implies that the outcome
+curve is concave under the assumption that ∆(x) is monotone:
+−1 (β)) is concave. In
+Proposition 5.3. Let π be a distribution over C states. Then β 7→ ∆µ(rπ
+−1
+fact, if w(x) is any non-decreasing map from X → R, β 7→ hw, rπ (β)i is concave.
+
+Proof. Recall that a univariate function f is concave (and finite) on [a, b] if and only (a) f is left- and
+right-differentiable, (b) for all x ∈ (a, b), ∂− f (x) ≥ ∂+ f (x) and (c) for any x > y, ∂− f (x) ≤ ∂+ f (y).
+−1 (β)) = h∆, π ◦ r −1 (β)i. By Lemma 5.3, π ◦ r −1 (β) has right and left
+Observe that ∆µ(rπ
+π
+π
+derivatives eQ(β) and eQ+ (β) . Hence, we have that
+∂+ ∆µ(βB ) = ∆(Q(βB ))
+
+and ∂− ∆µ(βB ) = ∆(Q+ (βB )) .
+
+(16)
+
+Using the fact that ∆(x) is monotone, and that Q ≤ Q+ , we see that ∂+ ∆µ(fπ−1 (βB )) ≤ ∂− ∆µ(fπ−1 (βB )),
+and that ∂∆µ(fπ−1 (βB )) and ∂+ ∆µ(fπ−1 (βB )) are non-increasing, from which it follows that ∆µ(fπ−1 (βB ))
+is concave. The general concavity result holds by replacing ∆(x) with w(x).
+
+15
+
+Utility Contour Plot
+0.8
+
+
+
+
+
+0.6
+
+
+
+group B selection rate
+
+1.0
+
+0.4
+
+0.2
+
+0.0
+
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.0
+
+group A selection rate
+
+Figure 3: Considering the utility as a function of selection rates, fairness constraints correspond
+to restricting the optimization to one-dimensional curves. The DemParity (DP) constraint is a
+straight line with slope 1, while the EqOpt (EO) constraint is a curve given by the graph of G(A→B) .
+The derivatives considered throughout Section 6 are taken with respect to the selection rate βA
+(horizontal axis); projecting the EO and DP constraint curves to the horizontal axis recovers concave
+utility curves such as those shown in the lower panel of Figure 2 (where MaxUtil in is represented
+by a horizontal line through the MU optimal solution).
+
+6
+
+Proofs of Main Theorems
+
+We are now ready to present and prove theorems that characterize the selection rates under fairness
+constraints, namely DemParity and EqOpt. These characterizations are crucial for proving the
+results in Section 3. Our computations also generalize readily to other linear constraints, in a way
+that will become clear in Section 6.2.
+
+6.1
+
+A Characterization Theorem for DemParity
+
+In this section, we provide a theorem that gives an explicit characterization for the range of selection
+rates βA for A when the bank loans according to DemParity. Observe that the DemParity objective
+corresponds to solving the following linear program:
+max
+
+τ =(τ A ,τ B )∈[0,1]2C
+
+U(τ )
+
+s.t.
+
+hπ A , τ A i = hπ B , τ B i .
+
+Let us introduce the auxiliary variable β := hπ A , τ A i = hπ B , τ B i corresponding to the selection
+rate which is held constant across groups, so that all feasible solutions lie on the green DP line in
+Figure 3. We can then express the following equivalent linear program:
+max
+
+τ =(τ A ,τ B )∈[0,1]2C ,β∈[0,1]
+
+U(τ )
+
+s.t.
+
+β = hπ j , τ j i, j ∈ {A, B} .
+
+This is equivalent because, for a given β, Proposition 5.2 says that the utility maximizing policies
+−1 (β). We now prove this:
+are of the form τ j = rπ
+j
+16
+
+Proof of Proposition 5.2 for DemParity. Noting that rπj (τ j ) = hπ j , τ j i, we see that, by Lemma 5.2,
+under the special case where v(x) = u(x) and w(x) = 1, the optimal solution (τ ∗A (β), τ ∗B (β)) for
+fixed rπA (τ A ) = rπB (τ B ) = β can be chosen to coincide with the threshold policies. Optimizing
+over β, the global optimal must coincide with thresholds.
+−1 (β), r −1 (β)), where β
+Hence, any optimal policy is equivalent to the threshold policy τ = (rπ
+πB
+A
+solves the following optimization:
+
+−1
+−1
+max U rπ
+(β), rπ
+(β) .
+(17)
+A
+B
+β∈[0,1]
+
+We shall show that the above expression is in fact a concave function in β, and hence the set of
+optimal selection rates can be characterized by first order conditions. This is presented formally in
+the following theorem:
+Theorem 6.1 (Selection rates for DemParity). The set of optimal selection rates β ∗ satisfying (17)
+−
++
+forms a continuous interval [βDemParity
+, βDemParity
+], such that for any β ∈ [0, 1], we have
+−
+β < βDemParity
+if gA u (QA (β)) + gB u (QB (β)) > 0 ,
+
+
++
++
+β > βDemParity if gA u Q+
+A (β) + gB u QB (β) < 0 .
+
+Proof. Note that we can write
+U
+
+−1
+−1
+rπ
+(β), rπ
+(β)
+A
+B
+
+
+
+−1 (β)i + g hu, π ◦ r −1 (β)i .
+= gA hu, π A ◦ rπ
+B
+B
+πB
+A
+
+
+−1 (β), r −1 (β)
+Since u(x) is non-decreasing in x, Proposition 5.3 implies that β 7→ U rπ
+is
+πB
+A
+concave in β. Hence, all optimal selection rates β ∗ lie in an interval [β − , β + ]. To further characterize
+this interval, let us us compute left- and right-derivatives.
+
+−1
+−1
+−1
+−1
+∂+ U rπ
+(β), rπ
+(β)
+=
+∂+ gA hu, π A ◦ rπ
+(β)i + ∂+ gB hu, π B ◦ rπ
+(β)i
+A
+B
+A
+B
+
+
+−1
+−1
+=
+gA hu, ∂+ π A ◦ rπA (β) i + gB hu, ∂+ π B ◦ rπ
+(β) i
+B
+Lemma 5.3
+
+=
+
+gA hu, eQA (β) i + gB hu, eQB (β) i
+
+=
+
+gA u(QA (β)) + gB u(QB (β)) .
+
+The same argument shows that
++
+−1
+−1
+∂− U((rπ
+(β), rπ
+(β))) = gA u(Q+
+A (β)) + gB u(QB (β)).
+A
+B
+
+−1 (β), r −1 (β) , a positive right derivative at β implies that β < β ∗ for all β ∗
+By concavity of U rπ
+πB
+A
+satisfying (17), and similarly, a negative left derivative at β implies that β > β ∗ for all β ∗ satisfying
+(17).
+
+With a result of the above form, we can now easily prove statements such as that in Corollary
+3.3 (see appendix C for proofs), by fixing a selection rate of interest (e.g. β0 ) and inverting the
+17
+
+inequalities in Theorem 6.1 to find the exact population proportions under which, for example,
+DemParity results in a higher selection rate than β0 .
+
+6.2
+
+EqOpt and General Constraints
+
+Next, we will provide a theorem that gives an explicit characterization for the range of selection rates
+βA for A when the bank loans according to EqOpt. Observe that the EqOpt objective corresponds
+to solving the following linear program:
+max
+
+τ =(τ A ,τ B )∈[0,1]2C
+
+U(τ )
+
+s.t. hwA ◦ π A , τ A i = hwB ◦ π B , τ B i ,
+
+(18)
+
+ρ
+where wj = hρ,π
+. This problem is similar to the demographic parity optimization in (17), except
+ji
+for the fact that the constraint includes the weights. Whereas we parameterized demographic parity
+solutions in terms of the acceptance rate β in equation (17), we will parameterize equation (18) in
+terms of the true positive rate (TPR), t := hwA ◦ π A , τ A i. Thus, (18) becomes
+X
+max
+max
+gj Uj (τ j ) s.t. hwj ◦ π j , τ j i = t, j ∈ {A, B} ,
+(19)
+t∈[0,tmax ] (τ A ,τ B )∈[0,1]2C
+
+j∈{A,B}
+
+where tmax = minj∈{A,B} {hπ j , wj i} is the largest possible TPR. The magenta EO curve in Figure 3
+illustrates that feasible solutions to this optimization problem lie on a curve parametrized by t.
+Note that the objective function decouples for j ∈ {A, B} for the inner optimization problem,
+X
+max
+gj Uj (τ j ) s.t. hwj ◦ π j , τ j i = t .
+(20)
+τ j ∈[0,1]C
+
+j∈{A,B}
+
+We will now show that all optimal solutions for this inner optimization problem are π j -a.e. equal to
+−1 (β ), depending only on the resulting selection
+a policy in Tthresh (π j ), and thus can be written as rπ
+j
+j
+rate.
+Proof of Proposition 5.2 for EqOpt. We apply Lemma 5.2 to the inner optimization in (20) with
+ρ(x)
+v(x) = u(x) and w(x) = hρ,π
+. The claim follows from the assumption that u(x)/ρ(x) is increasing
+ji
+by optimizing over t.
+This selection rate βj is uniquely determined by the TPR t (proof appears in Appendix B.1):
+Lemma 6.1. Suppose that w(x) > 0 for all x. Then the function
+−1
+Tj ,wj (β) := hrπ
+(β), π j ◦ wj i
+j
+
+is a bijection from [0, 1] to [0, hπ j , wi].
+Hence, for any t ∈ [0, tmax ], the mapping from TPR to acceptance rate, Tj−1
+,wj (t), is well defined
+−1
+−1
+and any solution to (20) is π j -a.e. equal to the policy rπj (Tj ,wj (t)). Thus (19) reduces to
+max
+t∈[0,tmax ]
+
+X
+
+
+
+
+−1
+−1
+gj Uj rπ
+T
+(t)
+.
+j
+j ,w j
+
+j∈{A,B}
+
+18
+
+(21)
+
+The above expression parametrizes the optimization problem in terms of a single variable. We
+shall show that the above expression is in fact a concave function in t, and hence the set of optimal
+selection rates can be characterized by first order conditions. This is presented formally in the
+following theorem:
+Theorem 6.2 (Selection rates for EqOpt). The set of optimal selection rates β ∗ for group A satsi−
++
+fying (19) forms a continuous interval [βEqOpt
+, βEqOpt
+], such that for any β ∈ [0, 1], we have
+(A→B)
+
+−
+β < βEqOpt
+if gA
+
+u(QA (β))
+u(QB (Gw
+(β)))
+>0,
++ gB
+(A→B)
+wA (QA (β))
+wB (QB (Gw
+(β)))
+(A→B)
+
+β>
+
++
+βEqOpt
+
+u(Q+
+(β)))
+u(Q+
+B (Gw
+A (β))
++ gB
+if gA
+<0.
++
+(A→B)
++
+wA (QA (β))
+wB (QB (Gw
+(β)))
+
+(A→B)
+
+−1
+−1
+Here, Gw
+(β) := TB,w
+(TA,w
+(β)) denotes the (well-defined) map from selection rates βA for A
+B
+A
+−1 (β ) and τ ∗ := r −1 (β ) satisfy the
+to the selection rate βB for B such that the policies τ ∗A := rπ
+A
+πB B
+B
+A
+constraint in (18).
+
+Proof. Starting with the equivalent problem in (21), we use the concavity result of Lemma B.1.
+Because the objective function is the positive weighted sum of two concave functions, it is also
+concave. Hence, all optimal true positive rates t∗ lie in an interval [t− , t+ ]. To further characterize
+[t− , t+ ], we can compute left- and right-derivatives, again using the result of Lemma B.1.
+
+
+X
+
+
+−1
+−1
+−1
+−1
+−1
+∂+
+gj Uj rπ
+(T
+(t))
+= gA ∂+ UA rπ
+(TA−1
+,wA (t)) + gA ∂+ UA rπ A (TA ,wA (t))
+,w
+j
+j
+j
+A
+j∈{A,B}
+
+= gA
+
+u(QA (TA−1
+,wA (t)))
+wA (QA (TA−1
+,wA (t)))
+
++ gB
+
+u(QB (TB−1
+,wB (t)))
+wB (QB (TB−1
+,wB (t)))
+
+The same argument shows that
+∂−
+
+−1
+−1
+
+
+u(Q+
+u(Q+
+B (TB ,wB (t)))
+A (TA ,wA (t))
+−1
+−1
++
+g
+.
+gj Uj rπ
+(T
+(t))
+=
+g
+B
+A
+−1
+−1
++
++
+j
+j ,w j
+(T
+(t)))
+(T
+(t)))
+w
+(Q
+w
+(Q
+,w
+,w
+A
+B
+A
+A
+B
+B
+A
+B
+j∈{A,B}
+
+X
+
+By concavity, a positive right derivative at t implies that t < t∗ for all t∗ satisfying (21), and
+similarly, a negative left derivative at t implies that t > t∗ for all t∗ satisfying (21).
+Finally, by Lemma 6.1, this interval in t uniquely characterizes an interval of acceptance rates.
+Thus we translate directly into a statement about the selection rates β for group A by seeing that
+(A→B)
+−1
+TA−1
+(β).
+,wA (t) = β and TB ,wB (t) = Gw
+Lastly, we remark that the results derived in this section go through verbatim for any linear
+constraint of the form hw, π A ◦ τ A i = hw, π B ◦ τ B i, as long as u(x)/w(x) is increasing in x, and
+w(x) > 0.
+
+19
+
+Repay Probability by Group
+repay probability
+
+1.0
+0.8
+
+1.0
+
+Groups
+
+black
+white
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0.0
+
+0.0
+300 400 500 600 700 800
+
+0.0
+
+score
+
+0.2
+
+0.4
+
+0.6
+
+CDF
+
+0.8
+
+1.0
+
+Figure 4: The empirical payback rates as a function of credit score and CDF for both groups from
+the TransUnion TransRisk dataset.
+
+7
+
+Simulations
+
+We examine the outcomes induced by fairness constraints in the context of FICO scores for two race
+groups. FICO scores are a proprietary classifier widely used in the United States to predict credit
+worthiness. Our FICO data is based on a sample of 301,536 TransUnion TransRisk scores from 2003
+[US Federal Reserve, 2007], preprocessed by Hardt et al. [2016]. These scores, corresponding to x
+in our model, range from 300 to 850 and are meant to predict credit risk. Empirical data labeled
+by race allows us to estimate the distributions πj , where j represents race, which is restricted to two
+values: white non-Hispanic (labeled “white” in figures), and black. Using national demographic
+data, we set the population proportions to be 18% and 82%.
+Individuals were labeled as defaulted if they failed to pay a debt for at least 90 days on at least
+one account in the ensuing 18-24 month period; we use this data to estimate the success probability
+given score, ρj (x), which we allow to vary by group to match the empirical data (see Figure 4). Our
+outcome curve framework allows for this relaxation; however, this discrepancy can also be attributed
+to group-dependent mismeasurement of score, and adjusting the scores accordingly would allow for
+a single ρ(x). We use the success probabilities to define the affine utility and score change functions
+defined in Example 2.1. We model individual penalties as a score drop of c− = −150 in the case of
+a default, and in increase of c+ = 75 in the case of successful repayment.
+In Figure 5, we display the empirical CDFs along with selection rates resulting from different
+loaning strategies for two different settings of bank utilities. In the case that the bank experiences
+a loss/profit ratio of uu−
+= −10, no fairness criteria surpass the active harm rate β0 ; however, in
++
+the case of uu−
+=
+−4,
+DemParity
+overloans, in line with the statement in Corollary 3.3.
++
+These results are further examined in Figure 6, which displays the normalized outcome curves
+and the utility curves for both the white and the black group. To plot the MaxUtil utility curves,
+the group that is not on display has selection rate fixed at β MaxUtil . In this figure, the top panel
+corresponds to the average change in credit scores for each group under different loaning rates β;
+the bottom panels shows the corresponding total utility U (summed over both groups and weighted
+by group population sizes) for the bank.
+
+20
+
+Loaning Decisions
+Profit/Loss Ratio: 1/4
+
+fraction of group above
+
+1.0
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0.0
+
+300
+
+400
+
+500
+
+600
+
+score
+
+700
+
+Profit/Loss Ratio: 1/10
+
+1.0
+
+800
+
+0.0
+
+Groups
+
+Black
+White
+
+Criteria
+
+harm
+MU
+DP
+EO
+
+300
+
+400
+
+500
+
+600
+
+score
+
+700
+
+800
+
+Figure 5: The empirical CDFs of both groups are plotted along with the decision thresholds resulting
+from MaxUtil, DemParity, and EqOpt for a model with bank utilities set to (a) uu−
+= −4 and (b)
++
+u−
+u+ = −10. The threshold for active harm is displayed; in (a) DemParity causes active harm while
+in (b) it does not. EqOpt and MaxUtil never cause active harm.
+Figure 6 highlights that the position of the utility optima in the lower panel determines the loan
+(selection) rates. In this specific instance, the utility and change ratios are fairly close, uu−
+= −4,
++
+=
+−2,
+meaning
+that
+the
+bank’s
+profit
+motivations
+align
+with
+individual
+outcomes
+to
+some
+and cc−
++
+extent. Here, we can see that EqOpt loans much closer to optimal than DemParity, similar to the
+setting suggested by Corollary 3.2.
+Although one might hope for decisions made under fairness constraints to positively affect
+the black group, we observe the opposite behavior. The MaxUtil policy (solid orange line) and
+the EqOpt policy result in similar expected credit score change for the black group. However,
+DemParity (dashed green line) causes a negative expected credit score change in the black group,
+corresponding to active harm. For the white group, the bank utility curve has almost the same
+shape under the fairness criteria as it does under MaxUtil, the main difference being that fairness
+criteria lowers the total expected profit from this group.
+This behavior stems from a discrepancy in the outcome and profit curves for each population.
+While incentives for the bank and positive results for individuals are somewhat aligned for the
+majority group, under fairness constraints, they are more heavily misaligned in the minority group,
+as seen in graphs (left) in Figure 6. We remark that in other settings where the unconstrained profit
+maximization is misaligned with individual outcomes (e.g., when uu−
+= −10), fairness criteria may
++
+perform more favorably for the minority group by pulling the utility curve into a shape consistent
+with the outcome curve.
+By analyzing the resulting affects of MaxUtil, DemParity, and EqOpt on actual credit score
+lending data, we show the applicability of our model to real-world applications. In particular, some
+results shown in Section 3 hold empirically for the FICO TransUnion TransRisk scores.
+
+21
+
+Outcome Curves
+Black
+
+score change
+
+40
+
+White
+
+40
+
+20
+
+20
+
+0
+
+0
+
+-20
+
+-20
+
+-40
+
+-40
+
+-60
+
+-60
+
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.0
+
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+Utility Curves
+1.00
+
+Black
+
+0.75
+
+profit
+
+1.00
+
+0.50
+
+0.50
+
+0.25
+
+0.25
+
+0.00
+
+0.00
+
+-0.25
+
+-0.25
+
+-0.50
+
+-0.50
+
+-0.75
+
+-0.75
+
+-1.00
+0.0
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+selection rate
+
+1.0
+
+-1.00
+0.0
+
+MU
+DP
+EO
+
+White
+
+0.75
+
+0.2
+
+0.4
+
+0.6
+
+1.0
+
+0.8
+
+selection rate
+
+1.0
+
+Figure 6: The outcome and utility curves are plotted for both groups against the group selection
+rates. The relative positions of the utility maxima determine the position of the decision rule
+thresholds. We hold uu−
+= −4 as fixed.
++
+
+22
+
+8
+
+Conclusion and Future Work
+
+We argue that without a careful model of delayed outcomes, we cannot foresee the impact a fairness
+criterion would have if enforced as a constraint on a classification system. However, if such an
+accurate outcome model is available, we show that there are more direct ways to optimize for
+positive outcomes than via existing fairness criteria.
+Our formal framework exposes a concise, yet expressive way to model outcomes via the expected
+change in a variable of interest caused by an institutional decision. This leads to the natural concept
+of an outcome curve that allows us to interpret and compare solutions effectively. In essence, the
+formalism we propose requires us to understand the two-variable causal mechanism that translates
+decisions to outcomes. Depending on the application, such an understanding might necessitate
+greater domain knowledge and additional research into the specifics of the application. This is
+consistent with much scholarship that points to the context-sensitive nature of fairness in machine
+learning.
+An interesting direction for future work is to consider other characteristics of impact beyond
+the change in population mean. Variance and individual-level outcomes are natural and important considerations. Moreover, it would be interesting to understand the robustness of outcome
+optimization to modeling and measurement errors.
+
+Acknowledgements
+We thank Lily Hu, Aaron Roth, and Cathy O’Neil for discussions and feedback on an earlier version
+of the manuscript. We thank the students of CS294: Fairness in Machine Learning (Fall 2017,
+University of California, Berkeley) for inspiring class discussions and comments on a presentation
+that was a precursor of this work. This material is based upon work supported by the National
+Science Foundation Graduate Research Fellowship under Grant No. DGE 1752814.
+
+23
+
+References
+Solon Barocas and Andrew D. Selbst. Big data’s disparate impact. California Law Review, 104,
+2016.
+Toon Calders, Faisal Kamiran, and Mykola Pechenizkiy. Building classifiers with independency
+constraints. In Proc. IEEE ICDMW, ICDMW ’09, pages 13–18, 2009.
+Alexandra Chouldechova. Fair prediction with disparate impact: A study of bias in recidivism
+prediction instruments. FATML, 2016.
+Danielle Ensign, Sorelle A Friedler, Scott Neville, Carlos Scheidegger, and Suresh Venkatasubramanian. Runaway feedback loops in predictive policing. arXiv preprint arXiv:1706.09847, 2017.
+Executive Office of the President. Big data: A report on algorithmic systems, opportunity, and
+civil rights. Technical report, White House, May 2016.
+Dean P Foster and Rakesh V Vohra. An economic argument for affirmative action. Rationality and
+Society, 4(2):176–188, 1992.
+Andreas Fuster, Paul Goldsmith-Pinkham, Tarun Ramadorai, and Ansgar Walther. Predictably
+unequal? the effects of machine learning on credit markets. SSRN, 2017.
+Moritz Hardt, Eric Price, and Nati Srebro. Equality of opportunity in supervised learning. In
+Proc. 30th NIPS, 2016.
+Lily Hu and Yiling Chen. A short-term intervention for long-term fairness in the labor market. In
+Proc. 27th WWW, 2018.
+Matthew Joseph, Michael Kearns, Jamie H Morgenstern, and Aaron Roth. Fairness in learning:
+Classic and contextual bandits. In Proc. 30th NIPS, pages 325–333, 2016.
+Alexandra Kalev, Frank Dobbin, and Erin Kelly. Best Practices or Best Guesses? Assessing the
+Efficacy of Corporate Affirmative Action and Diversity Policies. American Sociological Review,
+71(4):589–617, 2006.
+Stephen N. Keith, Robert M. Bell, August G. Swanson, and Albert P. Williams. Effects of affirmative action in medical schools. New England Journal of Medicine, 313(24):1519–1525, 1985.
+Niki Kilbertus, Mateo Rojas-Carulla, Giambattista Parascandolo, Moritz Hardt, Dominik Janzing,
+and Bernhard Schölkopf. Avoiding discrimination through causal reasoning. In In Proc. 30th
+NIPS, pages 656–666, 2017.
+Jon M. Kleinberg, Sendhil Mullainathan, and Manish Raghavan. Inherent trade-offs in the fair
+determination of risk scores. Proc. 8th ITCS, 2017.
+Matt J. Kusner, Joshua R. Loftus, Chris Russell, and Ricardo Silva. Counterfactual fairness. In In
+Proc. 30th NIPS, pages 4069–4079, 2017.
+Razieh Nabi and Ilya Shpitser. Fair inference on outcomes. arXiv:1705.10378v1, 2017.
+
+24
+
+Geoff Pleiss, Manish Raghavan, Felix Wu, Jon Kleinberg, and Kilian Q Weinberger. On fairness
+and calibration. In Advances in Neural Information Processing Systems 30, pages 5684–5693,
+2017.
+Stephen Ross and John Yinger. The Color of Credit: Mortgage Discrimination, Research Methodology, and Fair-Lending Enforcement. MIT Press, Cambridge, 2006.
+US Federal Reserve. Report to the congress on credit scoring and its effects on the availability and
+affordability of credit, 2007.
+Muhammad Bilal Zafar, Isabel Valera, Manuel Gomez Rogriguez, and Krishna P. Gummadi. Fairness Constraints: Mechanisms for Fair Classification. In Proc. 20th AISTATS, pages 962–970.
+PMLR, 2017.
+
+A
+
+Optimality of Threshold Policies
+
+A.1
+
+Proof of Lemma 5.1
+
+We begin with the first statement of the lemma. Suppose τ j ∼
+=πj τ 0j . Then there exists a set S ⊂ X
+such that π j (x) = 0 for all x ∈ S, and for all x ∈
+/ S, τ j (x) = τ 0j (x). Thus,
+rπ (τ j ) − rπj (τ 0j ) =
+
+X
+
+π j (x)(τ j (x) − τ 0j (x))
+
+x∈X
+
+=
+
+X
+
+π j (x)(τ j (x) − τ 0j (x)) = 0 .
+
+x∈S
+
+Conversely, suppose that rπj (τ j ) = rπj (τ 0j ). Let τ j = τ c,γ and τ 0j = τ c0 ,γ 0 as in Definition 5.1. We
+now have the following cases:
+1. Case 1: c = c0 . Then τ j (x) = τ 0j (x) for all x ∈ X − {c}. Hence,
+0 = rπ (τ j ) − rπj (τ 0j ) = π(x)(τ j (c) − τ 0j (c)) .
+This implies that either τ j (c) = τ 0j (c), and thus τ j (x) = τ 0j (x) for all x ∈ X , or otherwise
+π(c) = 0, in which case we still have τ j ∼
+=πj τ 0j (since the two policies agree every outside the
+set {c}).
+2. Case 2: c 6= c0 . We assume assume without loss of generality that c0 < c ≤ C. Since the
+policies τ c0 ,1 and τ c0 +1,0 are identity for c0 < C, we may also assume without loss of generality
+that γ 0 ∈ [0, 1). Thus for all x ∈ S := {c0 , c0 + 1, . . . , C}, we have τ 0j (x) < τ j (x). This implies
+that
+0 = rπ (τ j ) − rπj (τ 0j )
+X
+=
+π j (x)(τ j (x) − τ 0j (x))
+x∈S
+
+≥ min(τ j (c) − τ 0j (x)) ·
+x∈S
+
+X
+x∈S
+
+25
+
+π(x) .
+
+Since minx∈S (τ j (c) − τ 0j (x)) > 0, it follows that
+
+P
+
+x∈S
+
+π j (x) = 0, whence τ j ∼
+=πj τ 0j .
+
+Next, we show that rπ is a bijection from Tthresh (π) → [0, 1]. That rπ is injective follows
+immediately from the fact if rπj (τ ) = rπj (τ 0j ), then τ j ∼
+=πj τ 0j . To show it is surjective, we exhibit
+for every β ∈ [0, 1] a threshold policy τ c,γ for which rπj (τ c,γ ) = β. We may assume β < 1, since
+the all-ones policy has a selection rate of 1.
+Recall the definition of the inverse CDF
+Qj (β) := argmax{c :
+
+C
+X
+
+π(x) > β} .
+
+x=c
+
+Since β < 1, Qj (β) ≤ C. Let β+ =
+
+PC
+
+x=Qj (β) π(x),
+
+and let β− =
+
+PC
+
+x=Qj (β)+1 π(x).
+
+Note that by
+
+definition, we have β− ≤ β < β+ , and β+ − β− = π(Qj (β)). Hence, if we define γ =
+have
+rπj (τ Qj (β),γ ) = π(Qj (β))γ +
+
+C
+X
+
+β−β−
+β+ −β− ,
+
+we
+
+π(x) = β− + (β+ − β− )γ = β− + β − β− = β .
+
+x=Qj (β)+1
+
+A.2
+
+Proof of Lemma 5.2
+
+Given τ ∈ [0, 1]C , we define the normal cone at τ as NC(τ ) := ConicalHull{z : τ + z ∈ [0, 1]C }.
+We can describe NC(τ ) explicitly as:
+NC(τ ) := {z ∈ RC : z i ≤ 0 if τ i = 0, z i ≥ 0 if τ i = 1} .
+Immediately from the above definition, we have the following useful identity, which is that for any
+vector g ∈ RC ,
+
+
+g(x) < 0
+τ (x) = 0
+hg, zi ≤ 0 ∀z ∈ NC(τ ), if and only if ∀x ∈ X , τ (x) = 1
+(22)
+g(x) > 0 .
+
+
+τ (x) ∈ [0, 1] g(x) = 0
+Now consider the optimization problem (12). By the first order KKT conditions, we know that
+b ∈ R such that, for all z ∈ NC(τ ∗ )
+for any optimizer τ ∗ of the above objective, there exists some λ
+b ◦ wi ≤ 0 .
+hz, v ◦ π + λπ
+By (22), we must have that
+
+b
+
+π(x)(v(x) + λw(x))
+<0
+0
+b
+τ ∗ (x) = 1
+π(x)(v(x) + λw(x)) > 0 .
+
+
+b
+∈ [0, 1] π(x)(v(x) + λw(x))
+=0
+Now τ ∗ (x) is not necessarily a threshold policy. To conclude the theorem, it suffices to exhibit a
+threshold policy τe ∗ such that τ ∗ (x) ∼
+=π τe ∗ . (Note that τe ∗ (x) will also be feasible for the constraint,
+and have the same objective value; hence τe ∗ will be optimal as well.)
+26
+
+b let c∗ = min{c ∈ X : v(x) + λw(x)
+b
+Given τ ∗ and λ,
+≥ 0}. If either (a) w(x) = 0 for all x ∈ X
+and v(x) is strictly increasing or (b) v(x)/w(x) is strictly increasing, then the modified policy
+
+
+x < c∗
+0
+τe ∗ (x) = τ ∗ (x) x = c∗ ,
+
+
+1
+x > c∗
+is a threshold policy, and τ ∗ (x) ∼
+=π τe ∗ . Moreover, hw, τe ∗ i = hw, τe ∗ i and hπ, τe ∗ i = hπ, τe ∗ i, which
+implies that τe ∗ is an optimal policy for the objective in Lemma 5.2.
+
+A.3
+
+Proof of Lemma 5.3
+
+We shall prove
+
+
+−1
+∂+ π j ◦ rπ
+(β)
+= eQj (β) ,
+j
+
+(23)
+
+where the derivative is with respect to β. The computation of the left-derivative is analogous.
+−1 (β) does not
+Since we are concerned with right-derivatives, we shall take β ∈ [0, 1). Since π j ◦ rπ
+j
+−1 , we can choose a cannonical representation for r −1 .
+depend on the choice of representative for rπ
+πj
+j
+In Section A.1, we saw that the threshold policy τ Qj (β),γ(β) had acceptance rate β, where we had
+defined
+C
+X
+
+β+ =
+
+π(x) and β− =
+
+x=Qj (β)
+
+γ(β) =
+
+C
+X
+
+π(x) ,
+
+(24)
+
+x=Qj (β)+1
+
+β − β−
+.
+β+ − β−
+
+(25)
+
+Note then that for each x, τ Qj (β),γ(β) (x) is piece-wise linear, and thus admits left and right derivatives. We first claim that
+∀x ∈ X \ {Qj (β)}, ∂+ τ Qj (β),γ(β) (x) = 0 .
+
+(26)
+
+To see this, note that Qj (β) is right continuous, so for all  sufficiently small, Qj (β + ) = Qj (β).
+Hence, for all  sufficiently small and all x 6= Q(β), we have τ Qj (β+),γ(β+) (x) = τ Qj (β+),γ(β+) (x),
+−1 (β) is supported on x = Q (β), and hence
+as needed. Thus, Equation (26) implies that ∂+ π j ◦ rπ
+j
+j
+
+−1
+
+∂+ π j ◦ rπ
+(β)
+=
+∂
+π
+(x)τ
+(x)
+· eQj (β) .
++
+j
+Q
+(β),γ(β)
+j
+j
+x=Q (β)
+j
+
+
+To conclude, we must show that ∂+ π j (x)τ Qj (β),γ(β) (x)x=Q (β) = 1. To show this, we have
+j
+
+1 = ∂+ (β)
+= ∂+ (rπj (τ Qj (β),γ(β) ))
+
+rπj (τ Qj (β),γ(β) ) = β ∀β ∈ [0, 1)
+
+since
+!
+
+= ∂+
+
+X
+
+π(x) · τ Qj (β),γ(β) (x)
+
+x∈X
+
+27
+
+
+= ∂+ π(x) · τ Qj (β),γ(β) (x)x=Q (β) , as needed.
+j
+
+B
+
+Characterization of Fairness Solutions
+
+B.1
+
+Derivative Computation for EqOpt
+
+In this section, we prove Lemma 6.1, which we recall below.
+Lemma 6.1. Suppose that w(x) > 0 for all x. Then the function
+−1
+Tj ,wj (β) := hrπ
+(β), π j ◦ wj i
+j
+
+is a bijection from [0, 1] to [0, hπ j , wi].
+We will prove Lemma 6.1 in tandem with the following derivative computation which we applied
+in the proof of Theorem 6.2.
+Lemma B.1. The function
+
+
+
+−1
+−1
+Uj (t; wj ) := Uj rπ
+T
+(t)
+j
+j ,w j
+is concave in t and has left and right derivatives
+∂+ Uj (t; wj ) =
+
+u(Qj (Tj−1
+,wj (t)))
+wj (Qj (Tj−1
+,wj (t)))
+
+and ∂− Uj (t; wj ) =
+
+−1
+u(Q+
+j (Tj ,wj (t)))
+−1
+wj (Q+
+j (Tj ,wj (t)))
+
+.
+
+−1 (β) is continuous and left and
+Proof of Lemmas 6.1 and B.1. Consider a β ∈ [0, 1]. Then, π j ◦ rπ
+j
+right differentiable by Lemma 5.3, and its left and right derivatives are indicator vectors eQj (β) and
+−1 (β)i has left and right derivatives w (Q(β))
+eQ+ (β) , respectively. Consequently, β 7→ hwj , π j ◦ rπ
+j
+j
+j
+
+and wj (Q+ (β)), respectively; both of which are both strictly positive by the assumption w(x) > 0.
+−1 (β)i is strictly increasing in β, and so the map is injective. It is also
+Hence, Tj ,wj (β) = hwj , π j ◦ rπ
+j
+surjective because β = 0 induces the policy τ j = 0 and β = 1 induces the policy τ j = 1 (up to
+π j -measure zero). Hence, Tj ,wj (β) is an order preserving bijection with left- and right-derivatives,
+and we can compute the left and right derivatives of its inverse as follows:
+∂+ Tj−1
+,wj (t) =
+
+1
+1
+
+=
+,
+
+∂+ Tj ,wj (β) β=T −1 (t)
+wj (Qj (Tj−1
+,wj (t)))
+,w
+j
+
+and similarly, ∂− Tj−1
+,wj (t) =
+
+1
+.
+wj (Q+ (Tj−1
+,wj (t)))
+
+j
+
+Then we can compute that
+
+
+
+∂+ Uj (rπj (Tj−1
+,wj (t))) = ∂+ U(rπ j (β)) β=T −1 (t)) · ∂+ Tj ,wj (sup(t))
+j ,wj
+
+=
+
+and similarly ∂− Uj (rπj (Tj ,wj (t))) =
+
+u(Qj (Tj−1
+,wj (t)))
+wj (Qj (Tj−1
+,wj (t)))
+
+−1
+U (Q+
+j (Tj ,wj (t)))
+−1
+wj (Q+
+j (Tj ,wj (t)))
+
+.
+
+. One can verify that for all t1 < t2 , one has that
+
+28
+
+−1
+−1
+−1
+∂+ Uj (rπj (Tj−1
+,wj (t1 ))) ≥ ∂− Uj (rπ j (Tj ,wj (t2 ))), and that for all t, ∂+ Uj (rπ j (Tj ,wj (t))) ≤ ∂− Uj (rπ j (Tj ,wj (t))).
+These facts establish that the mapping t 7→ Uj (rπj (Tj−1
+,wj (t))) is concave.
+
+B.2
+
+Characterizations Under Soft Constraints
+
+Given a convex penalty Φ : R → R≥0 , and λ ∈ R≥0 , one can write down the general form for soft
+constrained utility optimization
+max
+τ =(τ A ,τ B )
+
+U(τ ) − λΦ(hwA ◦ π A , τ A i − hwB ◦ π B , τ B i) ,
+
+(27)
+
+where wA and wB represent generic constraints. Again, we shall assume that for j ∈ {A, B},
+u(x)/wj (x) is non-decreasing. Recall that for wj = (1, 1, . . . , 1), one recovers the soft version of
+ρ
+DemParity, whereas for wj = hρ,π
+, one recovers the soft constrained version of EqOpt.
+ji
+The same argument presented in Section 6.2 shows that the optimal policies are of the form
+−1
+τ j = rπ
+(Tj−1
+,wj (tj )) ,
+j
+
+where (tA , tB ) are solutions to the following optimization problem:
+max
+
+tA ∈[0,hπ A ,wA i],tB ∈[0,hπ B ,wB i]
+
+−1
+−1
+−1
+gA UA (rπ
+(TA−1
+,wA (tA ))) + gB UB (rπ B (TB ,wB (tB ))) − λΦ(tA − tB ) .
+A
+
+The following lemma gives us a first order characterization of these optimal TPRs, (tA , tB ).
+Lemma B.2. All optimal policies are equivalent to threshold policies with selection rate (βA , βB )
+which satisfy
+i
+h
+u(Q+
+u(QA (βA ))
+ 
+A (βA ))
+−
+λ∂
+Φ(∆),
+−
+λ∂
+Φ(∆)
++
+−
+wA (QA (βB ))
+0
+wA (Q+
+A (βA ))
+i ,
+(28)
+∈ h
++
+u(Q
+(β))
+u(Q
+(β
+))
+0
+B B
+B
++ λ∂ Φ(∆)
++ λ∂ Φ(∆),
+wB (QB (βB ))
+
+−
+
+wB (Q+
+B (βB ))
+
++
+
+where ∆ = tA − tB = TA ,wA (βA ) − TB ,wB (βB ).
+Proof. Let ∂(·) denote the super-gradient set of a concave function. Note that if F is left-and-right
+differentiable and concave, then ∂F (x) = [∂+ F (x), ∂− F (x)]. By concavity of Uj and convexity of
+Φ, we must have that
+ 
+
+
+
+X
+0
+−1
+−1
+∈ ∂
+Uj rπ
+T
+(t
+)
+− λΦ(tA − tB )
+j
+j
+j ,w j
+0
+j∈{A,B}
+
+
+
+−1 (T −1 (t )) + ∂ {−λΦ(t − t )}
+∂UA rπ
+t
+A
+A
+B
+,w
+A
+A
+A
+A
+
+=
+−1 (T −1 (t )) + ∂ {−λΦ(t − t )}
+∂UA rπ
+tB
+B
+A
+B
+B
+B ,w B
+"
+#
+
+
+−1 (T −1 (t )) − λ∂Φ(t)
+∂UA rπ
+A
+A
+A ,w A
+t=tA −tB
+
+=
+−1
+
+∂UB rπB (TB−1
+(t
+,wB B )) + λ∂Φ(t) t=tA −tB
+"
+#
+
+
+
+
+−1 (T −1 (t )) − λ∂ Φ(t)
+−1 (T −1 (t )) − λ∂ Φ(t)
+r
+]
+[∂+ UA rπ
+,
+∂
+U
++
+−
+−
+A
+A
+A
+,w
+π
+,w
+A
+A
+A
+A
+A
+A
+t=tA −tB
+t=tA −tB
+
+
+=
+−1 (T −1 (t )) + λ∂ Φ(t)
+−1 (T −1 (t )) + λ∂ Φ(t)
+[∂+ UB rπ
+,
+∂
+U
+r
+]
+−
+−
++
+B
+B
+B
+,w
+π
+,w
+B
+B
+B
+B
+A
+A
+t=t −t
+t=t −t
+A
+
+29
+
+B
+
+A
+
+B
+
+
+
+u(QA (TA−1
+,wA (tA )))
+
+ wA (QA (TA−1
+,wA (tA )))
+
+= 
+ u(QB (TB−1
+,wB (tB )))
+wB (QB (TB−1
+,wB (tB )))
+
+h
+= h
+
+u(QA (βA ))
+wA (QA (βA ))
+u(QB (β))
+wB (QB (βB ))
+
+
+− λ∂+ Φ(t)t=t
+
+A −tB
+
+
++ λ∂− Φ(t)t=t
+
+A −tB
+
+−1
+u(Q+
+A (TA ,wA (tA )))
+
+,w
+,
+
++
+−1
+A (QA (TA ,wA (tA )))
+
+
+− λ∂− Φ(t)t=t
+
+A −tB
+
+−1
+u(Q+
+B (TB ,wB (tB )))
++
+wB (QB (TB−1
+,wB (tB )))
+
+
+u(Q+ (β ))
+− λ∂+ Φ(t)t=t −t , w (QA+ (βA ))
+A
+B
+A
+B
+A
+
+u(Q+
+B (βB ))
++ λ∂− Φ(t)
+,
++
+t=tA −tB wB (QB (βB ))
+
+
++ λ∂+ Φ(t)t=t −t
+A
+B
+i
+
+
+− λ∂− Φ(t)t=t −t
+A
+B 
+i .
+
++ λ∂+ Φ(t)
+
+
+
+
+
+
+t=tA −tB
+
+Substituting ∆ = tA − tB = TA ,wA (βA ) − TB ,wB (βB ) concludes the proof.
+In general, a closed form solution for the soft constrained problem may be difficult to state.
+However, for the case of Φ(t) = |t|, we can state an explicit closed form solution:
+Proposition B.1 (Special case of Φ(t) = |t|). Let Φ(t) = |t|, fix λ, and let [βAλ,− , βAλ,+ ] denote the
+interval of optimal selection rates for Equation (27) with regularization λ. Finally, suppose that for
+any optimal MaxUtil selection rates (βAMaxUtil , βBMaxUtil ), one has TA ,wA (βAMaxUtil ) < TB ,wB (βBMaxUtil ).
+Let [βA− , βA+ ] denote the optimal loan rates in (27). Then there exists a λ∗ such that, for λ ≥ λ∗ ,
+[βA− , βA+ ] coincides with the hard constrained solution. Moreover, for λ < λ∗ , any β ∈ [0, 1] satifies
+u(QA (β))
++ σ∗ λ > 0
+wA (QA (β))
+u(Q+
+A (β))
+if gA
++ σ∗ λ < 0 .
+wA (Q+
+A (β))
+
+β < βAλ,− if gA
+β > βAλ,+
+
+Proof. Given a set of optimal constraint values (tA , tB ) = (TA ,wA (βA ), TB ,wB (βB )) for optimal selection rates (βA , βB ) for a given parameter λ. By Proposition B.2 below, it follows that if tA = tB for
+all optimal solutions, then for all λ0 ≥ λ, all optimal solutions must also have tA = tB .
+Hence, it suffices to show that (a) there exists a finite λ such that all solutions must have
+tA = tB , and (b) if tA 6= tB , then the display in (B.1) holds.
+To prove (a) and (b), suppose tA 6= tB . By Proposition B.2 below and the fact that TA ,wA (β MaxUtil ) <
+TB ,wB (βBMaxUtil ), we have tA < tB . Moreover we can compute that
+
+
+t>0
+{1}
+∂Φ(t) = [−1, 1] t = 0
+
+
+{−1}
+t<0
+it follows from the first order condition in Lemma B.2 that, if tA 6= tB
+u(Q+
+u(QA (βA ))
+A (βA ))
+0∈[
++ λ,
++ λ] ,
++
+w
+wA (QA (βA ))
+A (QA (βB ))
+
+(29)
+
+which immediately implies point (b). Point (a) follows from the above display by noting that, since
+wj (x) > 0 and u(x) < ∞ for all x, where exists a λ sufficiently large such that (29) cannot hold
+for any βA .
+
+30
+
+B.3
+
+Qualitative Behavior of Soft Constraints
+
+We now present a proposition which formalizes the intuition that soft constraints interpolate between MaxUtil and the general hard constraint (18) in Section 6.2 (for arbitrary w, not just for
+EqOpt). Because optimal policies may not be unique, we define the solution sets
+P(λ) := {(τ A , τ B ) : (τ A , τ B ) solves (27) with parameter λ} ,
+with the set P(∞) denoting the set of solutions to (18).
+At a high level, we parameterize the soft constrained solution in terms of the value of the
+constraint tA = hτ A , wA ◦ π A i for A and the difference in constraint values ∆ = hτ A , wA ◦ π A i −
+hτ B , wB ◦ π B i, where (τ A , τ B ) ∈ P(λ). We show that tA interpolates between the value of the
+constraint on A at λ = 0 and at λ = ∞, and that ∆ interpolates between the difference at λ = 0
+(MaxUtil) and at ∆ = 0 at λ = ∞. To be rigorous, we note that the possible values for tA and
+∆ for each λ are actually contiguous intervals. Hence, to make the interpolation precise, we define
+the following partial order on such intervals:
+Definition B.1 (Interval order). Let S1 , S2 be two intervals. We say that S1 ≺ S2 if max {x ∈
+S1 } < min {x ∈ S2 } and S1  S2 if both max {x ∈ S1 } ≤ max {x ∈ S2 } and min{x ∈
+S1 } ≤ min {x ∈ S2 }. We say that an interval-valued function S(λ) is non-decreasing (resp. non
+increasing) in λ if S(λ)  S(λ0 ) (resp S(λ0 )  S(λ0 ) for λ ≤ λ0 ).
+In these terms, the interpolation of the soft constraints can be stated as follows:
+Proposition B.2 (Soft constraints interpolate between MaxUtil and hard constrained solution).
+Let Φ(t) be a convex, symmetric convex function with Φ(t) > 0 for t > 0. Then the sets
+D(λ) := {∆ := hτ A , wA ◦ π A i − hτ B , wB ◦ π B i : (τ A , τ B ) ∈ P(λ)}
+TA (λ) := {tA := hτ A , wA ◦ π A i|∃τ B : (τ A , τ B ) ∈ P(λ)}
+are closed intervals. Moreover,
+1. In all cases, limλ→∞ max{|∆| ∈ D(λ)} = 0.
+2. If 0 ∈ D(λ), then there exists a MaxUtil solution satisfying (18). Thus, for all λ > 0,
+P(λ) = P(∞).
+3. If D(λ) ≺ {0}, then D(λ) and TA (λ) are non-decreasing on λ ∈ (0, ∞], and vice versa if
+D(λ)  {0}.
+4. If D(λ) ≺ {0}, then {0} = D(∞)  D(λ)  {min : ∆ ∈ D(0)}, and TA (∞)  TA (λ)  {min :
+∆ ∈ TA (λ)}, and vice versa if D(λ)  {0}.
+B.3.1
+
+Proof of Proposition B.2
+
+Again, we parameterize all solutions to the soft-constrained problem as in correspondence with
+solutions (tA , tB ) to
+min gA UA (tA ; wA ) + gB UB (tB ; wB ) + λΦ(tA − tB ) .
+
+(tA ,tB )
+
+31
+
+Letting ∆ := tB − tA , we can reparameterize the above as
+min gA UA (tA ; wA ) + gB UB (tA + ∆; wB ) − λΦ(∆) .
+
+(tA ,∆)
+
+Note then that D(λ) denotes the set of ∆ which are partial maximimizers of the above display. If
+0 ∈ {D(λ)}, this implies that there exists a MaxUtil solution for which ∆ = 0, therefore, for all
+λ > 0, all solutions will be MaxUtil solutions for which D(λ) = 0. Otherwise assume without loss
+of generality that D(λ) < {0}.
+First, the statement {0} = D(∞)  D(λ)  {min : ∆ ∈ D(0)}, and TA (∞)  TA (λ)  {min :
+∆ ∈ TA (λ)}, and vice versa if D(λ)  {0} can be solved by on a case-by-case basis. The strategy
+is to show that if any of these inequalities are violated, then the associated values of ∆ and tA are
+not partial maximizers of the soft constraint objective. In particular, TA (λ) ⊂ [T− , T+ ] for some
+appropriate T− , T+ .
+We now show that D(λ) and TA (λ) are non-increasing and non-decreasing, respectively. We
+shall do so invoking the following technical lemma.
+Lemma B.3. Let G1 (t) be concave and let G2 (t; λ) be concave in t. Let ∂G2 (t; λ) denote the
+super-gradient of G2 , that is
+∂G2 (t; λ) := Conv({∂− G2 (t; λ)} ∪ {∂− G2 (t; λ)})
+denotes the super-gradient set of the concave mapping t 7→ ∂G2 (t; λ).
+Then if λ 7→ ∂G2 (t; λ) is non-increasing (resp. non-decreasing) in λ, the interval valued function
+defined below is non-increasing (resp. non-decreasing) in λ
+MAX(λ) := λ 7→ arg max G1 (t) + G2 (t; λ) .
+t∈[a,b]
+
+For D(λ), one can write any partial maximizer ∆ as
+max G1 (∆) + G2 (∆; λ)
+∆≥0
+
+with G1 (∆) = maxtA gA UA (tA ; wA ) + gB UB (tA + ∆; wB ) and G2 (∆; λ) = λΦ(∆). Note that G1 (∆) is
+concave, being the partial maximization of a concave function, and ∂G2 (∆; λ) = −t∂Φ(∆). Since
+∂Φ(∆)  {0} for ∆ ≥ 0 (by convexity of φ) , we have that ∂G2 (∆; λ) = −t∂Φ(∆) is non-increasing
+in λ. Hence Lemma B.3 implies that interval valued function D(λ) is non-increasing.
+To show that TA (λ) is non-decreasing, we have that any maximizer tA can be written as
+max
+
+tA ∈[T− ,T+ ]
+
+G1 (tA ) + G2 (tA ; λ)
+
+where G1 (tA ) = gA UA (tA ; wA ) and G2 (tA ; λ) = max∆≥0 gB UB (tA + ∆; wB ) + λΦ(∆). By Danskin’s
+theorem,
+∂G2 (tA ; λ) = {∂UB (tA + ∆; wB ) : ∆ ∈ arg max G2 (tA ; λ)} .
+Note that {∆ ∈ arg max G2 (tA ; λ)} is non-increasing in λ for a fixed tA , since the contribution of
+the regularizer increases. Since the sets ∂UB (tA + ∆; wB ) are themselves non-increasing in ∆ by
+32
+
+concavity, we conclude that ∂G2 (tA ; λ) is non-decreasing in λ. Hence, Lemma B.3 implies that
+TA (λ) is non-decreasing in λ.
+Finally, to show that max{|∆| : ∆ ∈ D(λ)|} → 0, Note that the left and right derivatives of
+gA UA (t; wA ) and gB UB (t; wB ) are upper bounded by M whereas, since Φ is strictly convex, we know
+that for every  > 0, min{|∂+ Φ(∆)|, |∂− Φ(∆)|} > m() for all ∆ : |∆| > . Hence, the first order
+M
+optimality conditions cannot be satisfied for |∆| > , and λ > m()
+, so as λ → ∞, |∆| → 0.
+Proof of Lemma B.3. We prove the case where ∂G2 (t; λ) is non-increasing. The first order conditions requires that at an optimal t, one has
+∂− G1 (t) + ∂G2 (t; λ)− ≥ 0 ≥ ∂+ G1 (t) + ∂G2 (t; λ)+
+where the super-gradients are amended to take into account boundary conditions. Suppose that
+for the sake of contradiction that for λ0 > λ, MAX(λ0 )  MAX(λ) fails. Then, there (a) exists a
+t ∈ MAX(λ) such that {t} ≺ MAX(λ0 ), or (b) t ∈ MAX(λ0 ) such that {t}  MAX(λ0 ). Note that
+if {t} ≺ MAX(λ0 ), it must be the case that
+∂+ G1 (t) + ∂G2 (t; λ0 )+ > 0 .
+By assumption, ∂− G2 (t; λ0 )+ ≤ ∂0 G2 (t; λ)+ , which implies
+∂+ G1 (t) + ∂G2 (t; λ0 )+ ≤ ∂+ G1 (t) + ∂+ G2 (t; λ)− 0 ≤ 0 ,
+a contradiction.
+
+C
+
+Proofs of Main Results
+
+We remark that the proofs in this section rely crucially on the characterizations of the optimal
+fairness-constrained policies developed in Section 6. We first define the notion of CDF domination,
+which is referred to in a few of the proofs. Intuitively, it means that for any score, the fraction of
+group B above this is higher than that for group A. It is realistic to assume this if we keep with
+our convention that group A is the disadvantaged group relative to group B.
+P
+Definition
+C.1
+(CDF
+domination).
+π
+is
+said
+to
+be
+dominated
+by
+π
+if
+∀a
+≥
+1,
+A
+B
+x>a π A <
+P
+x>a π B . We denote this as π A ≺ π B .
+We remark that the ≺ notation in this section is entirely unrelated to the the partial order on
+intervals from Section B.3. Frequently, we shall use the following lemma:
+Lemma C.1. Suppose that π A ≺ π B . Then, for all β > 0, it holds that QA (β) ≤ QB (β) and
+u(QA (β)) ≤ u(QA (β))
+Proof. The fact that QA (β) ≤ QB (β) follows directly from the definition of monotonicty of u implies
+that u(QA (β)) ≤ u(QB (β)).
+
+33
+
+C.1
+
+Proof of Proposition 3.1
+
+The MaxUtil policy for group j solves the optimization
+−1
+max Uj (τ j ) = max Uj (rπ
+(βj )) .
+j
+
+τ j ∈[0,1]C
+
+βj ∈[0,1]
+
+Computing left and right derivatives of this objective yields
+−1
+∂+ Uj (rπ
+(βj )) = u(Qj (β)),
+j
+
+−1
+∂− Uj (rπ
+(βj )) = u(Q+
+j (β)) .
+j
+
+By concavity, solutions β ∗ satisfy
+β < β∗
+β>β
+
+∗
+
+if u(Qj (β)) > 0 ,
+if u(Q+
+j (β)) < 0 .
+
+(30)
+
+Therefore, we conclude that the MaxUtil policy loans only to scores x s.t. u(x) > 0, which implies
+∆(x) > 0 for all scores loaned to. Therefore we must have that 0 ≤ ∆µMaxUtil . By definition
+∆µMaxUtil ≤ ∆µ∗ .
+
+C.2
+
+Proof of Corollary 3.2
+
+We begin with proving part (a), which gives conditions under which DemParity cases relative
+improvement. Recall that β is the largest selection rate for which U(β) = U(βAMaxUtil ). First, we
+DemParity
+derive a condition which bounds the selection rate βA
+from below. Fix an acceptance rate
+MaxUtil
+MaxUtil
+β such that βA
+< β < min{βB
+, β}. By Theorem 6.1, we have that DemParity selects to
+group A with rate higher than β as long as
+gA ≤ g1 :=
+
+1
+1−
+
+u(QA (β))
+u(QB (β))
+
+.
+
+By (30) and the monotonicity of u, u(QA (β)) < 0 and u(QB (β)) > 0, so 0 < g1 < 1.
+DemParity
+Next, we derive a condition which bounds the selection rate βA
+from above. First,
+consider the case that βBMaxUtil < β, and fix β 0 such that βBMaxUtil < β 0 < β. Then DemParity selects
+group A at a rate βA < β 0 for any proportion gA . This follows from applying Theorem 6.1 since we
++ 0
+0
+have that u(Q+
+A (β )) < 0 and u(QB (β )) < 0 by (30) and the monotonicity of u.
+MaxUtil
+Instead, in the case that βB
+> β, fix β 0 such that β < β 0 < βBMaxUtil . Then DemParity
+0
+selects group A at a rate less than β as long as
+1
+
+gA ≥ g0 :=
+1−
+
+0
+u(Q+
+A (β ))
+0 ))
+u(Q+
+(β
+B
+
+.
+
+By (30) and the monotonicity of u, 0 < g0 < g1 . Thus for gA ∈ [g0 , g1 ], the DemParity selection
+rate for group A is bounded between β and β 0 , and thus DemParity results in relative improvement.
+Next, we prove part (b), which gives conditions under which EqOpt cases relative improvement.
+EqOpt
+First, we derive a condition which bounds the selection rate βA
+from below. Fix an acceptance
+MaxUtil
+MaxUtil
+(A→B)
+rate β such that βA
+< β and βB
+>G
+(β). By Theorem 6.2, EqOpt selects group A
+
+34
+
+at a rate higher than β as long as
+gA > g3 :=
+
+1
+1−
+
+1
+κ
+
+·
+
+ρ(QB (G(A→B) (β))) u(QA (β))
+u(QB (G(A→B) (β))) ρ(QA (β))
+
+.
+
+By (30) and the monotonicity of u, u(QA (β)) < 0 and u(QB (G(A→B) (β))) > 0, so g3 > 0.
+EqOpt
+Next, we derive a condition which bounds the selection rate βA
+from above. First, consider
+the case that there exists β 0 such that β 0 < β and βBMaxUtil < G(A→B) (β 0 ) . Then EqOpt selects
+group A at a rate less than this β 0 for any gA . This follows from Theorem 6.2 since we have that
++
+0
+(A→B) (β 0 ))) < 0 by (30) and the monotonicity of u.
+u(Q+
+A (β )) < 0 and u(QB (G
+0
+In the other case, fix β such that β < β 0 < β and βBMaxUtil > G(A→B) (β 0 ). By Theorem 6.2,
+EqOpt selects group A at a rate lower than β 0 as long as
+1
+
+gA > g2 :=
+1−
+
+1
+κ
+
+·
+
+(A→B) (β 0 ))) u(Q+ (β 0 ))
+ρ(Q+
+A
+B (G
++
+0
+u(QB (G(A→B) (β 0 ))) ρ(Q+
+A (β ))
+
+.
+
+By (30) and the monotonicity of u, 0 < g2 < g3 . Thus for gA ∈ [g2 , g3 ], the EqOpt selection rate
+for group A is bounded between β and β 0 , and thus EqOpt results in relative improvement.
+
+C.3
+
+Proof of Corollary 3.3
+
+Recall our assumption that β > βAMaxUtil and βBMaxUtil > β. As argued in the above proof of
+Corollary 3.2, by (30) and the monotonicity of u, u(QA (β)) < 0 and u(QB (β)) > 0. Applying
+Theorem 6.1, DemParity selects at a higher rate than β for any population proportion gA ≤ g0 ,
+A (β))
+where g0 = 1/(1 − u(Q
+u(QB (β)) ) ∈ (0, 1). In particular, if β = β0 , which we defined as the harm
+−1 (β )) = 0 and ∆µ is decreasing at β ), then by the concavity of ∆µ , we
+threshold (i.e. ∆µA (rπ
+0
+0
+A
+A
+A
+−1 (β DemParity )) < 0, that is, DemParity causes active harm.
+have that ∆µA (rπ
+A
+A
+
+C.4
+
+Proof of Corollary 3.4
+
+By Theorem 6.2, EqOpt selects at a higher rate than β for any population proportion gA ≤ g0 ,
+ρ(QB (G(A→B) (β))) u(QA (β))
+where g0 = 1/(1 − κ1 · u(Q
+). Using our assumptions βBMaxUtil > G(A→B) (β) and
+(G(A→B) (β))) ρ(QA (β))
+B
+
+β > βAMaxUtil , we have that u(QB (G(A→B) (β))) > 0 and u(QA (β)) < 0, by (30) and the monotonicity
+of u. This verifies that g0 ∈ (0, 1). In particular, if β = β0 , then by the concavity of ∆µA , we have
+−1 (β EqOpt )) < 0, that is, EqOpt causes active harm.
+that ∆µA (rπ
+A
+A
+
+C.5
+
+Proof of Corollary 3.5
+
+Applying Theorem 6.1, we have
+−
+
+1 − gA
+u(QA (β)) < u(QB (β)) =⇒ βDemParity > β .
+gA
+
+35
+
+Applying Theorem 6.2, we have:
+u(QB (G(A→B) (β))) ·
+
+ρ(Q+
+hρ, π B i
+1 − gA
+A (β))
+<−
+·
+u(Q+
+A (β)) =⇒ βEqOpt < β .
++
+(A→B)
+hρ, π A i ρ(QB (G
+gA
+(β)))
+
+By Corollaries 3.3 and 3.4, choosing gA < g2 := 1/(1 −
+(A→B) (β)))
+ρ(Q+
+B (G
+(A→B) (β)))
+u(Q+
+(G
+B
+
+u(Q+
+A (β))
+ρ(Q+
+A (β))
+
+u(QA (β))
+u(QB (β)) )
+
+and gA > g1 := 1/(1 −
+
+1
+κ
+
+·
+
+) satisfies the above.
+
+P
+It remains to check that g1 < g2 . Since we assumed β > x>µA π A , we may apply Lemma C.2
+to verify this.
+Thus we indeed have sufficient conditions for βDemParity > β > βEqOpt . In particular, if β =
+−1 (β EqOpt )) > 0, that is, EqOpt causes
+β0 , then by the concavity of ∆µA , we have that ∆µA (rπ
+A
+A
+−1 (β DemParity )) < 0, that is, DemParity causes active harm.
+improvement, and ∆µA (rπ
+A
+A
+−1 (β DemParity )) > 0 =⇒
+Lastly, because βDemParity > βEqOpt , it is always true that ∆µA (rπ
+A
+A
+−1 (β EqOpt )) > 0, using the concavity of the outcome curve.
+∆µA (rπ
+A
+A
+Lemma C.2 (Comparison of DemParity and EqOpt selection rates). Fix β ∈ [0, 1]. Suppose π A , π B
+Bi
+are identical up to a translation with µA < µB . Also assume ρ(x) is affine in x. Denote κ = hρ,π
+hρ,π A i .
+Then,
+X
+β>
+πA
+x>µA
+
+implies u(QB (G(A→B) (β))) · κ ·
+
+κ=
+
+<
+
+< u(QB (β)).
+
+µB
+x>µA π A , by lemma C.3, we must also have µA
+ρ(QB (β))
+ρ(QA (β0 )) by linearity of expectation and linearity of ρ.
+
+Proof. If we have β >
+P
+Px π B (x)ρ(x)
+x π A (x)ρ(x)
+
+ρ(QA (β))
+ρ(QB (G(A→B) (β)))
+
+P
+
+κ·
+
+<
+
+QB (β0 )
+QA (β0 ) .
+
+This implies
+
+Therefore,
+
+ρ(QA (β))
+<1
+ρ(QB (β0 ))
+
+(31)
+u(x)
+ρ(x) is increasing in x, we
+ρ(QA (β0 ))
+B (β))
+< κ · u(Q
+ρ(QB (β)) ·
+ρ(QB (G(A→B) (β0 )))
+
+Further, using G(A→B) (β) > β from lemma C.3 and the fact that
+(A→B)
+
+(β)))
+B (β))
+B (G
+(A→B) (β))) · κ ·
+< u(Q
+have u(Q
+ρ(QB (β)) . Therefore, u(QB (G
+ρ(QB (G(A→B) (β)))
+ρ(QA (β)) < u(QB (β)) where the last inequality follows from (31).
+
+We use the following technical lemma in the proof of the above lemma.
+Lemma C.3. If π A , π B that are identical up to a translation with µA < µB , then
+G(β) > β ∀ β ,
+X
+µ
+QB (β)
+β>
+π A =⇒ B <
+.
+µ
+QA (β)
+A
+x>µ
+
+(32)
+(33)
+
+Proof. For (32), observe that TPRA = ρ(µA ) < TPRB = ρ(µB ). For any β, we can write QB (β) =
+µB + c and QA (β) = µA + c for some c, since π A , π B that are identical up to translation by
+36
+
+µA − µB . Thus, by computation, we can see that for Q(β) < µ, ∂+ G(A→B) (β) > 1 and for
+Q(β) < µ, ∂+ G(A→B) (β) < 1. Since G(A→B) is monotonically increasing on [0, 1], we must have
+G(A→B) (β) > β for every βP
+∈ [0, 1].
+For (33), we have β > x>µ π A , we can again write QB (β) = µB − c and QA (β) = µA − c, for
+some c > 0. Then it is clear than we have
+
+C.6
+
+µB
+µA
+
+<
+
+QB (β)
+QA (β) .
+
+Proof of Corollary 3.6
+
+Proof. βAMaxUtil < βBMaxUtil implies gA · u(QA (βAMaxUtil )) + gB · u(QB (βAMaxUtil )) > 0, which by TheoDemParity
+rem 6.1, implies βAMaxUtil < βA
+.
+MaxUtil
+MaxUtil
+TPRA (τ
+) > TPRB (τ
+) implies G(A→B) (βAMaxUtil ) > βBMaxUtil and so
+EqOpt
+(A→B)
+MaxUtil
+u(QB (G
+(βA
+))) < 0. Therefore by Theorem 6.2, we have that βAMaxUtil > βA
+.
+We now give a very simple example of π A ≺ π B where Theorem 3.5 holds. The construction
+of the example exemplifies the more general idea of using large in-group inequality in group A to
+skew the true positive rate at MaxUtil, making TPRA (τ MaxUtil ) > TPRB (τ MaxUtil ).
+Example C.1 (EqOpt causes relative harm). Let C = 6, and let the utility function be such that
+u(4) = 0. Suppose π A (5) = 1 − 2, π A (1) = 2 and π B (5) = 1 − , π B (3) = .
+We can easily check that π A ≺ π B . However, for any  ∈ (0, 1/4), we have that TPRB (τ MaxUtil ) =
+5(1−)
+MaxUtil ) = 5(1−2) .
+5(1−)+3 < TPRA (τ
+5(1−2)+2
+
+C.7
+
+Proof of Proposition 4.1
+
+b Since π
+b
+b as Q.
+b ≺ π, we have Q(β)
+Denote the upper quantile function under π
+≤ Q(β). The
+conclusion follows for MaxUtil and DemParity from Theorem 6.1 by the monotonicity of u.
+\A (τ ) ∀ τ , that is, the true TPR dominates estimated TPR,
+If we have that TPRA (τ ) > TPR
+the conclusion for EqOpt follows from Theorem 6.2, by the same argument as in the proof of
+Corollary 3.6.
+
+C.8
+
+Proof of Proposition 4.2
+
+By Proposition 5.3, β ∗ = argmaxβ ∆µA (β) exists and is unique. β0 = max{β ∈ [βAMaxUtil , 1] :
+U(βAMaxUtil ) − UA (β) ≤ δ} which exists and is unique, by the continuity of ∆µA and Proposition
+5.3.
+
+37
+
+

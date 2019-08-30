@@ -1,0 +1,1387 @@
+See discussions, stats, and author profiles for this publication at: https://www.researchgate.net/publication/220854660
+
+Automated black-box testing of functional correctness using function
+approximation
+Conference Paper in ACM SIGSOFT Software Engineering Notes · July 2004
+DOI: 10.1145/1007512.1007532 · Source: DBLP
+
+CITATIONS
+
+READS
+
+40
+
+81
+
+1 author:
+Karl Meinke
+KTH Royal Institute of Technology
+68 PUBLICATIONS 505 CITATIONS
+SEE PROFILE
+
+Some of the authors of this publication are also working on these related projects:
+
+Virtualized Embedded Systems for Testing and Development (VIRTUES) View project
+
+TESTOMAT View project
+
+All content following this page was uploaded by Karl Meinke on 27 May 2014.
+The user has requested enhancement of the downloaded file.
+
+Automated Black-Box Testing of Functional Correctness
+using Function Approximation
+[Extended Abstract]
+Karl Meinke
+Department of Numerical Analysis and Computer Science
+Royal Institute of Technology
+100-44 Stockholm, Sweden
+January 14, 2004
+
+karlm@nada.kth.se
+ABSTRACT
+We consider black-box testing of functional correctness as
+a special case of a satisﬁability or constraint solving problem. We introduce a general method for solving this problem based on function approximation. We then describe
+some practical results obtained for an automated testing algorithm using approximation by piecewise polynomial functions.
+Keywords: black-box testing, constraint solving, coverage
+problem, formal speciﬁcations, functional testing, satisﬁability testing.
+
+1.
+
+INTRODUCTION.
+
+Black-box functional testing of a software system involves
+generating and executing a set of test cases (i.e. inputs) and
+judging each outcome (the oracle step) using only a set of
+functional requirements. This approach is usually justiﬁed
+on the grounds that structurally based (”glass-box”) testing methods, such as exhaustive path exploration, have a
+superlinear time complexity with respect to the size of the
+system under test (SUT). Thus glass-box testing methods
+do not scale well to large systems.
+For functional test automation, some kind of formal and
+machine recognisable requirements language is necessary.
+Without any loss of generality, we can assume that ﬁrstorder predicate logic is an adequate formal requirement language. (See for example [6].)
+We shall consider software systems whose functional correctness can be modeled by pre and postconditions pre and
+post which are ﬁrst-order predicate formulas. A successful
+black-box test of a system S, with respect to a functional
+speciﬁcation pre and post is an assignment α of values to
+the input variables x of S which satisﬁes the precondition
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+ISSTA 2004 Boston, Mass. USA
+Copyright 200X ACM X-XXXXX-XX-X/XX/XX ...$5.00.
+
+pre, such that S terminates given α and the resulting assignment ω to the output variables y of S (together with α)
+satisﬁes the negated postcondition ¬post. Black-box functional testing of S is therefore the search for successful tests
+with respect to a functional speciﬁcation {pre}S{post } of S.
+We will consider a particular algorithmic approach to this
+search problem. As we have seen, software testing involves
+solving the pair of constraints pre and ¬post . However,
+a naive application of classical constraint solving methods
+does not answer all the questions we are interested in. An
+important issue is the choice of a stopping criterion for any
+search based testing algorithm. Quite simply, how much
+testing is enough? This problem is well known in the testing community as the coverage problem. We will consider
+a measure of coverage, based on convergence of functional
+approximations, which reﬂects the underlying complexity of
+the SUT.
+In the classical theory of function approximation, some
+general class F of functions is shown to be approximable by
+a much more limited and tractable subclass A ⊆ F of functions. Well known classes of approximating functions include polynomials, trigonometric functions, sigmoidal functions, radial basis functions, wavelets, etc. We can apply
+function approximation theory to testing in the following
+way. After executing some ﬁnite number n of test cases on
+an SUT S, we will have constructed n test input assignments α1 , . . . , αn . Assuming termination in each case, we
+will have computed with S a corresponding series of n output assignments, ω1 , . . . , ωn . Suppose that we have still
+not found a successful test case and wish to continue testing. Instead of throwing away the negative results obtained
+so far, we could try to use them in some intelligent way
+to construct a new (and hopefully better) test case αn+1 .
+At the very least, αn+1 should diﬀer from α1 , . . . , αn . A
+more sophisticated approach than random choice of αn+1 is
+to combine α1 , . . . , αn and ω1 , . . . , ωn into some sort of
+approximate model mn of the SUT S. From this approximate model, we may be able to construct a “best guess”
+of where a successful test case might be found, and choose
+αn+1 to be this estimate. Now even if αn+1 fails as a test,
+it can be used together with the output ωn+1 to produce
+a more reﬁned approximate model mn+1 . By choosing α1
+at random and constructing each αn+1 from mn , we obtain
+an iterative test case generation algorithm. In a sense, we
+
+approach the testing problem as a kind of learning problem
+about the underlying system SUT S. One advantage of the
+approximation approach is that a stopping criterion can be
+formulated as a convergence criterion on approximation.
+Our approach opens up a large family of interesting algorithms based on diﬀerent kinds of approximations. We will
+illustrate the approach, and a simple case study, for a particular class of approximations, namely piecewise polynomial
+functions.
+The approach to testing as a computational learning (CL)
+problem has been pursued by several authors, starting with
+pioneering work of Budd and Angluin [3] and Weyuker’s
+early work (e.g. [13]). The CL approach seeks to infer a
+program from test results, and use the inferred program to
+establish test adequacy. It therefore has some similar principles to our approach. However, functional requirements
+are implicit in the CL approach, and convergence within an
+approximation space is not used to deﬁne adequacy. Nor
+is the automatic generation and optimisation of test cases
+considered.
+Other approaches to learning-based testing include [2],
+which uses classical constraint solving algorithms and a glass
+box approach, but do not use approximation theory. Theoretical research on the complexity of testing measured by
+the complexity of learning using Vapnik-Chervonenkis (VC)
+dimension is [11] and [12], though this research does not yet
+seem to have led to the design of practical testing algorithms.
+The coverage problem for black-box testing has been extensively analysed in work on mutation testing, starting with
+[5] and [7]. In practise, mutation testing is limited by theoretical problems, such as the recursive unsolvability of the
+equivalence problem for programs (see e.g. [9]). Mutation
+testing is concerned with quantitative adequacy measures of
+a speciﬁc test set, and not numerical or probabilistic results
+about coverage as such. Furthermore, it does it provide any
+feedback about how to improve an inadequate test set, as
+our approximation approach does.
+The organisation of this paper is as follows. In Section 2
+we formalise some basic deﬁnitions of black-box functional
+testing. In Section 3 we describe our algorithmic approach.
+In Section 4 we present a case study for testing a simple
+numerical algorithm. Finally, in Section 5 we draw some
+conclusions and discuss some issues for further research.
+The pre-requisites of our paper are some familiarity with
+functional requirements speciﬁcation using formal methods
+and logic. Technically, we make as few assumptions as possible. In particular, we introduce the concept of a functional
+speciﬁcation formalised as a pair of pre and postconditions
+over a ﬁrst-order language from ﬁrst principles. A more detailed introduction can be found in [1] or [8].
+
+2.
+
+LOGICAL FOUNDATIONS OF
+FUNCTIONAL BLACK-BOX TESTING.
+
+In this section we review some basic technical deﬁnitions
+necessary to formalise functional black-box testing within
+the framework of the theory of program correctness. The
+principle concept to be deﬁned is that of the success or failure of a black-box test for functional correctness.
+We begin by brieﬂy ﬁxing our notation for the syntax and
+semantics of ﬁrst-order logic over a relational signature Σ.
+2.1. Definition. A relational signature Σ is an indexed
+
+family of disjoint sets
+
+
+Σ =  Σn , Σm | n ∈ N, m ∈ N+ .
+Each element c ∈ Σ0 is a constant symbol. For any n ∈ N+
+each element f ∈ Σn is a function symbol of arity n, and
+
+each element r ∈ Σn is a relation symbol of arity n.
+The semantics of a relational signature Σ is given by a
+Σ-structure.
+2.2. Definition. Let Σ be a relational signature. By a
+Σ structure we mean pair A = (A, ΣA ), consisting of a
+non-empty set A termed the domain of A, and an indexed
+collection
+
+
+ΣA =  ΣA
+n , Σm
+
+A
+
+| n ∈ N, m ∈ N+ 
+
+of families of constants, functions and relations over A. Thus
+ΣA
+0 = cA | c ∈ Σ0 , where cA ∈ A is a constant that
+interprets c in A. For each n ∈ N+ , ΣA
+n = fA | f ∈ Σn ,
+where fA : An → A is an n-ary function which interprets
+ A
+
+f . Also Σn = rA | r ∈ Σn , where rA ⊆ An is an n-ary
+relation which interprets r. We let M od(Σ) denote the class
+of all Σ structures.
+Usually we are interested in computation, correctness and
+testing over one particular Σ structure A that we consider
+to be the standard semantics of Σ. For example A may be
+the ring Z of integers or the ring Q of rationals.
+Recall the deﬁnition of ﬁrst-order terms and formulas.
+2.3. Definition. Let Σ be a relational signature, and let
+X be a set of variable symbols disjoint from Σ0 . We deﬁne
+the set T (Σ, X) of all terms over Σ and X, inductively.
+Each constant symbol c ∈ Σ0 is a term c ∈ T (Σ, X). Each
+variable symbol x ∈ X is a term x ∈ T (Σ, X). For any
+n ≥ 1, if ti ∈ T (Σ, X) is a term for i = 1, . . . , n and f ∈ Σn
+is an n-ary function symbol then f (t1 , . . . , tn ) ∈ T (Σ, X)
+is a term. We let T (Σ) = T (Σ, ∅) denote the set of all
+variable free or ground terms.
+If a term t contains the variables x1 , . . . , xn then we may
+write t[x1 , . . . , xn ]. If α : X → A is any assignment then
+α : T (Σ, X) → A denotes the term evaluation mapping.
+2.4. Definition. Let Σ be a relational signature, and let X
+be a set of variable symbols which is disjoint from Σ0 . An
+atomic formula over Σ and X is a formula of the form
+r( t1 , . . . , tn )
+where, for any n ≥ 1 and for i = 1, . . . , n, ti ∈ T (Σ, X)
+
+is a term and r ∈ Σn is an n-ary relation symbol. The set
+L(Σ, X) of all ﬁrst-order formulas over Σ and X is deﬁned
+to be the smallest set containing all atomic formulas over Σ
+and X which is closed under the propositional connectives
+∧, ∨, →, ¬ and the quantiﬁers ∀, ∃.
+Recall the distinction between free and bound variables in
+a formula φ. If φ contains the free variables x1 , . . . , xn we
+may write φ[x1 , . . . , xn ] to indicate this.
+Given a relational structure A ∈ M od(Σ) and any assignment α : X → A, we write A, α |= φ if φ is true in A under
+α. We write A |= φ if A, α |= φ for every α : X → A, i.e. φ
+is valid in A.
+Next we recall how ﬁrst-order formulas are used to deﬁne
+pre and postconditions for a program S within the frame-
+
+work of the theory of program correctness. This is quite
+straightforward, except that we will need to distinguish between the values of program variables before execution and
+after termination of S.
+2.5. Definition. Let X be a set of variable symbols. We
+deﬁne the set of variable symbols X  = { x | x ∈ X } so
+that X  is disjoint from X. A variable x ∈ X is termed a
+prevariable while the variable x ∈ X  is termed the corresponding postvariable.
+If α : { x1 , . . . , xn } → A is any prevariable assignment,
+then α induces a postvariable assignment
+α : { x 1 , . . . , x n } → A
+deﬁned by α (x ) = α(x).
+A precondition over Σ and X is a formula φ ∈ L(Σ, X)
+containing only prevariables. A postcondition over Σ and X
+is a formula φ ∈ L(Σ, X ∪ X  ) which may contain both pre
+and postvariables.
+In order to formally deﬁne the semantics of pre and postconditions, we require a semantics for programs. We let
+Prog (Σ, X) denote an arbitrary programming language
+which has a signature Σ and set X of variables as an interface. By this we mean that in any semantics for Prog(Σ, X)
+the variables of X serve as program input/output variables,
+and range over values from some Σ structure A, which is
+the underlying semantics of Σ as a computational data type.
+Taking a black-box view of testing, we will deliberately ignore the syntactic structure and operational semantics of
+Prog (Σ, X). If S ∈ Prog(Σ, X) has the interface
+{ x1 , . . . , x n } ⊆ X
+then consistent with our notation for terms and formulas,
+we will indicate this by writing S[x1 , . . . , xn ].
+Every program S[x1 , . . . , xn ] ∈ Prog (Σ, X) is assumed
+to have a simple deterministic transformational action on
+its inputs. Thus given an initial assignment
+α : { x1 , . . . , xn } → A,
+if S terminates on the input α, then the output of S is assumed to be recovered from among the ﬁnal values assigned
+to x1 , . . . , xn after termination, and is uniquely determined
+by α. This assumption includes most basic forms of software, but precludes many kinds of real-time and reactive
+systems which may not terminate.
+2.6. Definition. Let Prog (Σ, X) be a programming language with a relational signature Σ and variable set X as
+interface. By a semantic mapping for Prog (Σ, X) with respect to a Σ structure A we mean a mapping of Prog(Σ, X)
+programs into partial state transition functions
+[[ . ]] : Prog (Σ, X) → [ [X → A]  [X → A] ].
+For any program S ∈ Prog (Σ, X), [[ S ]] : [X → A]  [X →
+A] is a partial function from intial states to ﬁnal states.
+Intuitively, for any initial state, α : X → A, either S fails to
+terminate on α, and [[ S ]](α) is undeﬁned (in which case we
+write [[ S ]](α) ↑) or else S terminates, and [[ S ]](α) : X → A
+is the state of the variables of S after termination. In the
+latter case we write [[ S ]](α) ↓= β to indicate that the l.h.s.
+is deﬁned and equal to β.
+By an abuse of notation we may also use [[ S[x1 , . . . , xn ] ]]
+to denote an n-ary partial function, where it is understood
+
+that
+[[ S ]](a1 , . . . , an ) = [[ S ]](a)
+and for each s ∈ S and x ∈ Xs , a : X → A is given by
+a(x) = an if x = xn , otherwise a(x) = as for some ﬁxed,
+arbitrary as ∈ As .
+Let us collect together the deﬁnitions introduced so far to
+formalise the concept of test success and failure.
+2.7. Definition. Let Σ be a relational signature, X be
+any set of variable symbols, and Prog (Σ, X) be any programming language with Σ and X as an interface. Let
+A ∈ Mod(Σ) be any Σ structure.
+(i) A functional speciﬁcation {p}S{q} is a triple consisting
+of a precondition p ∈ L(Σ, X), a program S ∈ Prog (Σ, X)
+and a postcondition q ∈ L(Σ, X ∪ X  ).
+(ii) A functional speciﬁcation {p}S{q} is said to be valid or
+correct in A under partial correctness semantics if, for every
+assignment α : X → A, if A, α |= p and [[ S ]](α) ↓= β for
+some β : X → A then A, α ∪ β  |= q. If {p}S{q} is valid in
+A under partial correctness semantics we write
+A |= {p}S{q}.
+(iii) Let S[x1 , . . . , xn ] ∈ Prog (Σ, X) be any program. Let
+p ∈ L(Σ, X) be a precondition and q ∈ L(Σ, X ∪ X  ) be
+a postcondition. For any α : { x1 , . . . , xn } → A we say
+that S fails the test α of {p}S{q} if A, α |= p and there
+exists β : { x1 , . . . , xn } → A such that
+[[ S ]](α) ↓= β
+and A, α ∪ β  |= q. We say that S passes the test α of
+{p}S{q} if S does not fail α.
+The following result is obvious, but concisely summarises
+the relationship between program testing and program correctness.
+2.8. Proposition. Let Σ be a relational signature, X
+be a set of variables and Prog (Σ, X) be a programming
+language with Σ and X as interface. Let A ∈ Mod(Σ)
+be any Σ structure. Given a program S[x1 , . . . , xn ] ∈
+Prog (Σ, X), a precondition p ∈ L(Σ, X), and a postcondition q ∈ L(Σ, X ∪ X  ), then
+A |= {p}S{q}.
+if, and only if, S fails some test α : { x1 , . . . , xn } → A of
+{p}S{q}.
+Proof. Immediate from Deﬁnitions 2.7.(ii) and 2.7.(iii).
+Thus we can say abstractly that program testing consists
+of the search for counterexamples to program correctness.
+In the case that S fails to terminate on an input α, a search
+algorithm for successful tests would potentially loop forever
+executing S. However, we can include a non-functional performance requirement on S, that S must terminate within
+some time bounded by a function f (α). When this time
+bound is exceeded we can ﬂag a failure of a performance
+requirement, rather than a functional requirement.
+
+3.
+
+APPROXIMATION-BASED TESTING.
+
+As we have seen in Section 1, the testing problem for
+a software system S[x1 , . . . , xn ] with respect to a functional speciﬁcation {pre}S{post } can be viewed as a search
+or satisﬁability problem to ﬁnd a prevariable assignment α :
+{ x1 , . . . , xn } → A for S such that S terminates and the
+resulting postvariable assignment ω : { x 1 , . . . , x n } →
+A obtained after termination (possibly together with α) satisﬁes pre ∧ ¬post . In this section we will show how methods
+of function approximation can be used to solve this problem, while also providing information about the degree of
+coverage obtained after n executed tests.
+
+3.1 Overview of the Approach.
+We take a bottom up approach to satisfying a formula
+Φ = pre ∧ ¬post . This means that we begin by analysing
+the literals of the form r(t1 , ..., tn ) or ¬r(t1 , ..., tn ) at all
+leaves of the parse tree for Φ. Here r is a relation symbol
+from the data type signature Σ and t1 , ..., tn are terms over
+Σ and sets X, X  of pre and postvariables. The satisﬁability
+problem for r or its complement ¬r, is entirely determined
+by the semantics of the data type A ∈ M od(Σ), over which
+we compute. In this report, for concreteness, we focus on
+the basic arithmetic relations <, ≤ and = over the signature
+Σring of rings and the standard interpretation of this signature over the rings Z and R of integers and reals respectively.
+To simplify our account, we will ignore the discrepancy between R and an actual ﬂoating point implementation, as
+well as problems of over and underﬂow for both arithmetic
+systems. Such issues, while leading to errors, fall outside
+the scope of the functional correctness statements we have
+in mind. We will deal with Z by embedding the integers into
+R and retracting back possible satisfying solutions to Z in
+an appropriate way. This gives us access to many powerful
+approximation methods from analysis for both the integer
+and ﬂoating point data types.
+To illustrate our approach consider, within the overall context of testing S, the problem of trying to satisfy a single
+literal such as
+t1 ≤ t2 ,
+with assignments α : { x1 , . . . , xn } → Z and
+ω : { x 1 , . . . , x n } → Z. Recall from Section 2 that ω is
+entirely determined by α and the semantics of S, so that we
+are in fact simply searching for a satisfying assignment α.
+Now in practical testing applications, n may easily be rather
+large, and so we must begin by ﬁnding a way to control the
+dimensionality of the search space for α.
+A natural approach is to restrict attention to subsets of
+the prevariables
+Y = { xi(1) , ..., xi(d) } ⊆ { x1 , ..., xn },
+for successively increasing values d = 1, 2, ..., n. For a speciﬁc choice of search variables Y , we can arbitrarily choose
+an assignment to its complement Y = { x1 , ..., xn } − Y
+say β : Y → Z which is consistent with pre. We can
+then search the reduced d-dimensional subspace for a satisfying assignment α : Y → Z. That is to say, the union
+α∪β : { x1 , ..., xn } → Z should satisfy the formula t1 ≤ t2 .
+For d = 1, this approach is similar to orthogonal array
+testing in the literature, e.g. [10]. Both approaches are
+motivated by the hypothesis that successful tests will often
+be found for quite low values of d, e.g. d = 1, 2, or 3 given
+
+the correct choice of Y .
+With the literal t1 ≤ t2 we can associate an n-ary partial
+function U (t1 , t2 ) : Zn  Z given by
+U (t1 , t2 ) = λ x1 , ..., xn . ω(t1 )[x1 , ..., xn ]−
+ω(t2 )[x1 , ..., xn ],
+where
+ω = [[ S ]](x1 , ..., xn ),
+and ω is the resulting term evaluation mapping. If postvariables occur in t1 or t2 , then due to the black box nature
+of the SUT S, the exact relationship between a prevariable
+assignment α to { x1 , . . . , xn } and the resulting postvariable assignment ω to { x 1 , . . . , x n } remains unknown.
+Hence, even though we know the structure of t1 and t2 ,
+the behaviour of U (t1 , t2 ) remains unknown. Instantiating
+the variables of Y using the assignment β we obtain a ddimensional section of this function U (t1 , t2 , β) : Zd  Z
+given by
+U (t1 , t2 , β) =
+λ xi(1) , ..., xi(d) . ω( β(t1 )[xi(1) , ..., xi(d) ] )−
+ω( β(t2 )[xi(1) , ..., xi(d) ] ),
+where
+ω = [[ S ]]( β(x1 ), . . . , β(xn ) ).
+whose behaviour is therefore also unknown. However, all
+zeros of U (t1 , t2 , β) are associated with solutions to the
+original constraint t1 ≤ t2 , and these are bounded by d − 1
+dimensional surfaces. Now after n prevariable assignments
+α1 ∪ β, . . . , αn ∪ β : { x1 , . . . , xn } → Z
+have been executed as tests on S, with termination of S in
+each case, we have n postvariable assignments
+ω1 , . . . , ω n : { x  1 , . . . , x  n } → Z
+and n assignments to the search prevariables α1 , ..., αn :
+Y → Z from which n values v1 , . . . , vn of U (t1 , t2 , β) can
+be calculated, namely
+vj = U (t1 , t2 , β)( αj (xi(1) ), . . . , αj (xi(d) ) ) , 1 ≤ j ≤ n.
+We can use the points v1 , . . . , vn to construct a function
+fn : Rd → R which approximates the unknown partial function U (t1 , t2 , β) : Zd  Z in an appropriate approximation
+space. (This simultaneously embeds the problem into R.)
+The zeros of the known function fn may then provide estimates of the zeros of the unknown function U (t1 , t2 , β).
+These zeros of fn may be identiﬁed either numerically or algebraically from the deﬁnition of fn . Any zero point for fn
+can then be chosen as the next prevariable assignment αn+1 :
+Y → Z, to test S by suitable retraction back into Z (for
+example by rounding). The SUT S is tested using the combined prevariable assignment αn+1 ∪ β : { x1 , . . . , xn } →
+Z. If S terminates on this input, then from the resulting
+assignment to postvariables, after the termination of S, we
+can calculate the value
+vn+1 = U (t1 , t2 , β)( αn+1 (xi(1) ), . . . , αn+1 (xi(d) ) )
+and can observe whether vn+1 is indeed equal to zero. If
+this is the case then αn+1 ∪ β was a successful test for S.
+
+However, even if vn+1 is not equal to zero, vn+1 can be used
+to reﬁne the approximation fn to a better approximation
+fn+1 of U (t1 , t2 , β) which might yield more accurate estimates of the zero points of U (t1 , t2 , β). If the sequence
+of approximations fn , fn+1 , . . . converges to U (t1 , t2 , β),
+then the probability of ﬁnding an error in S, if one exists,
+must gradually increase.
+By choosing α0 at random, and each αn+1 from fn , we
+obtain an iterative algorithm for generating test cases for
+S with respect to the testing condition t1 ≤ t2 . Furthermore, observations about the convergence of the sequence
+f1 , f2 , . . . within the chosen approximation space give us
+insight into the degree of coverage obtained.
+The arithmetic relations = and < can be handled in a
+similar fashion to ≤, in terms of zero points or zero crossings
+respectively.
+Obviously, a central question in our whole approach is the
+choice of appropriate approximation spaces for the fi , and
+the eﬃcient representation and manipulation of such functions. These questions need to be investigated both theoretically and empirically. Some important details are missing
+from this brief account of the approximation method, but
+these will be added in Sections 3.2 and 3.3.
+
+ascending order, i.e.
+αr(1) (xλ ) < αr(2) (xλ ) < . . . < αr(n) (xλ )
+(We assume that we do not test the same input value twice!)
+For each 1 ≤ j ≤ n we deﬁne a k + 1-tuple
+∆j = ( ∆j1 , . . . , ∆jk+1 ) ∈ Rk+1
+of divided diﬀerences deﬁned by
+∆j1 = vr(j+1) − vr(j) / αr(j+1) (xλ ) − αr(j) (xλ )
+and for 1 ≤ m ≤ k,
+j
+∆jm+1 = ∆j+1
+m − ∆m / αr(j+m+1) (xλ ) − αr(j) (xλ ).
+
+Obviously, in the upper end region for n − k ≤ j ≤ n certain
+values of ∆ji are undeﬁned, and these are simply marked
+and then ignored in a concrete data structure.
+Now for each 1 ≤ j ≤ n and for each 0 ≤ i ≤ k, we can
+associate a polynomial piece pji : R → R of degree i,
+(j, i) i
+
+pji (y) = ai
+
+y
+
+(j, i)
+
++ . . . + a0
+
+with the interval [αr(j) (xλ ), αr(j+i) (xλ )]. For example:
+when i = 0, pj0 is a constant polynomial with
+(j, 0)
+
+3.2 Piecewise Polynomial Approximation.
+The well known Weierstrass Approximation Theorem (see
+for example [4]) establishes that any continuous function
+f : R → R over a closed interval [m, n] can be approximated
+by a sequence p1 , p2 , . . . : R → R of polynomial functions,
+i.e. f is the limit of the pi in an appropriate metric topology
+on real valued continuous functions. The ease with which
+polynomials can be represented, evaluated, integrated, differentiated and solved algebraically (up to quartics) makes
+them an obvious candidate for experimentation with the approach described in 3.1. However, since discontinuity is commonplace in computable functions, we should immediately
+generalise the approach to piecewise polynomial approximation.
+For simplicity, we will reconsider the situation of 3.1, under the assumption that d = 1 and the variable subset Y is a
+singleton, Y = { xλ }, for some 1 ≤ λ ≤ n. This allows us
+to eﬃciently solve the roots of any polynomial p in a single
+variable up to fourth degree in a purely algebraic fashion.
+An eﬃcient implicit method of representing a piecewise
+polynomial function p : R → R is by using divided diﬀerences. Using this approach, we can avoid explicitly calculating the coeﬃcients of any polynomial piece until they are
+needed. The representation method can be described as follows.
+Assume that we wish to approximate U (t1 , t2 , β) using
+polynomial pieces of degree at most k. As was observed
+in Section 4.1, we can assume that after executing n test
+intputs
+
+(j, i−1) i−1
+
+y + ai−1
+
+= ∆j0 ;
+
+a0
+
+when i = 1 then pj1 is a linear polynomial with
+(j, 1)
+
+a1
+
+= ∆j1 ,
+
+and
+(j, 2)
+
+a0
+
+when i = 2 then
+
+(j, 1)
+
+= vr(j) − (a1
+
+pj2
+
+is a quadratic polynomial with
+(j, 2)
+
+a2
+(j, 2)
+
+a1
+(j, 2)
+
+a0
+
+∗ αr(j) (xλ ));
+
+(j, 2)
+
+= ∆j1 − (a2
+
+(j, 2)
+
+= vr(j) − ((a1
+
+= ∆j2 ,
+
+∗ (αr(j) (xλ ) + (αr(j+1) (xλ ))),
+(j, 2)
+
++ (a2
+
+∗ αr(j) (xλ ))) ∗ αr(j) (xλ )).
+
+We leave the reader to generalise this deﬁnition to higher
+orders as a useful exercise. Considering the i-th degree polyobtained over the shifted interval
+nomial pj+1
+i
+[αr(j+1) (xλ ), αr(j+i+1) (xλ )]
+∆ji+1
+
+is close to zero then pij is close to pj+1
+in
+then if
+i
+the function space, i.e. as ∆ji+1 converges to zero then pji
+converges to pji+1 . Thus ∆ji+1 is a measure of the “goodness of ﬁt” of pji to U (t1 , t2 , β) over the extended interval
+[αr(j) (xλ ), αr(j+i+1) (xλ )].
+We must initialise the divided diﬀerence model by constructing an initial k + 1 length list
+
+α1 ∪ β, . . . , αn ∪ β : { x1 , . . . , xn } → Z
+
+∆ = ∆1 , . . . , ∆k+1
+
+on S, with termination of S in each case, we know n values
+
+of k + 1-tuples. For this we require at least k + 1 initial pre and postvariable assignments to calculate values of
+U (t1 , t2 , β) from k+1 tests of S. It is appropriate to choose
+αr(1) (xλ ) and αr(k+1) (xλ ) to be maximum and minimum
+points over the desired range of testing. These might for instance correspond to the maximum positive and minimum
+negative machine representable integers. The remaining initialisation points αr(2) (xλ ), . . . , αr(k) (xλ ) might then be
+
+vj = U (t1 , t2 , β)( αj (xλ ) ) , 1 ≤ j ≤ n
+for the unknown function U (t1 , t2 , β). Now let
+r : { 1, . . . n } → { 1, . . . n }
+be a permutation which ranks the values αj (xλ ) into strictly
+
+evenly spaced over this interval. Another possibility is to
+distribute αr(1) (xλ ), . . . , αr(k+1) (xλ ) over the input space
+according to some expected probability distribution of inputs that reﬂects some hypothesis about usage patterns of
+the SUT S. Though since k is typically small there are better ways to integrate such probability distributions. This
+subject is beyond the scope of the present paper however.
+In general, after executing n additional tests of S, we obtain a list ∆(n) of length n + k + 1
+∆(n) = ∆(n)1 , ∆(n)2 , . . . , ∆(n)n+k+1
+where for 1 ≤ j ≤ (n + k + 1), ∆(n)r(j) is the k + 1-tuple
+of divided diﬀerences associated with the input/output pair
+(αr(j) , vr(j) ). Thus in the case that d = 1, the model size
+grows in a tractable linear fashion with the number of executed tests.
+Suppose now that after initialisation and executing n additional tests, we have still not obtained a succesful test of
+S and wish to choose a new prevariable assignment αn+1 :
+{ xλ } → Z in order to construct one further test αn+1 ∪ β.
+Surveying the whole list ∆(n) of diﬀerences (though see the
+above remark about upper endpoints of ∆(n)), we eﬀectively
+observe k.(n + k + 1) polynomial pieces of degrees between 0
+and k, together with, for each such polynomial piece pji the
+measure ∆ji+1 of its goodness of ﬁt locally. Thus if we consider the global maxima and minima of all diﬀerence values,
+M in(n) = min{ ∆(n)ji : 1 ≤ j ≤ n and 1 ≤ i ≤ k + 1 }
+M ax(n) = max{ ∆(n)ji : 1 ≤ j ≤ n and 1 ≤ i ≤ k + 1 }
+then M in(n) is associated with a polynomial piece of best
+ﬁt, while M ax(n) is associated with a polynomial piece of
+worst ﬁt. Typically M ax(n) arises as a diﬀerence over an
+input interval [αr(j) (xλ ), αr(j+1) (xλ )] containing a substantial discontinuity. If test points must be added closer and
+closer to this discontinuity then we will observe certain difference values diverging to ±∞ and this must be dealt with
+in a practical implementation, e.g. by introducing a maximum resolution between consecutive input values and some
+exception handling.
+Considering M in(n), associated say with the diﬀerence
+∆(n)ji+1 we may calculate the coeﬃcients of the corresponding ith degree polynomial piece pji . We consider zero points
+of pji within the interval [αr(j) (xλ ), αr(j+i+1) (xλ )] only. This
+interval represents the domain of validity of the approximating polynomial piece pji . Outside this interval, solutions to
+pji would be an extrapolation of this function to an interval
+where another polynomial piece might provide more accurate information. There will be at most i solutions to pji
+within the interval [αr(j) (xλ ), αr(j+i+1) (xλ )] and any one
+(or all in succession) of these values can be chosen for the
+next test input αn+1 .
+Independently of whether solutions occur within
+[αr(j) (xλ ), αr(j+i+1) (xλ )], we need to decide on an acceptance criterion for the accuracy of the approximation pji .
+It is probably pointless to keep testing S over the interval
+[αr(j) (xλ ), αr(j+i+1) (xλ )] if pji is an accurate approximation to U (t1 , t2 , β) over this interval and pji has no zeros
+within the interval. In the case that pji does contain zeros
+then these predictions can be used to test the accuracy of
+pji . However, if pji contains no zeros within the interval then
+we must choose at least one further test assignment αn+1 :
+
+{ xλ } → Z in the interval [αr(j) (xλ ), αr(j+i+1) (xλ )] and
+compare the predictions made using pji for U (t1 , t2 , β). In
+this case we may choose αn+1 (xλ ) randomly within the interval [αr(j) (xλ ), αr(j+i+1) (xλ )] or as a maximum or minimum point in this interval, or by some other strategy. Then
+we make a prediction for the value of vn+1 according to pji ,
+since this is no longer expected to be zero.
+If the predicted and observed values of vn+1 agree to
+within some speciﬁed tolerance then we can with some conﬁdence reject this interval as a region for further testing.
+After executing the generated test input αn+1 ∪ β on the
+SUT S and obtaining a new output value vn+1 =
+U (t1 , t2 , β)( αn+1 (xλ ) ). We must check that: (a) vn+1
+actually is equal to zero (if this was predicted), and (b)
+vn+1 is close enough (to within some tolerance value) to its
+predicted value using pji , in order to accept the accuracy of
+approximation of pji .
+In the case that pji was suﬃciently accurate, we mark the
+interval
+[αr(j) (xλ ), αr(j+i+1) (xλ )]
+as adequately modelled or approximated, and no further
+tests are chosen from this interval. In the case that pji was
+not suﬃciently accurate, we reconstruct a reﬁned approximation model ∆(n + 1) containing the new and old test
+results. This simply involves computing the new permutation r : { 1, . . . , n + 1 } → { 1, . . . , n + 1 } such that
+αr(1) (xλ ) < αr(2) (xλ ) < . . . < αr(n+1) (xλ )
+and re-calculating the divided diﬀerence vectors
+∆(n + 1)r(n+1)−1 , . . . , ∆(n + 1)r(n+1)−k
+locally. Then we have completed one iteration of the test
+procedure.
+The case where d ≥ 2 is more complex. In general we
+obtain a d-dimensional matrix of diﬀerences. To solve for
+zeros algebraically, we can for example, decompose d-ary
+polynomials into their 1-dimensional sections. The details
+are beyond the scope of this paper and will be described
+elsewhere.
+
+3.3 Solving Boolean Combinations of Literals.
+A practically useful speciﬁcation language ﬁrst emerges
+when we can combine literals over a data type using Boolean
+operations. How does the approximation method of Section
+3.2 generalise to this case?
+We will assume that in the system speciﬁcation
+{pre}S{post },
+the precondition pre and postcondition post are quantiﬁer
+free formulas. We begin by rewriting the corresponding
+testing condition pre ∧ ¬post into disjunctive normal form
+(DNF). After this we rewrite all negative literals of the form
+(a) ¬(t1 ≤ t2 ),
+
+(b) ¬(t1 < t2 ),
+
+(c) ¬(t1 = t2 )
+
+as positive formulas of the form
+(a ) t2 < t1 ,
+
+(b ) t2 ≤ t1 ,
+
+(c ) (t1 < t2 ) ∨ (t2 < t1 )
+
+respectively. Notice that the disjunction (c ) may disturb
+the DNF property in which case we must renormalise every
+conjunction in which it is introduced. Of course DNF normalisation may expand the formula size considerably, but
+
+the complexity of our method will be aﬀected by the number of disjuncts and not the total number of literals.
+Let TSpec denote the resulting DNF normalised form of
+pre ∧ ¬post in which all literals are positive. (In general it
+does not seem essential for the approximation method that
+all literals can be converted to positive form. But in this case
+study of the arithmetic data types it is clearly convenient.)
+Then TSpec has the form
+TSpec = φ1 ∨ φ2 ∨ . . . ∨ φl
+where for 1 ≤ i ≤ l, the disjunct φi is a conjunction of
+positive binary literals,
+i
+(ti(l(i),1) , ti(l(i),2) ).
+φi = r1i (ti(1,1) , ti(1,2) ) ∧ . . . ∧ rl(i)
+
+Now in principle we can analyse the satisﬁability of each
+disjunct φi independently, and in parallel. Then for a particular disjunct φi we can analyse the satisﬁability of each
+binary literal rji (ti(j,1) , ti(j,2) ) for 1 ≤ j ≤ l(i) in sequence,
+using the approximation method described in Section 3.2.
+Note that if { x1 , . . . , xn } represents the set of all prevariables occurring in TSpec then we choose
+Y ⊆ { x1 , . . . , x n }
+and its complement Y globally for all literals. We then
+choose a single global assignment β : Y → Z for investigating satisﬁability of all literals.
+However, the above naive approach is wasteful in a number of ways. Firstly, we must regard every execution of a test
+of the SUT S as costly in terms of computation time. The
+computational overhead of building approximation models
+and generating the next test case will typically be a small
+proportion of the total time spent executing tests on S, when
+S is a large system. Therefore, we must make the best use of
+the information gleaned from each test execution, and this
+requires updating the approximation models for every binary literal in every conjunct, simultaneously. In turn this
+requires that the approximation models for all literals are
+stored simultaneously!
+Secondly, the number and size of data structures for approximation models (in this particular case, lists or arrays
+of divided diﬀerences) grows rather quickly, especially when
+d > 1 and this may be exacerbated by the conversion to
+DNF. Fortunately, in the arithmetic case that we consider,
+we can conﬂate the l(i) divided diﬀerence structures required
+for the i-th conjunct, into just three divided diﬀerence structures. Thus, in this case, the method can be made linear in
+the number of disjuncts.
+Consider again satisﬁability testing of the i-th disjunct
+φi . Now φi is equivalent to a conjunction of three formulas,
+namely:
+(i) a conjunction of all its inequalities
+LEi = ti(j(1),1) ≤ ti(j(1),2) ∧ . . . ∧ ti(j(lei ),1) ≤ ti(j(lei ),2) ,
+(ii) a conjunction of all its strict inequalities
+Li = ti(j  (1),1) < ti(j  (1),2) ∧ . . . ∧ ti(j  (li ),1) < ti(j  (li ),2) ,
+and
+(iii) a conjunction of all its equations
+Ei = ti(j  (1),1) = ti(j  (1),2) ∧ . . . ∧ ti(j  (ei ),1) = ti(j  (ei ),2) .
+So
+φi = LEi ∧ Li ∧ Ei .
+
+Consider for example the conjunction LEi of inequalities.
+Recalling their deﬁnition from Section 3.2, we can conﬂate
+the unknown functions
+U ( ti(j(1),1) , ti(j(1),2) , β ), . . . , U ( ti(j(lei ),1) , ti(j(lei ),2) , β )
+into a single function U (LE, i, β) deﬁned by
+U (LE, i, β)(xi(1) , . . . , xi(d) ) = supk∈{
+
+1, ..., lei } (
+
+U ( ti(j(k),1) , ti(j(k),2) , β )(xi(1) , . . . , xi(d) ) ).
+Then zero points of U (LE, i, β) correspond precisely to regions satisfying all inequalities of LEi simultaneously. Similarly for Li we construct a single conﬂated function
+U (L, i, β)(xi(1) , . . . , xi(d) ) = supk∈{
+
+1, ..., li } (
+
+U ( ti(j  (k),1) , ti(j  (k),2) , β )(xi(1) , . . . , xi(d) ) ).
+Finally for Ei we construct a conﬂated function,
+U (E, i, β)(xi(1) , . . . , xi(d) ) = supk∈{
+
+1, ..., ei } (
+
+| U ( ti(j  (k),1) , ti(j  (k),2) , β )(xi(1) , . . . , xi(d) ) | ).
+Notice the use of absolute values of the underlying unknown
+functions in this last case.
+A zero point of U (LE, i, β) or U (E, i, β) , or a zero
+crossing of U (L, i, β), corresponds to a solution of the inequalities, strict inequalities and equations of the disjunct
+φi , and these can by analysed independently. Each solution
+region for the inequalities LEi can then be analysed for solutions to the strict inequalities Li , and a solution region for
+both of these can ﬁnally be investigated for solutions to the
+equations Ei . Furthermore, only three divided diﬀerence arrays need be kept in store for each disjunct φi , one for the
+approximation of each conﬂated function. To improve their
+approximation accuracy, the three approximations associated with every other disjunct φj can also be updated after
+the execution of the SUT S on each new test case αn ∪ β.
+How should we choose which disjunct φi to analyse for
+satisﬁability on any particular iteration, and how should we
+decide when to terminate this iterative testing process? The
+key to the solution can be found in the convergence properties of the approximations built by our method. If TSpec
+has l disjuncts, each consisting of a conjunction of inequalities, strict inequalities and equations, then after n tests have
+been executed we have 3.l lists of divided diﬀerences,
+L
+E
+∆(n)LE
+1 , ∆(n)1 , ∆(n)1
+
+...
+L
+E
+∆(n)LE
+l , ∆(n)l , ∆(n)l
+
+for the inequalities, strict inequalties and equations respectively of TSpec.
+There exist a variety of ways to measure convergence. One
+simple measure is as follows. Recall from Section 3.2 that a
+simple ﬁxed tolerance value is used to accept the accuracy
+of approximation of a particular polynomial piece pji . Once
+this value is reached, the interval [αr(j) (xλ ), αr(j+i+1) (xλ )],
+covered by the piece pji is marked as adequately approximated and no further test values are chosen from the do(respectively
+main covered by this piece. Let Coverage (n)LE
+i
+
+E
+Coverage (n)L
+i and Coverage (n)i ) be the integral of the intervals covered by all polynomial pieces pji in ∆(n)LE
+(re1
+j
+E
+spectively in ∆(n)L
+1 and ∆(n)1 ) such that pi is an adequate
+approximation of U (LE, i, β) (respectively of U (L, i, β)
+and U (E, i, β) ) over its associated interval. Then, for each
+1 ≤ i ≤ l, we can deﬁne the coverage value Coverage(n)i
+achieved for the i-th disjunct as the average sum of the
+coverages achieved for its inequalties, strict inequalities and
+equations
+
+Coverage(n)i =
+E
++ Coverage (n)L
+( Coverage(n)LE
+i
+i + Coverage(n)i )/3.
+
+One global strategy for testing then is to systematically reduce the worst case uncertainty. This corresponds to choosing for the n+1-th test, the disjunct φi which has the smallest coverage value Coverage(n)i after n tests. (In the case of
+several equivalent alternatives, for example during initialisation of the algorithm, one alternative can be chosen at
+random.)
+Similarly a stopping criterion for the procedure under
+worst case uncertainty is to choose a value σ ∈ R and terminate the algorithm when Coverage(n)i ≥ σ for all 1 ≤ i ≤ l.
+We should point out that a variety of other disjunct choice
+and stopping criteria can be envisaged, based on approximation and convergence concepts, which have yet to be evaluated.
+
+3.4 A Complete Algorithm.
+We can now summarise the informal presentation of the
+approximation method for black-box speciﬁcation based testing given in Sections 3.2 and 3.3 with a more formal description of the algorithms for test execution, choice of next test
+and updating of coverage. As in Section 3.3, for simplicity,
+we deal only with the case where d = 1 and Y is a singleton
+set Y = { xλ } for some chosen prevariable xλ . It should
+be clear how to generalise the algorithms for d > 1.
+In the sequel, if l is a list data structure and 1 ≤ i ≤
+length(l) then we write li for the i-th element of l. We
+also use a “C” style notation for array declarations where
+the length is determined dynamically at initialisation time.
+Thus if ident is an identiﬁer and τ is a type then ident[ ] : τ
+is an array of values of type τ whose length will be determined when ident is ﬁrst initialised. If Y is a ﬁnite set of
+variable identiﬁers for a ﬁrst order language then we assume
+the existence of a type Assignment(Y, A) of bindings of Y
+to elements of a data type A. These may for example be
+implemented as arrays.
+3.4.1. Algorithm.
+Input:
+(i) an SUT S[x1 , . . . , xn ] ∈ Prog (Σring , X),
+(ii) a quantiﬁer free precondition pre ∈ L(Σring , X),
+(iii) a quantiﬁer free postcondition
+post ∈ L(Σring , X ∪ X  ),
+(iv) a time limit τ : [{ x1 , . . . , xn } → Z] → R,
+(v) a coverage limit limit ∈ R,
+(vi) a search variable xλ ∈ { x1 , . . . , xn }.
+Output:
+either:
+(i) prevariable assignments α : { xλ } → Z,
+β : { x1 , . . . , xn } − { xλ } → Z and
+
+postvariable assignment ω : { x 1 , . . . , x n } → Z
+such that (Z, α ∪ β ∪ ω) |= pre ∧ ¬post, or
+(ii) error: execution time of S exceeds τ (α ∪ β), or
+(iii) error: coverage reaches limit without success.
+Algorithm PolyTest
+Types
+Predicate = { LE, L, E }
+Constants
+k : integer; // Maximum degree of approximation.
+tol : real; // Error tolerance of each polynomial.
+α1 , . . . , αk+1 : Assignment( { xλ }, Z);
+// used to initialise divided diﬀerence structure ∆.
+Variables
+successful, timeout : boolean;
+coverage, disj coverage[ ], v prediction : real;
+pred coverage[ ] : array [LE . . . E] of real;
+∆[ ] : array [LE . . . E] of list of array [1 . . . k+1] of real;
+modelled [ ] : array [LE . . . E] of
+list of array [1 . . . k+1] of boolean;
+v [ ] : array [LE . . . E] of list of real;
+α : Assignment( { xλ }, Z);
+β : Assignment( { x1 , . . . , xn } - { xλ }, Z );
+ω : Assignment( { x 1 , . . . , x n }, Z );
+TCond : DNF formula in L(Σring , X ∪ X  );
+{
+successful := false;
+timeout := false;
+coverage := 0;
+TCond := PosDNF( pre ∧ ¬post );
+// Convert the test condition into positive DNF
+β := Random( β, { x1 , . . . , xn } − { xλ } , pre);
+/* Make a random choice for β consistent with
+pre by conventional constraint solving.*/
+∆ := array [ 1 . . . length(TCond) ] of
+array [LE . . . E] of
+list of array [1 . . . k+1] of real;
+// Create diﬀerence structure ∆
+modelled := array [ 1 . . . length(TCond) ] of
+array [LE . . . E] of
+list of array [1 . . . k+1] of boolean;
+// Create modelled.
+v := array [ 1 . . . length(TCond) ] of
+array [ 1 . . . length(TCond) ]
+of array [LE . . . E] of list of real;
+// Create v.
+for d = 1 to length(TCond) do
+for p = LE to E do
+InitialiseList( ∆[d][p], modelled[d][p],
+v[d][p], α1 , . . . , αk+1 , S );
+/* Initialise divided diﬀerence list,
+modelled list
+and value list for the d-th disjunct
+and predicate p by executing
+the k + 1 initial input assignments
+α1 , . . . , αk+1 on S.*/
+while ( coverage < limit
+and not (successful or timeout) ) do
+{
+
+α := ChooseInput( );
+// chooses α : { xλ } → Z so (Z, α ∪ β) |= pre
+while ExecutionT ime(S) < τ (α ∪ β)
+and not Terminated(S) do
+Execute( S, α ∪ β );
+/* Execute S on α ∪ β while
+monitoring execution time
+and termination.*/
+if ExecutionT ime(S) < τ (α ∪ β) then
+{
+ω := [[ S ]](α) ;
+// Save the ﬁnal state of S.
+coverage := UpdateCoverage( coverage );
+if (Z, α ∪ β ∪ ω) |= ¬post then
+successful := true;
+};
+else timeout := true;
+}; // of while loop
+if successful then
+return (“successful with: ” α, β, ω )
+else
+if timeout then return ( “error: timed out ”)
+else return (“error: coverage reaches:”, limit );
+}
+Note that the algorithm PolyTest terminates as soon as a
+prevariable assignment α ∪ β is encountered such that the
+execution of S on α ∪ β exceeds the allowed time bound
+τ (α ∪ β). This ﬂags potential inﬁnite loops for further investigation. It is also possible to allow PolyTest to proceed
+in such cases, for example by assigning a constant non-zero
+value in the corresponding position of the result array v.
+It remains to deﬁne the algorithms for ChooseInput and
+U pdateCoverage using the piecewise polynomial approximation method described in Section 3.3.
+3.4.2. Algorithm.
+Output:
+(i) An assignment result : { xλ } → Z such that
+(Z, α ∪ β) |= pre, and α ∪ β is a potentially
+successful test case for S according to the
+approximation model.
+Algorithm ChooseInput
+Variables
+d, p, j, i : real;
+poly : polynomial with real coeﬃcients:
+solutions : set of real;
+{
+
+d := least x ∈ { 1, . . . , length(T Cond) }
+s.t. coverage[x] is minimal;
+p := least x ∈ { LE, L, E }
+s.t. coverage[d][x] is minimal;
+j, i := least x, y ∈ { 1, . . . , length(∆[d][p]) }×
+{ 1, . . . , k + 1 } s.t. ∆[d][p]x [y] is minimal
+
+and modelled[d][p]x [y] = false ;
+/* Construct polynomial at this position
+in the diﬀerence structure ∆[d][p].*/
+poly := MakePolynomial( ∆[d][p]j [i] );
+// Calculate solutions of the polynomial
+solutions := SolvePolynomial( poly );
+/* Now intersect solutions with
+the interval of the polynomial
+to see if any can be used as zero predictions.*/
+if solutions ∩[v[d][p]j , v[d][p]j ] = ∅
+{
+/* Then a zero exists in the interval of poly.
+So use this zero point for the next test input.*/
+result( xλ ) :=
+least s ∈ solutions ∩[v[d][p]j , v[d][p]j ];
+v prediction := 0;
+}
+else
+{
+/* No zero point exists in the interval of poly.
+Choose a point within interval for next test
+according to some strategy (see Section 3.2)
+to evaluate the accuracy of approximation. */
+result( xλ ) := Choose( y ∈ [v[d][p]j ), v[ d][p]j ] );
+v prediction := Evaluate( poly, result( xλ ) ) ;
+}
+return( result );
+}
+The function Choose(S) chooses an element from the set
+S according to some strategy, e.g. randomly. The function
+Evaluate(p, x) evaluates a polynomial p on an argument x.
+3.4.3. Algorithm.
+Output:
+(i) A worst case coverage value result which is the
+minimum over all disjuncts φl of T Cond of the average
+coverage achieved by approximation up to tolerance tol
+for φl separately on its inequalities,
+strict inequalities and equations.
+Algorithm UpdateCoverage
+Variables
+v : real:
+{
+for d = 1 to length(TCond) do
+for p = LE to E do
+{
+/* Evaluate the unknown function U for disjunct
+d and predicate p on the prevariable assignment
+α ∪ β and postvariable assignment ω.*/
+v := U( d, p, α, β, ω );
+if | v - v prediction | < tol then
+{
+/* A new polynomial piece satisfying
+the approximation accuracy of tol
+has been identiﬁed in the diﬀerence model./*
+
+modeled[d][p]j [i] := true ;
+coverage[d][p] :=
+coverage[d][p] + | v[d][p]j+i - v[d][p]j | ;
+coverage[d] :=
+( coverage[d][LE] + coverage[d][L]
++ coverage[d][E] ) / 3;
+
+}
+else
+{
+
+result :=
+minx∈{
+
+1, ..., length(T Cond) }
+
+coverage[x];
+
+/* Insert the assignment α into the sorted
+list of prevariable assignments
+and return insertion position.*/
+pos := insert( α(xλ ), a[d][p] );
+v[d][p]pos := insert(v);
+//Update ∆ locally around pos
+UpdateDiﬀerences( ∆[d][p]pos ) , . . . ,
+∆[d][p]pos−k );
+
+}
+}
+return( result ):
+}
+
+Notice how updating the coverage value coverage[d][p] by
+adding the integral of the domain of a suﬃciently accurate
+polyomial piece simply consists of adding the length of its
+interval, in the case that d = 1.
+
+4.
+
+A CASE STUDY.
+
+It is beyond the scope of this extended abstract to give
+a full analysis of the empirical performance of the approximation based testing algorithms of Section 3. Indeed, this
+evaluation work is still in progress. However, it is appropriate to describe here a simple case study using an early
+and unoptimised version of our algorithms implemented in
+C++. In particular we can convey the complexity of the
+modeling process for a simple SUT.
+Consider Algorithm 4.1, which presents a conventional implementation of Newtons method for ﬁnding the square root
+of a ﬂoating point number. A black-box speciﬁcation for this
+algorithm is simply
+number ≥ 0 → ( |(root ∗ root) − number| < epsilon )
+where epsilon is a ﬁxed error tolerance of choice.
+We have introduced ﬁve diﬀerent mutation errors by hand
+into the code, where these are numbered and commented out
+to reveal the correct code only. It is particularly interesting
+for us to consider ﬂoating point computations, since for this
+type of algorithm very few symbolic methods exist for code
+correctness analysis. Note that several of the more obvious
+mutation errors that could be introduced into Newton Root
+lead to inﬁnite loops at runtime. Errors 1-5 do not have this
+property (at least individually).
+4.1. Algorithm.
+// Algorithm Newton Root
+ﬂoat number, root;
+
+ﬂoat error = 0.000001;
+// ﬂoat error = 0.01; // error 1
+// ﬂoat error = 0.1; // error 2
+if ( number == 0)
+{ root = 0; }
+else
+{
+root = 1.0;
+// root = 0.5; // error 3
+do
+{
+root = ( number / root + root ) / 2.0;
+// number = ( number / root + root ) / 2.0;
+// error 4
+}
+while ( fabs( ( number / root + root)) -1 ) >= error );
+// while ( ( number / root + root) -1 ) >= error );
+// error 5
+}
+Algorithm 4.1. was seeded with various combinations of
+the given mutation errors, compiled and executed within the
+approximation based test framework described in Section
+3. Table 1 summarises the results obtained. In column
+1, we list each individual mutation error, (rows 1-5), seven
+double mutation errors (rows 6-12), and ﬁve triple mutation
+errors (rows 13-17). In columns 2-4 we list the number of
+constant, linear and quadratic polynomial pieces required
+before convergence of approximation exceeded the threshold
+value. Column 5 lists the number of solution intervals found,
+where a solution interval is a range of values for the single
+input variable, which give rise to an error. Thus column 5
+does not correspond to individual errors but rather sets of
+errors. Column 6 indicates the total number of inputs or test
+cases on which the SUT was executed before convergence of
+approximation was obtained.
+In terms of time performance, the algorithm terminated in
+under 1 second for all cases considered. Recall from Section
+3 that for d = 1 the time complexity of testing is linear in
+the number of test cases considered.
+We can observe a number of interesting phenomena already in this simple case. The number of test cases examined before model convergence was achieved varied widely,
+between 8 and 1410. The variation in the number of solution intervals obtained is less signiﬁcant, since this prototype
+implementation does not merge adjacent intervals.
+Interestingly, the algorithm gives us some insight into the
+pathology of code errors when multiple mutation errors are
+introduced. We can see that error 4 totally dominates error 1 in the double mutation error on row 6. This makes
+tangible the situation where one error can mask another,
+and conﬁrms that debugging must therefore be an iterative
+process. This phenomenon is visible elsewhere in the table.
+For example, errors 3 and 4 (row 8) cause an inﬁnite loop,
+which is inherited by error combinations 1, 3 and 4 (row 13)
+and 2, 3 and 4 (row 14).
+Error 4 also dominates error 5 when the two exist simultaneously (row 8). Among double mutation errors, only the
+combination of errors 3 and 5 (row 11) seems to exhibit
+characteristics not determined uniquely by one error component. These characteristics are inherited by row 15. So we
+see that these mutation errors seem to possess an interesting
+
+Error
+No.
+
+1
+2
+1
+1
+3
+
+&
+&
+&
+&
+&
+
+1
+2
+3
+1
+2
+3
+4
+3
+3
+3
+4
+4
+
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+
+1
+2
+3
+4
+5
+4
+4
+4
+5
+5
+5
+5
+4
+4
+5
+5
+5
+
+Approximations used
+Const. Lin. Quad.
+40
+168
+0
+1
+14
+1
+1
+
+4
+5
+0
+0
+4
+0
+0
+
+14
+14
+16
+1
+
+4
+4
+0
+0
+
+16
+1
+
+0
+0
+
+39
+134
+1000
+5
+15
+5
+5
+inﬁnite
+15
+15
+17
+5
+inﬁnite
+inﬁnite
+17
+5
+inﬁnite
+
+Solution
+Intervals
+
+Model
+Points
+
+21
+132
+98
+5
+18
+5
+5
+
+65
+187
+1410
+8
+23
+8
+8
+
+18
+18
+15
+5
+
+23
+23
+23
+8
+
+15
+5
+
+23
+8
+
+loop
+
+loop
+loop
+
+loop
+
+Table 1: Complexity of Testing for Newton Root
+
+semi-lattice like structure under conjunction.
+
+5.
+
+CONCLUSIONS.
+
+In this report, we have shown how speciﬁcation-based software testing can viewed as a satisﬁability problem, and how
+this problem can be solved using techniques from function
+approximation which also yield a model of test coverage.
+There is considerable scope for future research. In particular, the following questions seem important.
+(i) What is the practical scope of our existing testing
+technique for low values of the approximation dimension d?
+What other methods can be used for dimension reduction?
+(ii) What is the scalability of our approach to large scale
+systems and complex functional speciﬁcations?
+(iii) How can algorithm PolyTest be extended from quantiﬁer free formulas to general quantiﬁed formulas in an eﬃcient way?
+(iv) What are the best types of approximation function for
+relations chosen from other (e.g. non-numeric) data types?
+For example, in recent years, approximation techniques using wavelets have achieved signiﬁcant success and we expect
+that Haar wavelets (for discrete data types such as Booleans,
+chars and integers) and Daubechies wavelets (for continuous
+data types such as ﬂoats) could have an important role to
+play. In general, one can say that functional analysis is rich
+in providing approximation spaces and useful theoretical results for designing algorithms.
+We ackowledge the helpful comments of H. Johansson
+while this research was carried out. We also gratefully acknowledge the ﬁnancial support of the Swedish Research
+Council for Engineering Sciences (TFR) under grant 2000447.
+
+5.1 References.
+[1] J.W. de Bakker, Mathematical Theory of Program Correctness, Prentice-Hall, 1980.
+[2] F. Bergadano, D. Gunetti, Testing by means of inductive
+program learning, ACM Trans. Software Engineering and
+
+View publication stats
+
+Methodology 5 (2) 119-145, 1996.
+[3] T.A. Budd, D. Angluin, Two notions of correctness and
+their relation to testing, Acta Informatica 18, 31-45, 1982.
+[4] E.W. Cheney, Approximation Theory, American mathematical Society Chelsea Publishing, Providence, Rhode Island, 1966.
+[5] R.A. DeMillo, R.J. Lipton, F.G. Sayward, Hints on test
+data selection: help for the practicing programmer, IEEE
+Computer 11(4), 34-41, 1978.
+[6] H.B. Enderton, A Mathematical Introduction to Logic,
+Academic Press, 1972.
+[7] R.G. Hamlet, Testing programs with the aid of a compiler, IEEE Transactions on Software Engineering, 3(4), 279290, 1977.
+[8] J. Loeckx and K. Sieber, The Foundations of Program
+Veriﬁcation, John Wiley, Chichester, 1987.
+[9] A.J. Oﬀut, J. Pan, Automatically detecting equivalent
+mutants and infeasible paths, The Journal of Software Testing, Veriﬁcation and Reliability 7 (3), 165-192, 1997.
+[10] M.S. Phadke, Planning eﬃcient software tests, Crosstalk
+10 (10), 11-15, 1997.
+[11] K. Romanik, Approximate testing and its relationship
+to learning, Theoret. Comput. Sci. 188, 79-99, 1997.
+[12] K. Romanik and J.S. Vitter, Using Vapnik-Chervonenkis
+dimension to analyze the testing complexity of program segments, Information and Computation 128 (2), 87-108, 1996.
+[13] E.J. Weyuker, Assessing test data adequacy through
+program inference, ACM Trans. Program. Lang., Syst., 5
+(4), 641-655, 1983.
+
+

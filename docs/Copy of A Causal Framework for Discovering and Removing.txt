@@ -1,0 +1,827 @@
+A Causal Framework for Discovering and Removing
+Direct and Indirect Discrimination
+Lu Zhang, Yongkai Wu, and Xintao Wu
+
+arXiv:1611.07509v1 [cs.LG] 22 Nov 2016
+
+University of Arkansas
+{lz006,yw009,xintaowu}@uark.edu
+
+Abstract
+Anti-discrimination is an increasingly important task in data
+science. In this paper, we investigate the problem of discovering both direct and indirect discrimination from the historical
+data, and removing the discriminatory effects before the data
+is used for predictive analysis (e.g., building classifiers). We
+make use of the causal network to capture the causal structure
+of the data. Then we model direct and indirect discrimination
+as the path-specific effects, which explicitly distinguish the
+two types of discrimination as the causal effects transmitted
+along different paths in the network. Based on that, we propose an effective algorithm for discovering direct and indirect
+discrimination, as well as an algorithm for precisely removing
+both types of discrimination while retaining good data utility.
+Different from previous works, our approaches can ensure
+that the predictive models built from the modified data will
+not incur discrimination in decision making. Experiments using real datasets show the effectiveness of our approaches.
+
+Introduction
+Discrimination refers to unjustified distinctions in decisions
+against individuals based on their membership in a certain
+group. Federal Laws and regulations (e.g., the Equal Credit
+Opportunity Act of 1974) have been established to prohibit
+discrimination on several grounds, such as gender, age, sexual orientation, race, religion or belief, and disability or illness, which are referred to as the protected attributes. Nowadays various predictive models have been built around the
+collection and use of historical data to make important decisions like employment, credit and insurance. If the historical data contains discrimination, the predictive models are
+likely to learn the discriminatory relationship present in the
+data and apply it when making new decisions. Therefore, it
+is imperative to ensure that the data goes into the predictive
+models and the decisions made with its assistance are not
+subject to discrimination.
+In the legal field, discrimination is usually divided into
+direct and indirect discrimination. Direct discrimination occurs when individuals receive less favorable treatment explicitly based on the protected attributes. An example would
+be rejecting a qualified female applicant in applying a university just because of her gender. Indirect discrimination
+Copyright c 2017, Association for the Advancement of Artificial
+Intelligence (www.aaai.org). All rights reserved.
+
+refers to the situation where the treatment is based on apparently neutral non-protected attributes but still results in unjustified distinctions against individuals from the protected
+group. A well-known example of indirect discrimination is
+redlining, where the residential Zip code of the individual is
+used for making decisions such as granting a loan. Although
+Zip code is apparently a neutral attribute, it correlates with
+race due to the racial makeups of certain areas. Thus, Zip
+code can indirectly lead to racial discrimination if there is
+no good reason to justify its use in making decisions.
+Discrimination discovery and removal has received an increasing attention over the past few years in data science
+(Hajian and Domingo-Ferrer 2013; Kamiran and Calders
+2012; Ruggieri, Pedreschi, and Turini 2010; Romei and
+Ruggieri 2014; Feldman et al. 2015). Many approaches have
+been proposed to deal with both direct and indirect discrimination. However, significant issues exist in current techniques. For discrimination discovery, the difference in decisions across the protected and non-protected groups is a
+combined (not necessarily linear) effect of direct discrimination, indirect discrimination, and other effects which are
+objectively explainable and should not be considered as discrimination. However, few works have explicitly identified
+the three different effects when measuring discrimination.
+For example, the classic metrics risk difference, risk ratio, relative chance, odds ratio, etc. (Romei and Ruggieri
+2014) treat all the difference in decisions as discrimination.
+(Žliobaitė, Kamiran, and Calders 2011) considered the explainable effect, but failed to distinguish the effects of direct and indirect discrimination. For discrimination removal,
+an algorithm must ensure that the predictive models built
+from the historical data do not incur discrimination in decision making. However, as we will show in our experiments,
+previous works in removing discrimination cannot guarantee that the predictive models are not subject to discrimination even though they attempt to modify the historical
+data to contain no discrimination. In addition, it is a general
+requirement is to preserve the data utility while achieving
+non-discrimination. As will also shown in the experiments,
+totally removing all connections between the protected attribute and decision as proposed in (Feldman et al. 2015)
+may suffer significant utility loss.
+The causal modeling based discrimination detection has
+been proposed most recently (Bonchi et al. 2015; Zhang,
+
+Zip code
+Race
+
+Loan
+Income
+
+Figure 1: The toy model.
+Wu, and Wu 2016b; 2016a) for improving the correlation
+based approaches. In this paper, we develop a framework
+for discovering and removing both direct and indirect discrimination based on the causal network. A causal network
+is a directed acyclic graph (DAG) widely used for causal
+representation, reasoning and inference (Pearl 2009), where
+causal effects are carried by the paths that trace arrows pointing from the cause to the effect which are referred to as the
+causal paths. Using this model, direct and indirect discrimination can be captured by the causal effects of the protected
+attribute on the decision transmitted along different paths.
+Direct discrimination is modeled by the causal effect transmitted along the direct path from the protected attribute to
+the decision. Indirect discrimination, on the other hand, is
+modeled by the causal effect transmitted along other causal
+paths that contain any unjustified attribute. Consider a toy
+model of a loan application system shown in Figure 1 for example. Assume that we treat Race as the protected attribute,
+Loan as the decision, and Zip code as the unjustified attribute that causes redlining. Direct discrimination is then
+modeled by path Race → Loan, and indirect discrimination
+is modeled by path Race → Zip code → Loan. Assume
+that the use of Income can be objectively justified as it is
+reasonable to deny a loan if the applicant has low income.
+In this case, path Race → Income → Loan is explainable,
+which means that the difference in loan issuance across different race groups can be explained by the fact that some
+race groups in the dataset tend to be under-paid.
+To measure the causal effect transmitted along a certain
+causal path, we employ the formulation of the path-specific
+effect (Avin, Shpitser, and Pearl 2005; Shpitser 2013). We
+define direct and indirect discrimination as different pathspecific effects and show how to accurately measure them
+using the observational data. Based on that, we propose an
+effective algorithm for discovering direct and indirect discrimination, as well as an algorithm for precisely removing both types of discrimination while retaining good data
+utility. Our approaches can ensure that the predictive models built from the modified data are not subject to any type
+of discrimination. The experiments using two real datasets
+show that our approaches are effective in discovering and
+removing discrimination.
+
+Preliminary Concepts
+A causal network is a DAG G = (V, A) where V is a set
+of nodes and A is a set of arcs. Each node represents an attribute. Each arc, denoted by an arrow → pointing from the
+cause to the effect represents the direct causal relationship.
+Throughout the paper, we denote an attribute by an uppercase alphabet, e.g., X; denote a subset of attributes by a bold
+uppercase alphabet, e.g., X. We denote a domain value of attribute X by a lowercase alphabet, e.g., x; denote a value assignment of attributes X by a bold lowercase alphabet, e.g.,
+
+x. For a node X, its parents are denoted by Pa(X), and its
+children are denoted by Ch(X). Each node is associated with
+a conditional probability table (CPT), i.e., P(x|Pa(X)). We
+also use Pa(X) to represent a value assignment of X’s parents if no unambiguity occurs in the context. The joint distribution over all attributes P(v) can be computed using the
+factorization formula (Koller and Friedman 2009)
+Y
+P(v) =
+P(v|Pa(V)),
+(1)
+V∈V
+
+where P(v|Pa(V)) is the observational distribution.
+In the causal network, the measuring of causal effects is
+facilitated with the do-calculus (Pearl 2009), which simulates the physical interventions that force some attributes X
+to take certain values x. The post-intervention distributions,
+which represent the effect of the intervention, can be estimated from the observational data. Formally, the intervention that sets the value of X to x is denoted by do(X = x).
+The post-intervention distribution of all other attributes Y =
+V\X, i.e., P(Y = y|do(X = x)) or simply P(y|do(x)), can be
+expressed as a truncated factorization formula (Pearl 2009)
+Y
+P(y|do(x)) =
+P(y|Pa(Y))δX=x ,
+Y∈Y
+
+where δX=x means assigning any attributes in X involved in
+the term ahead with the corresponding values in x. Specifically, the post-intervention distribution of a single attribute
+Y given an intervention on a single attribute X is given by
+X
+Y
+P(y|do(x)) =
+P(v|Pa(V))δX=x ,
+(2)
+V\{X,Y},Y=y V∈V\{X}
+
+where the summation is a marginalization that traverses all
+value combinations of V\{X, Y}.
+By using the do-calculus, the total causal effect of X on
+Y is defined as follows (Pearl 2009). Note that in this definition, the effect of the intervention is transmitted along all
+causal paths from the cause X to the effect Y.
+Definition 1 (Total causal effect) The total causal effect of
+the change of X from x1 to x2 on Y = y is given by
+T E(x2 , x1 ) = P(y|do(x2 )) − P(y|do(x1 )).
+The path-specific effect is an extension to the total causal
+effect in the sense that the effect of the intervention is transmitted only along a subset of causal paths from X to Y. Denote a subset of causal paths by π. The π-specific effect considers a counterfactual situation where the effect of X on Y
+with the intervention is transmitted along π, while the effect
+of X on Y without the intervention is transmitted along paths
+not in π. We denote by P(y | do(x2 |π )) the distribution of Y
+after an intervention of changing X from x1 to x2 with the
+effect transmitted along π. Then, the π-specific effect of X
+on Y is defined as follows (Avin, Shpitser, and Pearl 2005).
+Definition 2 (Path-specific effect) Given a path set π, the
+π-specific effect of the value change of X from x1 to x2 on
+Y = y is given by
+S Eπ (x2 , x1 ) = P(y | do(x2 |π )) − P(y | do(x1 )).
+
+Z2
+X
+
+Z1
+
+Y
+
+Figure 2: An example with the recanting witness criterion
+satisfied.
+The authors in (Avin, Shpitser, and Pearl 2005) have given
+the condition under which the path-specific effect can be estimated from the observational data, known as the recanting
+witness criterion.
+Definition 3 (Recanting witness criterion) Given a path
+set π, let Z be a node in G such that: 1) there exists a path
+from X to Z which is a segment of a path in π; 2) there exists a path from Z to Y which is a segment of a path in π; 3)
+there exists another path from Z to Y which is not a segment
+of any path in π. Then, the recanting witness criterion for
+the π-specific effect is satisfied with Z as a witness.
+Theorem 1 (Identifiability) The π-specific effect can be estimated from the observational data if and only if the recanting witness criterion for the π-specific effect is not satisfied.
+If the recanting witness criterion is not satisfied, the πspecific effect S Eπ (x2 , x1 ) can be computed as follows based
+on (Shpitser 2013). First, express P(y|do(x1 )) as the truncated factorization formula according to Equation (2). Second, to compute P(y | do(x2 |π )), divide the children of X into
+two sets Sπ and S̄π , i.e., Ch(X) = Sπ ∪ S̄π . Let Sπ contains
+X’s each child S where arc X → S is a segment of a path
+in π; let S̄π contains X’s each child S where either S is not
+included in any path from C to E, or arc X → S is a segment of a path not in π. Finally, replace values x1 with x2 for
+the terms corresponding to nodes in Sπ , and keep values x1
+unchanged for the terms corresponding to nodes in S̄π .
+Note that the above computation requires Sπ ∩ S̄π = ∅.
+Theorem 1 is reflected in that: Sπ ∩ S̄π , ∅ if and only if the
+recanting witness criterion for the π-specific effect is satisfied. Figure 2 shows an example with the recanting witness
+criterion satisfied, where π = {X → Z1 → Z2 → Y}. According to the definitions, Z1 is contained in both Sπ and S̄π .
+
+Modeling Direct and Indirect Discrimination
+as Path-Specific Effects
+Consider a historical dataset D that contains a group of
+tuples, each of which describes the profile of an individual. Each tuple is specified by a set of attributes V, including the protected attributes, the decision, and the nonprotected attributes. Among the non-protected attributes, assume there is a set of attributes that cannot be objectively
+justified if used in the decision making process, which we
+refer to as the redlining attributes denoted by R. For ease
+of presentation, we assume that there is only one protected
+attribute with binary values. We denote the protected attribute by C associated with two domain values c− (e.g.,
+female) and c+ (e.g., male); denote the decision by E associated with two domain values e− (i.e., negative decision)
+and e+ (i.e., positive decision). Our approach can extend
+to handling multiple domain values of C and even multiple Cs. We assume that a causal graph G can be built
+
+to correctly represent the causal structure of dataset D. In
+the past decades, many algorithms have been proposed to
+learn the causal network from data and they are proved to
+be quite successful (Spirtes, Glymour, and Scheines 2000;
+Neapolitan and others 2004; Colombo and Maathuis 2014;
+Kalisch and Bühlmann 2007). We also make a reasonable
+assumption that C has no parent in G, as the protected attribute is always an inherent nature of an individual.
+Discrimination can be captured by the causal effect of C
+on E. In our context, the causal effect includes direct/indirect
+discrimination and other explainable effects. We model direct discrimination as the causal effect transmitted along the
+direct path from C to E, i.e., C → E. Define πd as the path
+set that contains only C → E. The πd -specific effect of the
+change of C from c− to c+ on E = e+ is given by
+S Eπd (c+ , c− ) = P(e+ | do(c+ |πd )) − P(e+ | do(c− )).
+The physical meaning of S Eπd (c+ , c− ) is the expected
+change in decisions (in term of the probability of E = e+ )
+of individuals from protected group c− , if it is told that these
+individuals were from the other group c+ and everything else
+remains unchanged. When applied to the example in Figure
+1, it means the expected change in loan approval of applications actually from the disadvantage group (e.g., black),
+when the bank is instructed to treat the applicants as from
+the advantage group (e.g., white). Thus, the measurement of
+the πd -specific effect exactly follows the definition of direct
+discrimination and is appropriate for measuring the discriminatory effect.
+Similarly, we model indirect discrimination as the causal
+effect transmitted along all the indirect paths from C to E
+that contain the redlining attributes. Given the set of redlining attributes R, define πi as the path set that contains all the
+causal paths from C to E which pass through R, i.e., each
+of the paths includes at least one node in R. Then, the πi specific effect, which is given by
+S Eπi (c+ , c− ) = P(e+ | do(c+ |πi )) − P(e+ | do(c− )),
+represents the expected change in decisions of individuals
+from protected group c− , if the profiles of these individuals
+along path πi were changed as if they were from the other
+group c+ . When applied to the example in Figure 1, it means
+the expected change in loan approval of the disadvantage
+group if they had the same racial makeups shown in the Zip
+code as the advantage group. Thus, the πi -specific effect is
+appropriate for measuring the discriminatory effect of indirect discrimination.
+Therefore, we propose the criterion for claiming direct
+and indirect discrimination based on the path-specific effect.
+We say that direct discrimination against protected group
+c− is claimed if S Eπd (c+ , c− ) > τ, where τ > 0 is a usedefined threshold for discrimination depending on the law.
+For instance, the 1975 British legislation for sex discrimination sets τ = 0.05, namely a 5% difference. Similarly, given
+the redlining attributes R, we say that indirect discrimination
+against protected group c− is claimed if S Eπi (c+ , c− ) > τ. To
+avoid reverse discrimination, we do not specify which group
+is the protected group. Therefore, we give the following criterion.
+
+Theorem 2 Given the protected attribute C, decision E, and
+redlining attributes R, direct discrimination is claimed if either S Eπd (c+ , c− ) > τ or S Eπd (c− , c+ ) > τ holds, and indirect discrimination is claimed if either S Eπi (c+ , c− ) > τ or
+S Eπi (c− , c+ ) > τ holds.
+It is worth noting that, if a path set π contains all causal
+paths from C to E, it can be directly obtained from the definition that the π-specific effect is equivalent to the total causal
+effect, i.e.,
+S Eπ (c+ , c− ) = T E(c+ , c− ) = P(e+ |do(c+ )) − P(e+ |do(c− )).
+It can be proved straightforwardly using Equation (2) that
+the above equation equals to P(e+ |c+ ) − P(e+ |c− ), which
+is known as risk difference (Romei and Ruggieri 2014)
+widely used for discrimination measurement in the antidiscrimination literature. Therefore, the path-specific effect
+can be considered as a significant extension to risk difference for explicitly distinguishing the discriminatory effects of direct and indirect discrimination from the total
+causal effect. On the other hand, we do not necessarily have
+S Eπd (c+ , c− ) + S Eπi (c+ , c− ) = S Eπd ∪πi (c+ , c− ). This implies
+that there might not be a linear connection between direct
+and indirect discrimination.
+According to Definition 3 and Theorem 1, it is guaranteed
+that the recanting witness criterion for the πd -specific effect
+is not satisfied since there is no intermediate node in the direct path C → E and Sπd contains E only, and direct discrimination can always be measured from the observational
+data. Thus, S Eπd can be computed as follows.
+X 
+P(e+ |c+ , Pa(E)\{C})
+S Eπd (c+ , c− ) =
+V\{C,E}
+
+(3)
+
+P(v|Pa(V))δC=c− − P(e+ |c− ).
+
+Y
+V∈V\{C,E}
+
+For indirect discrimination, we divide C’s children into
+Sπi and S̄πi . Different from above, the recanting witness criterion for the πi -specific effect might be satisfied or not.
+When the recanting witness criterion is not satisfied, we have
+Sπi ∩ S̄πi = ∅. Then, S Eπi (c+ , c− ) can be computed as follows.
+XY
+P(g|c+ , Pa(G)\{C})
+S Eπi (c+ , c− ) =
+V\{C} G∈Sπi
+
+Y
+
+P(h|c− , Pa(H)\{C})
+
+H∈S̄πi
+
+Y
+
+
+P(o|Pa(O))δC=c−
+
+Algorithm 1: PSE-DD
+
+1
+2
+3
+4
+5
+
+8
+
+Compute S Eπi (·) according to Equation (4);
+if S Eπi (c+ , c− ) > τ k S Eπi (c− , c+ ) > τ then
+judgei = true;
+
+9
+
+return [ judged , judgei ];
+
+6
+7
+
+The computational complexity of PSE-DD depends on
+the complexities of building the causal network and computing the path-specific effect according to Equation (3) or (4).
+Many researches have been devoted to improving the performance of network construction (Kalisch and Bühlmann
+2007; Tsamardinos et al. 2003; Aliferis et al. 2010) and
+probabilistic inference in causal networks (Heckerman and
+Breese 1994; 1996). These topics are beyond the scope of
+this paper.
+For indirect discrimination (line 7), the complexity further depends on how to identify Sπi and S̄πi . A straightforward method of finding all paths in πi may have an exponential complexity. On the other hand, it can be easily observed
+that, a node S belongs to Sπi if and only if there exists a path
+from S to E passing through R (a path from S to E passing
+through R also includes the path where S itself belongs to
+R). Similarly, S belongs to S̄πi if and only if there does not
+exist a path from S to E passing through R. It is relatively
+easy to check the existence of a path between two nodes.
+In our algorithm, we examine the existence of a path from
+S to E passing through R by checking whether there exists
+a node R ∈ R so that R is S ’s decedent and E is R’s decedent. The subroutine of finding Sπi and S̄πi is presented in the
+pseudo-code below, where De(·) denotes the decedents of a
+node. Since the decedents of all the nodes involved in the
+algorithm can be obtained by traversing the network starting
+from C within the time of O(|A|), the computational complexity of this procedure is given by O(|V|2 + |A|).
+
+(4)
+
+O∈V\({C}∪Ch(C))
+
+− P(e+ |c− ).
+How to deal with the opposite situation will be discussed
+later in the next section.
+
+Input : Historical dataset D, protected attribute C, decision
+attribute E, user-defined parameter τ.
+Output: Judgment of direct and indirect discrimination
+judged , judgei .
+G = buildCausalNetwork(D);
+judged = judgei = f alse;
+Compute S Eπd (·) according to Equation (3);
+if S Eπd (c+ , c− ) > τ k S Eπd (c− , c+ ) > τ then
+judged = true;
+
+1
+2
+3
+4
+5
+6
+7
+
+Sπi = ∅, S̄πi = ∅;
+foreach S ∈ Ch(C)\{E} do
+foreach R ∈ R do
+if R ∈ De(S ) ∪ {S } && E ∈ De(R) then
+Sπi = Sπi ∪ {S };
+else
+S̄πi = S̄πi ∪ {S };
+
+Discrimination Discovery and Removal
+Discrimination Discovery
+We propose a Path-Specific based Discrimination Discovery (PSE-DD) algorithm based on Theorem 2. It first builds
+the causal network from the historical dataset, and then computes S Eπd and S Eπi according to Equations (3) and (4). The
+procedure of the algorithm is shown in Algorithm 1.
+
+Discrimination Removal
+When direct or indirect discrimination is claimed for a
+dataset, the discriminatory effects need to be removed before
+the dataset is released for predictive analysis (e.g., building
+a classifier). A naive approach would be simply not using
+
+the protected attribute when building the predictive model,
+which often incur significant utility loss. In addition, this approach can eliminate direct discrimination, but indirect discrimination still presents.
+We propose a Path-Specific Effect based Discrimination
+Removal (PSE-DR) algorithm to remove both direct and
+indirect discrimination. The general idea is to modify the
+causal network and then use it to generate a new dataset.
+Specifically, we modify the CPT of E, i.e., P(e|Pa(E)), to
+obtain a new CPT P0 (e|Pa(E)), so that the direct and indirect discriminatory effects are below the threshold τ. To
+maximize the utility of the modified dataset, we minimize
+the Euclidean distance between the joint distribution of the
+original causal network (denoted by P(v)) and the joint distribution of the modified causal network (denoted by P0 (v)).
+As a result, we obtain the following quadratic programming
+problem.
+X
+2
+minimize
+P0 (v) − P(v)
+V
+
+subject to
+
+S Eπd (c+ , c− ) ≤ τ,
++
+
+S Eπi (c , c ) ≤ τ,
+−
+
+S Eπd (c− , c+ ) ≤ τ,
+S Eπi (c− , c+ ) ≤ τ,
+
+∀Pa(E), P0 (e− |Pa(E)) + P0 (e+ |Pa(E)) = 1,
+∀Pa(E), e, Pr0 (e|Pa(E)) ≥ 0,
+where P0 (v) and P(v) are computed according to Equation (1) using P0 (e|Pa(E)) and P(e|Pa(E)) respectively, and
+S Eπd (·) and S Eπi (·) are computed according to Equations (3)
+and (4) respectively using P0 (e|Pa(E)). The optimal solution
+is obtained by solving the quadratic programming problem.
+After that, the joint distribution of the modified causal network is computed using Equation (1), and the new dataset is
+generated based on the joint distribution. The procedure of
+PSE-DR is shown in Algorithm 2.
+
+The computational complexity of PSE-DR depends on the
+complexity of solving the quadratic programming problem.
+It can be easily shown that, the coefficients of the quadratic
+terms in the objective function form a positive definite matrix. According to (Kozlov, Tarasov, and Khachiyan 1980),
+the quadratic programming can be solved in polynomial
+time. Finally, it is also worth noting that our approach can
+be easily extended to handle the situation where either direct or indirect discrimination needs to be removed.
+
+Dealing with Unidentifiable Situation
+As stated in Theorem 1, when the recanting witness criterion
+is satisfied, the πi -specific effect cannot be estimated from
+the observational data. However, the structure of the recanting witness criterion implies indirect discrimination as there
+exist causal paths from C to E passing through the redlining attributes. From the data owners’ perspective, they may
+want to ensure non-discrimination even though the discriminatory effect cannot be accurately measured. In this case, we
+remove discrimination by adapting Algorithm 2 as follows.
+Recall that Sπi ∩ S̄πi , ∅ if and only if the recanting witness
+criterion is satisfied. For each node S ∈ Sπi ∩ S̄πi , we cut off
+all the causal paths from S to E that pass through R, so that
+S would not belong to Sπi any more. Then, we must have
+Sπi ∩ S̄πi = ∅ after the modification. To cut off the paths, we
+focus on the arc from E’s each parent Q, i.e., Q → E. If
+these exists a path from S to Q passing through R, then arc
+Q → E is removed from the network. The pseudo-code of
+this procedure is shown below, which can be added before
+line 1 in Algorithm 2 to deal with this situation.
+1
+2
+3
+
+Algorithm 2: PSE-DR
+
+1
+2
+3
+4
+
+Input : Historical dataset D, protected attribute C, decision
+attribute E, use-defined redlining attributes R,
+user-defined parameter τ.
+Output: Modified dataset D∗ .
+Obtain the modified CPT of E by solving the quadratic
+programming problem;
+Calculate P∗ (v) according to Equation (1) using the modified
+CPTs;
+Generate D∗ based on P∗ (v);
+return D∗ ;
+
+For discrimination removal, it is crucial to ensure that not
+only the modified data does not contain discrimination, but
+also the predictive models built on it will not incur biased
+decision. The goal of a predictive model is to learn from data
+the computational relationship between E and all the other
+attributes, which is captured by the CPT of E in the causal
+network. In our approach, we modify only the CPT of E
+to remove discrimination. Therefore, we can ensure that the
+predictive models can learn these modifications and will not
+incur discrimination in decision making. We will evaluate
+this result in the experiments.
+
+4
+5
+6
+7
+
+if Sπi ∩ S̄πi , ∅ then
+foreach S ∈ Sπi ∩ S̄πi do
+foreach Q ∈ Pa(E) do
+foreach R ∈ R do
+if R ∈ De(S ) && Q ∈ De(R) then
+Remove arc Q → E from G;
+Break;
+
+Experiments
+In this section, we conduct experiments using two real
+datasets: the Adult dataset (Lichman 2013) and the Dutch
+Census of 2001 (Netherlands 2001). We compare our algorithms with the local massaging (LMSG) and local preferential sampling (LPS) algorithms proposed in (Žliobaitė,
+Kamiran, and Calders 2011) and disparate impact removal
+algorithm (DI) proposed in (Feldman et al. 2015; Adler et al.
+2016). The causal networks are constructed and presented
+by utilizing an open-source software TETRAD (Glymour
+and others 2004). We employ the original PC algorithm
+(Spirtes, Glymour, and Scheines 2000) and set the significance threshold 0.01 for conditional independence testing in
+causal network construction. The quadratic programming is
+solved using CVXOPT (Dahl and Vandenberghe 2006).
+
+race
+
+age
+
+sex
+
+native_country
+
+marital_status
+
+edu_level
+
+occupation
+
+hours_per_week
+
+workclass
+
+relationship
+
+income
+
+Figure 3: Causal network for Adult dataset: the green path represents the direct path, and the blue paths represent the indirect
+paths passing through marital status.
+
+Discrimination Discovery
+
+Discrimination Removal
+
+The Adult dataset consists of 65123 tuples with 11 attributes
+such as age, education, sex, occupation, income,
+marital status etc. Since the computational complexity of the PC algorithm is an exponential function of the
+number of attributes and their domain sizes, for computational feasibility we binarize each attribute’s domain values into two classes to reduce the domain sizes. We use
+three tiers in the partial order for temporal priority: sex,
+age, native country, race are defined in the first tier,
+edu level and marital status are defined in the second tier, and all other attributes are defined in the third
+tier. The causal network is shown in Figure 3. We treat
+sex as the protected attribute, income as the decision,
+and marital status as the redlining attribute. The green
+path represents the direct path from sex to income, and
+the blue paths represent the indirect paths passing through
+marital status. We set the discrimination threshold τ as
+0.05. By computing the path-specific effects, we obtain that
+S Eπd (c+ , c− ) = 0.025 and S Eπi (c+ , c− ) = 0.175, which indicate no direct discrimination but significant indirect discrimination against females according to our criterion.
+The Dutch dataset consists of 60421 tuples with 12 attributes. Similarly, we binarize the domain values of attribute age due to its large domain size. Three tiers are
+used in the partial order for temporal priority: sex, age,
+country birth are defined in the first tire, edu level and
+marital status are defined in the second tire, and all other
+attributes are defined in the third tire. The causal graph is
+shown in Figure 4. Similarly we treat sex as the protected attribute, occupation as the decision, and marital status
+as the redlining attribute. For this dataset, S Eπd (c+ , c− ) =
+0.220 and S Eπi (c+ , c− ) = 0.001, indicating significant direct discrimination but no indirect discrimination against females.
+
+We run the removal algorithm PSE-DR to remove discrimination from the Adult and Dutch datasets. Then, we run
+the discovery algorithm PSE-DD to further examine whether
+discrimination is truly removed in the modified datasets. For
+the modified Adult dataset we have S Eπd (c+ , c− ) = 0.013
+and S Eπi (c+ , c− ) = 0.049, and for the modified Dutch
+dataset we have S Eπd (c+ , c− ) = 0.050 and S Eπi (c+ , c− ) =
+0.001. The results show that the modified datasets contain
+no direct and indirect discrimination.
+Discrimination in predictive models. We aim to examine whether the predictive models built from the modified
+dataset incur discrimination in decision making. We use
+the Adult dataset where indirect discrimination is detected,
+and divide the original dataset into the training and testing datasets. First, we remove discrimination from the training dataset to obtain the modified training dataset. Then,
+we build the predictive models from the modified training
+dataset, and use them to make predictive decisions over the
+testing data. Two classifiers, SVM and Decision Tree, are
+used for prediction with five-fold cross-validation. Finally,
+we run PSE-DD to examine whether the predictions for the
+testing data contain discrimination. We also examine the
+data utility (χ2 ) and the prediction accuracy.
+The results are shown in Table 1. As shown in the column
+“PSE-DD”, both the modified training data and the predictions for the testing data contain no direct and indirect discrimination. In addition, PSE-DD produces relatively small
+data utility loss in term of χ2 and good prediction accuracy. For comparison, we include algorithms from previous
+works: LMSG, LPS and DI. For LMSG and LPS, discrimination is not removed even from the training data, and hence
+also exists in the predictions. The DI algorithm provides a
+parameter λ to indicate the amount of discrimination to be
+removed, where λ = 0 represents no modification and λ = 1
+
+sex
+
+age
+
+country_birth
+
+marital_status
+
+edu_level
+
+occupation
+
+prev_residence_place
+
+citizenship
+
+economic_status
+
+household_position
+
+household_size
+
+cur_eco_activity
+
+Figure 4: Causal network for Dutch dataset: the green path represents the direct path, and the blue paths represent the indirect
+paths passing through marital status.
+Table 1: Direct/indirect discriminatory effects in the modified training data and predictions for the testing data. Values
+violating the discrimination criterion are marked in bold.
+Direct
+Train
+Indirect
+χ2 (×104 )
+Direct
+SVM Indirect
+Accu.(%)
+Predict
+Direct
+DTree Indirect
+Accu.(%)
+
+PSE-DD
+0.013
+0.049
+1.620
+0.023
+0.041
+80.54
+0.023
+0.042
+80.55
+
+DI
+0.001
+0.050
+7.031
+0.005
+0.167
+81.47
+0.004
+0.168
+81.38
+
+LMSG
+-0.142
+0.288
+1.924
+-0.124
+0.271
+76.81
+-0.124
+0.271
+76.81
+
+LPS
+-0.142
+0.174
+1.292
+-0.051
+0.192
+76.63
+-0.051
+0.192
+76.64
+
+represents full discrimination removal. However, λ has no
+direct connection with the threshold τ. In our experiments,
+we execute DI multiple times with different λs and report
+the one that is closest to achieve τ = 0.05. As shown in
+the column “DI”, it indeed removes direct and indirect discrimination from the training data. However, as indicated by
+the bold values 0.167/0.168, significant amount of indirect
+discrimination exists in the predictions of both classifiers.
+In addition, its data utility is far more worse than PSE-DR,
+implying that it removes many information unrelated to discrimination.
+
+Related Work
+A number of techniques have been proposed to discover discrimination in the literature. Classification rule-based methods such as elift (Pedreshi, Ruggieri, and Turini 2008) and
+belift (Mancuhan and Clifton 2014) were proposed to represent certain discrimination patterns. (Luong, Ruggieri, and
+
+Turini 2011; Zhang, Wu, and Wu 2016b) dealt with the individual discrimination by finding a group of similar individuals. (Žliobaitė, Kamiran, and Calders 2011) proposed
+conditional discrimination which considers some part of
+the discrimination may be explainable by certain attributes.
+None of these work explicitly identifies direct discrimination, indirect discrimination, and explainable effects. In
+(Bonchi et al. 2015), the authors proposed a framework
+based on the Suppes-Bayes causal network and developed
+several random-walk-based methods to detect different types
+of discrimination. However, the construction of the SuppesBayes causal network is impractical with the large number
+of attribute-value pairs. In addition, it is unclear how the
+number of random walks is related to practical discrimination metrics, e.g., the difference in positive decision rates.
+
+Proposed methods for discrimination removal are either
+based on data preprocessing (Kamiran and Calders 2012;
+Žliobaitė, Kamiran, and Calders 2011) or algorithm tweaking (Kamiran, Calders, and Pechenizkiy 2010; Calders and
+Verwer 2010; Kamishima, Akaho, and Sakuma 2011). In a
+recent work (Feldman et al. 2015), the authors first ensure no
+direct discrimination by completely removing the protected
+attribute C from data, and then modify all the non-protected
+attributes to ensure that C cannot be predicted from the nonprotected attributes. As a result, indirect discrimination is removed since the decision E has no connection with C via the
+non-protected attributes. However, as shown in our experiment results, this approach cannot ensure that predictions
+made by the classifier built on the modified data do not contain discrimination. In addition, it suffers significant utility
+loss as it removes all the connections between C and E.
+
+Conclusions
+In this paper, we studied the problem of discovering both
+direct and indirect discrimination from the historical data,
+and removing the discriminatory effects before performing
+predictive analysis. We made use of the causal network to
+capture the causal structure of the data, and modeled direct
+and indirect discrimination as different path-specific effects.
+Based on that, we proposed the discovery algorithm PSEDD to discover both direct and indirect discrimination, and
+the removal algorithm PSE-DR to remove them. The experiments using real datasets show that, only our approach can
+ensure that the predictive models built from the modified
+data are not subject to any type of discrimination.
+
+References
+Adler, P.; Falk, C.; Friedler, S. A.; Rybeck, G.; Scheidegger,
+C.; Smith, B.; and Venkatasubramanian, S. 2016. Auditing
+Black-box Models by Obscuring Features.
+Aliferis, C. F.; Statnikov, A.; Tsamardinos, I.; Mani, S.; and
+Koutsoukos, X. D. 2010. Local causal and markov blanket
+induction for causal discovery and feature selection for classification part i: Algorithms and empirical evaluation. Journal of Machine Learning Research 11(Jan):171–234.
+Avin, C.; Shpitser, I.; and Pearl, J. 2005. Identifiability of
+path-specific effects. In IJCAI’05, 357–363.
+Bonchi, F.; Hajian, S.; Mishra, B.; and Ramazzotti, D. 2015.
+Exposing the probabilistic causal structure of discrimination. CoRR abs/1510.00552.
+Calders, T., and Verwer, S. 2010. Three naive bayes approaches for discrimination-free classification. Data Mining
+and Knowledge Discovery 21(2):277–292.
+Colombo, D., and Maathuis, M. H.
+2014.
+Orderindependent constraint-based causal structure learning.
+JMLR 15(1):3741–3782.
+Dahl, J., and Vandenberghe, L. 2006. Cvxopt: A python
+package for convex optimization. In Proc. eur. conf. op. res.
+Feldman, M.; Friedler, S. A.; Moeller, J.; Scheidegger, C.;
+and Venkatasubramanian, S. 2015. Certifying and removing
+disparate impact. In KDD, 259–268. ACM.
+Glymour, C., et al. 2004. The TETRAD project. http:
+//www.phil.cmu.edu/tetrad.
+Hajian, S., and Domingo-Ferrer, J. 2013. A methodology for
+direct and indirect discrimination prevention in data mining.
+JKDE 25(7):1445–1459.
+Heckerman, D., and Breese, J. S. 1994. A new look at
+causal independence. In Proceedings of the Tenth international conference on Uncertainty in artificial intelligence,
+286–292. Morgan Kaufmann Publishers Inc.
+Heckerman, D., and Breese, J. S. 1996. Causal independence for probability assessment and inference using
+bayesian networks. IEEE Transactions on Systems, Man,
+and Cybernetics-Part A: Systems and Humans 26(6):826–
+831.
+Kalisch, M., and Bühlmann, P. 2007. Estimating highdimensional directed acyclic graphs with the pc-algorithm.
+The Journal of Machine Learning Research 8:613–636.
+
+Kamiran, F., and Calders, T. 2012. Data preprocessing
+techniques for classification without discrimination. KAIS
+33(1):1–33.
+Kamiran, F.; Calders, T.; and Pechenizkiy, M. 2010. Discrimination aware decision tree learning. In ICDM, 869–
+874. IEEE.
+Kamishima, T.; Akaho, S.; and Sakuma, J. 2011. Fairnessaware learning through regularization approach. In ICDMW,
+643–650. IEEE.
+Koller, D., and Friedman, N. 2009. Probabilistic graphical
+models: principles and techniques. MIT press.
+Kozlov, M. K.; Tarasov, S. P.; and Khachiyan, L. G. 1980.
+The polynomial solvability of convex quadratic programming. USSR Computational Mathematics and Mathematical
+Physics 20(5):223–228.
+Lichman, M. 2013. UCI machine learning repository. http:
+//archive.ics.uci.edu/ml.
+Luong, B. T.; Ruggieri, S.; and Turini, F. 2011. k-nn as an
+implementation of situation testing for discrimination discovery and prevention. In KDD, 502–510. ACM.
+Mancuhan, K., and Clifton, C. 2014. Combating discrimination using bayesian networks. Artificial intelligence and
+law 22(2):211–238.
+Neapolitan, R. E., et al. 2004. Learning bayesian networks,
+volume 38. Prentice Hall Upper Saddle River.
+Netherlands, S. 2001. Volkstelling. https://sites.
+google.com/site/faisalkamiran/.
+Pearl, J. 2009. Causality: models, reasoning and inference.
+Cambridge university press.
+Pedreshi, D.; Ruggieri, S.; and Turini, F.
+2008.
+Discrimination-aware data mining. In KDD, 560–568.
+ACM.
+Romei, A., and Ruggieri, S. 2014. A multidisciplinary survey on discrimination analysis. The Knowledge Engineering
+Review 29(05):582–638.
+Ruggieri, S.; Pedreschi, D.; and Turini, F. 2010. Data mining
+for discrimination discovery. TKDD 4(2):9.
+Shpitser, I. 2013. Counterfactual graphical models for longitudinal mediation analysis with unobserved confounding.
+Cognitive science 37(6):1011–1035.
+Spirtes, P.; Glymour, C. N.; and Scheines, R. 2000. Causation, prediction, and search, volume 81. MIT press.
+Tsamardinos, I.; Aliferis, C. F.; Statnikov, A.; and Brown,
+L. E. 2003. Scaling-up bayesian network learning to thousands of variables using local learning techniques. Vanderbilt University DSL TR-03-02.
+Žliobaitė, I.; Kamiran, F.; and Calders, T. 2011. Handling
+conditional discrimination. In ICDM, 992–1001. IEEE.
+Zhang, L.; Wu, Y.; and Wu, X. 2016a. On discrimination
+discovery using causal networks. In Proceedings of SBPBRiMS 2016.
+Zhang, L.; Wu, Y.; and Wu, X. 2016b. Situation testingbased discrimination discovery: a causal inference approach.
+In Proceedings of IJCAI 2016.
+
+

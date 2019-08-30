@@ -1,0 +1,934 @@
+Unbiased Black Box Search Algorithms
+Jonathan E. Rowe
+
+Michael D. Vose
+
+School of Computer Science
+University of Birmingham
+Birmingham, B15 2TT, UK
+
+Claxton Complex
+The University of Tennessee
+Knoxville, TN 37996-3450
+
+vose@eecs.utk.edu
+
+J.E.Rowe@cs.bham.ac.uk
+
+ABSTRACT
+We formalize the concept of an unbiased black box algorithm, which generalises the idea previously introduced by
+Lehre and Witt. Our formalization of bias relates to the
+symmetry group of the problem class under consideration,
+establishing a connection with previous work on No Free
+Lunch. Our definition is motivated and justified by a series of results, including the outcome that given a biased
+algorithm, there exists a corresponding unbiased algorithm
+with the same expected behaviour (over the problem class)
+and equal or better worst-case performance. For the case
+of evolutionary algorithms, it is already known how to construct unbiased mutation and crossover operators, and we
+summarise those results.
+
+Categories and Subject Descriptors
+F.2 [Theory of Computation]: Analysis of Algorithms
+and Problem Complexity
+
+General Terms
+Theory, Algorithms
+
+Keywords
+Black Box Algorithms, Combinatorial Optimization
+
+1.
+
+BACKGROUND
+
+Lehre and Witt consider several restrictions to the classic
+black box optimization scenario, as applied to a search space
+of binary strings [4]. In particular, they consider algorithms
+that explore the search space using specialized operators,
+satisfying the following conditions:
+1. The operators are invariant with respect to bit-wise
+exclusive-or and the permutation of bit positions.
+2. Each operator is some function of a single previously
+sampled element.
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+GECCO’11, July 12–16, 2011, Dublin, Ireland.
+Copyright 2011 ACM 978-1-4503-0557-0/11/07 ...$10.00.
+
+In this paper we are only concerned with generalizations of
+the first condition1 . Lehre and Witt call operators satisfying
+it unbiased, and justify it as “natural” by arguing that the
+bit operators used in Evolutionary Algorithms are typically
+unbiased.
+We seek to understand this condition more formally, with
+a view to generalizing it to arbitrary search spaces and to
+arbitrary problem classes. In so doing, we will demonstrate
+an intimate connection with the No Free Lunch theorems,
+and with recent work on characterizing invariance properties
+of Evolutionary Algorithms [7].
+Our results are quite general and apply to all randomized
+black box search algorithms, and any problem class (defined
+on a finite search space). This is in contrast to [4] which considers only algorithms of a certain form, and for a particular
+search space.
+
+2. BLACK BOX ALGORITHMS
+We begin by summarizing the basic definitions of Black
+Box search algorithms, following notation used in [6].
+Let f : X → Y be a function between finite sets, and let
+yi denote f (xi ). The domain X and co-domain Y are fixed
+for the following discussion, but f may vary.
+Definition: A trace T corresponding to f is a sequence
+"(x0 , y0 ), . . .# of pairs from X × Y where the x components
+are unique; T is a trace if it is a trace corresponding to some
+f . The following notation will be used,
+T∗
+Tx
+Ty
+
+= {(x0 , y0 ), . . .} set of pairs of components
+= "x0 , . . .#
+sequence of x components
+= "y0 , . . .#
+sequence of y components
+
+In particular, T ∗ ⊆ f . The performance sequence associated
+with trace T is Ty ; a performance sequence is a performance
+sequence associated with some trace. A function mapping
+performance sequences to R is a performance measure.
+Definition: Trace T corresponding to f is total if T ∗ = f .
+A partial trace is one which is not total. The set of all partial
+traces corresponding to function f is denoted by T (f ), and
+T is defined by
+[
+T (f )
+T =
+f
+
+Definition: A search operator is a function g : T → X
+which maps a partial trace T to some element not occurring
+1
+Those readers interested in restrictions on operator arity
+might like to see [1] for further analysis.
+
+in Tx .
+Definition: A deterministic non-repeating Black Box search
+algorithm A corresponds to a search operator g, and will be
+referred to simply as an algorithm. Algorithm A applied to
+function f is denoted by Af , and maps traces to traces
+
+T & (g(T ), f ◦ g(T )) if T ∈ T (f )
+Af (T ) =
+T
+otherwise
+where & is the concatenation operator.
+In procedural terms, algorithm A runs on function f by
+beginning with the empty trace ∅, and repeatedly applying
+Af ; we denote by A(f ) the total trace produced (by running
+A on f to convergence); note that A(f )∗ = f . Algorithms
+A and A" are regarded as equal if and only if A(f ) = A" (f )
+for all f .
+Definition: A randomized black box search algorithm is
+identified with a probability vector µ having components
+indexed by algorithms, and will be referred to simply as a
+randomized algorithm. The total trace µ(f ) resulting from
+applying µ to f is A(f ) with probability µA .
+In procedural terms, randomized algorithm µ runs on f by
+choosing A with probability µA and then applying algorithm
+A to f . Note that the collection of randomized algorithms
+contains the set of (deterministic) algorithms.
+Randomized algorithms µ and µ" are equivalent, denoted
+by µ ≡ µ" , if and only if for all f and all T
+Prob{µ(f ) = T } = Prob{µ" (f ) = T }
+
+Following Schumacher [8], given permutation σ : X → X
+and algorithm A corresponding to search operator g, the
+algorithm σA corresponds to the search operator σg, which
+is defined to act on any given trace T as follows:
+σg(T ) = σ −1 (g(σx(T )))
+and σx maps traces to traces as follows: σx (∅) = ∅, and if
+T = "(x0 , y0 ), . . . , (xγ−1 , yγ−1 )#, then
+σx (T ) = "(σ(x0 ), y0 ), . . . , (σ(xγ−1 ), yγ−1 )#
+(i.e., σx applies σ to the x components of T ). Moreover,
+given f : X → Y, define σf to be f ◦ σ −1 . Composition of
+permutations will be denoted by juxtaposition.
+Lemma 1. ([3]) For all algorithms A, and permutations
+σ, σ " ,
+σ " (σA) = (σσ " )A
+Moreover, ι A = A where ι is the identity permutation.
+Following Duenez-Guzman [3], given randomized algorithm
+µ, define the randomized algorithm σµ by
+(σµ)A = µσ −1 A
+In procedural terms, to run σµ on f amounts to choosing
+A with probability µA and then running algorithm σA on
+f . A performance measure m is extended to randomized
+algorithms in the natural way; the performance of µ on f as
+measured by m is
+X
+m(µ, f ) =
+m(A(f )y ) µA
+A
+
+Note how m is polymorphic: a performance measure m maps
+performance sequences to values, whereas the performance
+of µ on f as measured by m is the corresponding expected
+value.
+Theorem 1. ([3]) Given randomized algorithm µ, function
+f , performance measure m, and permutation σ,
+m(σµ, f ) = m(µ, σf )
+The expected performance of randomized algorithm µ over
+a set of functions F ⊆ Y X is
+1 X
+E (µ, F) =
+m(µ, f )
+|F|
+f ∈F
+
+and is referred to as expected average performance (one
+might argue it would be natural to call it average expected
+performance, but the average and expectation commute).
+Lemma 2. ([3]) E (·, ·) is linear in its first argument.
+Theorem 2. ([3]) For all randomized algorithms µ, all permutations σ ∈ X !, and all F ⊆ Y X ,
+E (σµ, F) = E (µ, σF)
+Note that choosing F to be a singleton set reduces Lemma 2
+and Theorem 2 to statements about m(µ, f ).
+
+3. UNBIASED ALGORITHMS
+Given a search space X , we are often not concerned with
+the set Y X of all functions from X to some value set Y, but
+with a subset of Y X corresponding to a particular problem
+class (e.g. functions corresponding to MAXSAT instances).
+Moreover, we are often not concerned with the set X ! of all
+permutations of X . Indeed, a criticism of the No Free Lunch
+theorem is that it only applies to sets of functions which are
+permutation closed [8], and sets of functions corresponding
+to traditional combinatorial problem classes do not typically
+have that property. This leads us to restrict attention to
+those permutations of the search space which preserve the
+problem class.
+Definition 1. Given F ⊆ Y X , let G(F) denote the set of
+permutations preserving F,
+G(F) = {σ ∈ X ! | σf ∈ F for all f ∈ F}
+Note that G(F) is a subgroup of X ! (both are closed under
+composition – which is an associative binary operator – and
+both are closed under the formation of inverses), and
+σG(F) = G(F) = G(F)σ
+σF = F
+
+for all σ ∈ G(F).2
+
+A central question left open by [4] is: how do we determine
+the permutations with respect to which an algorithm should
+be invariant?
+Definition 2. A randomized algorithm µ is unbiased with
+respect to a problem class F ⊆ Y X if and only if µ ≡ σµ for
+all σ ∈ G(F).
+2
+We follow the usual convention that σS = {σs | s ∈ S} and
+Sσ = {sσ | s ∈ S}.
+
+Examples are presented in the next section illustrating how
+this definition captures and generalizes concepts in [4]. The
+following theorems justify the definition, and relate this work
+to the Focused No Free Lunch theorems of [3, 9].
+Theorem 3. Let µ be any randomized algorithm, and let
+F ⊆ Y X be any problem class. For all σ ∈ G(F),
+E (σµ, F) = E (µ, F)
+regardless of the choice of performance measure.
+Proof. Since σ ∈ G(F) =⇒ σF = F, Theorem 2 yields
+E (σµ, F) = E (µ, σF) = E (µ, F)
+When µ is unbiased, the previous result is a triviality,
+since µ ≡ σµ. However, when µ is biased, the theorem
+implies there are non-equivalent algorithms with the same
+expected average performance. [3, 9].
+Definition 3. Given randomized algorithm µ and problem
+class F ⊆ Y X , define the randomized algorithm
+X
+1
+σµ
+F(µ) =
+|G(F)|
+σ∈G(F )
+
+Theorem 4. Given randomized algorithm µ and problem
+class F ⊆ Y X ,
+σ(F(µ)) = (σF)(µ) = F(µ)
+for all σ ∈ G(F). In particular, F(µ) is unbiased.
+Proof. Lemma 1, together with the fact that G(F) is a
+group yield
+(σ(F(µ)))A
+
+= F(µ)σ −1 A
+X
+1
+=
+(σ " µ)σ −1 A
+|G(F)| "
+=
+=
+=
+=
+
+1
+|G(F)|
+1
+|G(F)|
+1
+|G(F)|
+1
+|G(F)|
+
+Note that, so far, we have placed no restrictions on what a
+performance measure might be. However, it often happens,
+of course, that we are interested in the task of optimization
+of functions, and we now consider performance measures
+that may be related to this task.
+Definition 4. A performance measure m is monotone if
+either higher performance values are interpreted as superior
+performance (for example, if we were interested in finding
+the local optima, and m counted the number encountered
+before some cutoff time), or else lower values are interpreted
+as superior performance (for example, if we were interested
+in finding a global optimum, and m counted the number of
+function evaluations made before encountering one).
+We now show that to any randomized algorithm, there
+corresponds an unbiased randomized algorithm having equal
+expected average performance. Moreover, if the performance
+measure is monotone, the unbiased algorithm cannot have
+inferior worst-case expected performance.
+Theorem 6. Given randomized algorithm µ and problem
+class F ⊆ Y X , the unbiased randomized algorithm F(µ)
+has the same expected average performance as µ. Assuming
+the performance measure is monotone: F(µ) cannot have
+inferior worst-case expected performance; if the expected
+performance of µ varies over the orbits of F under G(F),3
+then F(µ) has superior worst-case expected performance.
+Proof. Theorem 4 shows F(µ) is unbiased. Appealing
+to Lemma 2 and Theorem 3,
+X
+1
+E (σµ, F)
+E (F(µ), F) =
+|G(F)|
+σ∈G(F )
+
+=
+
+σ ∈G(F )
+
+X
+
+σ " ∈G(F )
+
+X
+
+σ " ∈G(F )
+
+X
+
+σ " ∈G(F )
+
+X
+
+µσ " −1 (σ −1 A)
+µ(σ " σ)−1 A
+((σ " σ)µ)A
+
+X
+
+σ∈G(F )
+
+E (µ, F)
+
+To see that the worst-case expected performance cannot be
+inferior, suppose µ exhibits worst (maximal) performance
+value at f ∗ ∈ F. Appealing to Lemma 2 (see the comment
+beneath Theorem 2), for any f ∈ F,
+X
+1
+m(σµ, f )
+m(F(µ), f ) =
+|G(F)|
+=
+
+1
+|G(F)|
+
+X
+
+≤
+
+Theorem 5. Given randomized algorithm µ and problem
+class F ⊆ Y X ,
+
+1
+|G(F)|
+
+=
+
+m(µ, f ∗ )
+
+F(F(µ)) = F(µ)
+Proof. Appealing to Theorem 4,
+X
+1
+F(F(µ)) =
+σF(µ)
+|G(F)|
+σ∈G(F )
+
+1
+|G(F)|
+
+= F(µ)
+as required.
+
+X
+
+σ∈G(F )
+
+F(µ)
+
+m(µ, σf )
+
+σ∈G(F )
+
+as required.
+
+=
+
+E (µ, F)
+
+σ∈G(F )
+
+(τ µ)A
+
+τ ∈G(F )
+
+= F(µ)A
+
+=
+
+1
+|G(F)|
+
+X
+
+m(µ, f ∗ )
+
+σ∈G(F )
+
+If a minimal performance value means worst performance,
+then the inequality above reverses, so the same conclusion
+(F(µ) cannot have inferior worst-case expected performance)
+is obtained. When the expected performance of µ varies over
+the orbits of F, the worst-case expected performance of F(µ)
+is superior since the inequality is strict.
+Recall that the black box complexity of a problem class F
+is the minimum worst-case expected optimization time for
+3
+The orbit of f is {σf | σ ∈ G(F)}, and the orbits of F are
+the orbits of f ∈ F.
+
+functions in F over all black box algorithms [2]. Consequently, we have
+Corollary 1. The black box complexity of a problem class
+is the same as the unbiased black box complexity of that
+class.
+
+4.
+
+EXAMPLES
+
+(σA)(f ) = T . Let T k be the restriction of T to {0, . . . , k}.4
+We induct on k to show σ exists such that (σA)k+1
+(∅) = T k .
+f
+Let A correspond to search operator g.
+Base case k = 0:
+
+Choose σ such that σ(x0 ) = g(∅).
+Inductive case (σA)kf (∅) = T k−1 :
+
+4.1 Random search
+We now consider random search from the perspective of
+the formalism developed in sections 2 and 3. Intuitively,
+each step of random search is conducted by ignoring the
+partial trace describing how search has so far progressed, and
+selecting a new random point of X to visit. By recording
+the sequence of points visited, one could produce a trace
+T describing how random search happened to explore the
+search space. Note that a deterministic algorithm — which
+had trace T hard-coded into its search operator — could
+explore X by visiting the same points in the same order.
+It follows that random search is behaviorally equivalent to
+randomly choosing and using some deterministic algorithm.
+Let E be the “enumeration algorithm” corresponding to
+the search operator
+g(T ) = x|T |
+where X = {x0 , . . . , xn } and | T | is the number of elements
+in sequence T . It follows that
+
+(σA)f ((σA)kf (∅))
+=
+=
+
+T k−1 & (σ −1 (g(σx (T k−1 ))), f (g(σx (T k−1 ))))
+
+Tk
+T k−1 & (xk , yk )
+
+Choose σ such that σ(xk ) = g(σx (T k−1 )); there can be no
+conflicts with previous constraints on the choice of σ, since
+g(σx (T k−1 )) ∈ X \ {σ(x0 ), . . . , σ(xk−1 )}. It follows that
+there is a unique σ such that (σA)(f ) = T ; all choices in
+the inductive construction are forced, and the construction
+defines σ for all x ∈ X .
+Theorem 7. If – as in the No Free Lunch scenario – the
+problem class F is permutation closed (G(F) = X !), then
+Prob{F(µ)(f ) = T } =
+Proof. Appealing to Lemma 3,
+Prob{F(µ)(f ) = T }
+
+Appealing to the duality theorem (see [6] for example),
+σx (E(σ −1 f ))
+σx (E(f ◦ σ))
+σx "(x0 , f (σ(x0 ))), . . . , (xn , f (σ(xn )))#
+"(σ(x0 ), f (σ(x0 ))), . . . , (σ(xn ), f (σ(xn )))#
+
+=
+
+σ∈X !
+
+= 1
+Lemma 3. Given algorithm A, function f , and trace T ,
+X
+[(σA)(f ) = T ] = [T ∗ = f ]
+
+=
+=
+=
+=
+=
+=
+
+F(µ)A [A(f ) = T ]
+
+X 1 X
+(σµ)A [A(f ) = T ]
+|X !|
+A
+σ∈X !
+1 X X
+µ −1 [A(f ) = T ]
+|X !| σ∈X ! A σ A
+1 X X
+µA [(σA)(f ) = T ]
+|X !|
+σ∈X ! A
+X
+1 X
+µA
+[(σA)(f ) = T ]
+|X !| A
+σ∈X !
+1 X
+µA [T ∗ = f ]
+|X !| A
+[T ∗ = f ]
+|X |!
+
+Theorem 8. If – as in the No Free Lunch scenario – the
+problem class F is permutation closed (G(F) = X !), then
+F(µ) ≡ u
+for every randomized algorithm µ.
+Proof. Let e be the randomized algorithm defined by
+
+σ∈X !
+
+Proof. If T ∗ .= f , then (σA)(f )∗ = f .= T ∗ and both
+sides above are zero. Therefore assume T ∗ = f . The proof
+is completed by showing there exists a unique σ for which
+
+X
+A
+
+If we were interested in uniform random search, then it is
+natural to choose σ uniformly (so every enumeration of X
+is equally likely); the corresponding randomized algorithm
+u is defined by
+1 X
+uA =
+[A = σ −1 E]
+|X !| σ∈X !
+where [expression] is 1 if expression is true, and 0 otherwise.
+Lemma 1 implies the map A -→ σA is bijective (its inverse
+is A -→ σ −1 A), hence
+X
+1 X X
+uA =
+[σA = E]
+|X
+!| σ∈X ! A
+A
+1 X
+1
+=
+|X !|
+
+[T ∗ = f ]
+|X |!
+
+for every randomized algorithm µ.
+
+E(f ) = "(x0 , f (x0 )), . . . , (xn , f (xn ))#
+(σ −1 E)(f ) =
+=
+=
+=
+
+= "(σ −1 (g(∅)), f (σ −1 (g(∅))))#
+= "(x0 , y0 )#
+
+(σA)f (∅)
+T0
+
+eA = [A = E]
+4
+
+A sequence is a function mapping i (from some index set)
+to the ith element of the sequence.
+
+Note that
+F(e)A
+
+=
+=
+=
+=
+
+1 X
+(σe)A
+|X !|
+σ∈X !
+1 X
+e −1
+|X !| σ∈X ! σ A
+1 X −1
+[σ A = E]
+|X !| σ∈X !
+
+uA
+
+Hence u = F(e), and by Theorem 7,
+Prob{u(f ) = T } =
+
+[T ∗ = f ]
+= Prob{F(µ)(f ) = T }
+|X |!
+
+for every randomized algorithm µ.
+
+If f is an objective function corresponding to a particular
+problem instance, then f ◦ σ corresponds to an instance in
+which the labels of the original problem have been permuted
+by π. Unbiased black box algorithms for TSP would have
+to be invariant with respect to such permutations.
+
+4.4 Subset Sum
+The goal of the subset sum problem is to find a non-empty
+subset of a given a finite set {z1 , . . . , zn } of integers whose
+sum is as close as possible to zero. Let the search space
+again be a set of binary strings representing possible subsets
+(the i th bit indicates whether the subset contains i). Given
+the objective function
+(
+∞
+if x = 0 · · · 0
+f (x) =
+P
+otherwise
+i zi [xi = 1]
+
+Theorems 6 and 8 not only show any algorithm has the
+same expected average performance as random search (over
+a permutation-closed problem class), but also that random
+search has the best worst-case expected performance. It
+should be appreciated that the extent to which the results
+in this section are intuitive is one measure of success in our
+being able to formally demonstrate the appropriateness of
+our formalism.
+
+permutations of the search space given by exclusive-or with
+a mask (as in the MAXSAT example) will not preserve the
+problem class, since the value of the zero string will not
+be infinite. Permutations reordering bit positions are allowed however. We see that for this problem class, the unbiased algorithms are not necessarily invariant with respect
+to exclusive-or.
+
+4.2 MAXSAT
+
+4.5 Vertex Cover
+
+Let the search space be binary strings of length n and
+suppose a binary string represents a truth-assignment for a
+MAXSAT problem on n variables (the i th bit is the value
+of xi ). Given a MAXSAT instance with objective function
+f , we are interested in permutations σ such that f ◦ σ is also
+a MAXSAT objective function.
+One way to obtain such a permutation is to exclusive-or
+the bits with a fixed binary string. This will have the effect
+of negating certain literals in the MAXSAT instance. For
+example, suppose the MAXSAT instance is
+
+Given a graph, the vertex cover problem is to find the
+smallest set of vertices so that every edge is connected to
+some vertex in the set. It is easy to see that re-ordering the
+vertices in the graph gives another problem instance. By
+our definition, an unbiased algorithm should be invariant
+with respect to such re-orderings. A genetic algorithm that
+uses one-point crossover would not be unbiased, because the
+behavior would depend on the particular vertex ordering.
+If we can find a good ordering of vertices, it may happen
+that one-point crossover is particularly effective. However,
+incorporating an optimal vertex ordering into the algorithm
+prevents it from being black box – since knowledge of the
+problem instance is required. But if we restrict attention to
+that subset of vertex cover problems for which the vertex
+ordering is optimal, then our one-point crossover algorithm
+is black box with respect to that subset. Moreover, since
+now vertex re-orderings do not preserve the problem class,
+the algorithm does not need to be invariant with respect to
+them in order to be unbiased.
+
+(x1 , ¬x3 , x5 ) ∧ (¬x1 , x2 , x4 ) ∧ (x2 , x3 , ¬x5 )
+and f is the corresponding objective function which counts
+how many clauses are satisfied by a given truth assignment.
+Let σ be the permutation given by applying the mask 11001.
+Then f ◦ σ corresponds to the MAXSAT instance
+(¬x1 , ¬x3 , ¬x5 ) ∧ (x1 , ¬x2 , x4 ) ∧ (¬x2 , x3 , x5 )
+A second type of permutation preserving this problem
+class arises from re-ordering the bit positions. Suppose π
+re-orders the bits as b1 b2 b3 b4 b5 -→ b5 b4 b3 b2 b1 . Then f ◦ π
+corresponds to the MAXSAT instance
+(x5 , ¬x3 , x1 ) ∧ (¬x5 , x4 , x2 ) ∧ (x4 , x3 , ¬x1 )
+These types of permutations correspond exactly to those
+considered by Lehre and Witt to define unbiased operators.
+Our definition of unbiased with respect to a problem class
+both captures and generalizes the symmetry concepts they
+consider in [4].
+
+4.3 Traveling Salesman
+Let the search space be the set of all permutations of the
+labels {1, 2, . . . , n}. We consider functions corresponding to
+traveling salesman problems. Fix a permutation π from the
+search space. Let σ be the permutation of the search space
+given by
+σ(x) = π ◦ x
+
+5. LINEAR SUBSET PROBLEMS
+It would be helpful to have a generic way to deduce the set
+of permutations which preserve a given search space. We can
+provide a partial answer for the situation where the problem
+class has a certain algebraic form, as follows (see chapter 19
+of [5] for a similar definition):
+Definition 5. A linear subset problem class is given by a
+set C of components and a collection X of subsets of C,
+forming the search space. Instances of the problem class are
+defined by a weight function w : C −→ R. The objective
+function is then
+X
+w(i)
+f (x) =
+i∈x
+
+Many classical optimisation problems are linear subset
+problems. We give three examples:
+
+Travelling Salesman Problem The components are all
+possible edges between cities. Elements of the search
+space are edge sets forming valid routes. The weight
+function specifies the problem instance by giving the
+cost of each edge (with infinity for edges not in the
+graph).
+MAXSAT The components are all possible clauses that
+can be formed by the literals. An element of the search
+space is a set of clauses which is satisfied by some truth
+assignment. The weight function specifies the problem
+instance by assigning 1 to clauses appearing in the instance and 0 to the remainder.
+MAXCUT The components are pairs of distinct vertices.
+Elements of the search space correspond to subsets of
+vertices; select components for which one vertex is in
+the subset and the other is not. The weight function
+specifies the cost associated with an edge (with zero
+for edges not in the graph).
+Definition 6. Let C and X be the component set and
+search space (respectively) of a linear subset problem class.
+An automorphism of the class is a permutation π : C → C
+for which π(x) ∈ X for all x ∈ X (where we apply π elementwise to the members of x).
+The set of automorphisms forms a group which acts on X .
+
+Theorem 9. Let F ⊆ Y X correspond to a linear subset
+problem class. If π is an automorphism of this class, then
+π ∈ G(F).
+
+Proof. Let C be the component set. Given any instance
+corresponding to a weight function w : C −→ R, we have
+the corresponding objective function
+X
+f (x) =
+w(i)
+i∈x
+
+Note that
+(πf )(x) = f (π −1 (x))
+X
+=
+w(i)
+i∈π −1 (x)
+
+=
+
+X
+
+w(π −1 (j))
+
+j∈x
+
+=
+
+X
+j∈x
+
+(w ◦ π −1 )(j)
+
+Hence the objective function πf corresponds to the instance
+having corresponding weight function w ◦ π −1 .
+Some examples:
+Travelling Salesman Permutations of the set of possible
+edges which will preserve tours must correspond to
+permutations of the cities.
+MAXSAT Permutations of clauses preserving the search
+space include permuting the variables, and negating
+subsets of literals (and combinations of these). These
+give us the invariance properties described by Lehre
+and Witt (and mentioned in the previous section).
+MAXCUT The automorphisms include those arising from
+permuting the labels of the vertices of the graph.
+
+6. EVOLUTIONARY ALGORITHMS
+Lehre and Witt [4] constructed unbiased algorithms by
+using mutation operators which are invariant with respect
+to exclusive-or and re-orderings of bit positions. It would be
+helpful – for the purpose of constructing unbiased algorithms
+– to have a recipe for evolutionary operators guaranteed to
+produce an unbiased algorithm with respect to any search
+space and problem class.
+Fortunately, much is already known about this problem.
+In particular, if the group G(F) acts transitively on the
+search space X ,5 then all mutation and crossover operators
+invariant with respect to G(F) can be constructed (see [7]).
+Mutation is implemented by fixing some element o ∈ X
+and some probability distribution π over X which has the
+property: for all σ ∈ G(F) with σ(o) = o it is the case that
+π(x) = π(σ(x)) for all x ∈ X . To mutate an element x ∈ X:
+1. Pick σ ∈ G(F) so that σ(o) = x.
+2. Pick y ∈ X according to π.
+3. Return σ(y).
+Every mutation operator invariant with respect to G(F) can
+be implemented in this way, by suitable choice of π.
+Crossover is implemented by fixing some element o ∈ X
+and some probability distribution χ over X X , which has the
+property: for all σ ∈ G(F) with σ(o) = o it is the case that
+χ(h) = χ(σ ◦ h ◦ σ −1 ) for all h ∈ X X . To cross over two
+elements x, y ∈ X :
+1. Pick σ ∈ G(F) so that σ(o) = y.
+2. Choose h ∈ X X according to χ.
+3. Return σ(h(σ −1 (x)))
+Every crossover operator invariant with respect to G(F) can
+be implemented in this way, by suitable choice of χ.
+Note that any selection operator, since dependent on fitness values and not on the choice of representation of the
+search space, will always be invariant with respect to any
+group action on X . Consequently, these results mean that
+all unbiased evolutionary algorithms can be completely characterised, provided that G(F) acts transitively on X .
+Returning to the situation described by Lehre and Witt [4],
+they require that the mutation operator commute with the
+group generated by bitwise exclusive-or, and permutation of
+bit positions acting on the space of binary strings of a given
+length. Choosing the all zeros string as o ∈ X , we find that
+it is permutations of bit positions which preserve o. We
+therefore require our probability distribution π over X to
+have the property that strings containing the same number
+of ones (or, equivalently, zeros) should have the same probability. Given x ∈ X , we can take the group element that
+maps o to x to be
+σ : z -−→ z ⊕ x
+We see, then, that any unbiased mutation operator corresponds to first choosing the number of bits to flip (according
+to some distribution) and then flipping exactly that number
+of bits (chosen uniformly).
+5
+
+G(F) acts transitively iff ∀x, y ∈ X . ∃ σ ∈ G(F) . y = σ(x).
+
+7.
+
+CONCLUSIONS
+
+We have given a formal definition of biased and unbiased
+black box algorithms. The definition of bias is relative to
+the particular problem class under consideration. There is a
+surprising link with recent work on focussed No Free Lunch,
+in that there may be a set of algorithms all having the same
+expected performance on a problem class that need not be
+permutation closed. One such algorithm will be unbiased. It
+will not only have the same expected performance but also
+equal or better worst-case expected performance than the
+others. It follows that the black-box complexity of a problem
+class is the same as the unbiased black box complexity of
+that class. This provides one rigourous justification for the
+investigation of unbiased algorithms and their performance
+properties. Moreover, our results apply to any finite problem
+class on any finite search space. We have also summarized
+(in the transitive case) the construction of mutation and
+crossover operators invariant with respect to G(F).
+
+8.
+
+ACKNOWLEDGMENTS
+
+Jonathan Rowe would like to thank the organisers and
+participants of the Dagstuhl Seminar 10361, “Theory of Evolutionary Algorithms”.
+
+9. REFERENCES
+[1] B. Doerr, D. Johannsen, T. Kötzing, P. K. Lehre,
+M. Wagner, and C. Winzen. Faster black-box
+algorithms through higher arity operators. In FOGA
+2011, 2011.
+[2] S. Droste, T. Jansen, K. Tinnefeld, and I. Wegener. A
+new framework for the valuation of algorithms for
+black-box optimization. In Foundations of Genetic
+Algorithms 7. Morgan Kaufmann Publishers, 2003.
+[3] E. Duenez-Guzman. Biological simulations and
+biologically inspired adaptive systems. PhD thesis, The
+University of Tennesee, Knoxville, 2009.
+[4] P. K. Lehre and C. Witt. Black-box search by unbiased
+variation. In GECCO’10, pages 1441–1448, 2010.
+[5] C. Papadimitriou and K. Steiglitz. Combinatorial
+Optimization: Algorithms and Complexity. Dover
+Publications; Unabridged edition, 1998.
+[6] J. E. Rowe, M. D. Vose, and A. H. Wright.
+Reinterpreting no free lunch. Evolutionary
+Computation, 17(1):117–129, 2009.
+[7] J. E. Rowe, M. D. Vose, and A. H. Wright.
+Representation invariant genetic operators.
+Evolutionary Computation, 18(4):635–660, 2010.
+[8] C. Schumacher. Black box search - framework and
+methods. PhD thesis, The University of Tennesee,
+Knoxville, 2000.
+[9] D. Whitley and J. Rowe. Focused no free lunch
+theorems. Proceedings of the 10th Annual Conference
+on Genetic and Evolutionary Computation,
+GECCO-2008, pages 811–818, 2008.
+
+

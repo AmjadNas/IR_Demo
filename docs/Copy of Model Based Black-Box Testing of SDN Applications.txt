@@ -1,0 +1,352 @@
+Model Based Black-Box Testing of SDN Applications
+Jiangyuan Yao∗† , Zhiliang Wang¶† , Xia Yin∗† , Xingang Shi¶† , Jianping Wu∗† and Yahui Li§
+∗
+
+Department of Computer Science and Technology, Tsinghua University
+¶
+Institute for Network Sciences and Cyberspace, Tsinghua University
+†
+Tsinghua National Laboratory for Information Science and Technology (TNLIST)
+§
+College of Software, Jilin University
+
+{yaojy,wzl,yxia,jianping,liyahui@csnet1.cs.tsinghua.edu.cn}
+ABSTRACT
+
+avoid state explosion problem. As the price, STS cannot
+ensure the test coverage for the speciﬁc applications.
+In this paper we propose a model based black-box testing method for SDN applications. First, We use a group of
+parallel component models to describe the system behaviors
+and data structure stored in the applications. An application can be speciﬁed with several component models and
+the data can be passed through these components. Then,
+we propose a test generation approach which can systematically generate data plane test sequences and alleviate state
+explosion. We calculate model composition of a few related
+components. Then we can generate test sequences from the
+composition instead of exploring the global state space of
+the whole system. Finally, we plan to implement our test
+tool based on our model and test generation. This on-going
+tool uses the generated data plane sequences for SDN network simulation traﬃc. It can expose both the design ﬂaws
+and the implementation bugs.
+
+The quality of control plane applications determines reliability of the Software-Deﬁned Networking (SDN). The risk
+of bugs and challenges for testing actually have been increased due to the programmability of SDN. In this paper,
+we propose a model based black-box testing method for SDN applications. We use a group of components to describe
+the data structure stored in the applications and the system behaviors. Based on our models, we present our test
+generation approach and work-in-progress test tool. With
+partial model composition, it can systematically generate
+data plane test sequences and alleviate state explosion.
+
+Categories and Subject Descriptors
+C.2.2 [Network Protocols]: Protocol veriﬁcation; D.2.5
+[Testing and Debugging]: Testing tools
+
+Keywords
+
+entry
+(sw_id, mac)
+variable Pt_f
+
+handler
+
+Software-Deﬁned Networking (SDN); Model-Based Testing
+(MBT); SDN application testing; Test generation;
+
+Null
+Initial
+?<sw_id,*,mac,*>
+!Packet_out(flood)
+REG(handler)
+
+1. INTRODUCTION
+The programmability of Software-Deﬁned Networking (SDN)[6] ease the diﬃculty of new network functions’ development and deployment. Unfortunately, it also brings new
+challenges for testing. Some researchers have worked on testing of SDN applications. NICE[2] employed model checking
+for testing OpenFlow applications. It uses the assignments
+of the variables in the source codes as states of the models. It is hard to discover implementation faults by whitebox method. Furthermore, the source code based models
+may become time-consuming or even lead to space explosion due to details. Similarly, Vericon[1] and FlowLog[4]
+extract model from source codes for veriﬁcation. They are
+both white-box methods. STS[7] proposed a black-box fuzz
+tester for SDN applications. The network events were generated based on probability. Without formal models, it can
+
+Recorded
+
+Listen
+
+?Packet-in-LLDP
+Drop()
+
+?Packet-in-non-LLDP
+!{entry(dpid,src):<dpid,src,dst,inport>}
+&entry(dpid,dst):<dpid,src,dst,inport>}
+
+?<sw_id,mac,*,p>
+Pt_f:=p
+
+?<sw_id,*,mac,Pt_f>
+!Packet_out(flood)
+
+?<sw_id,*,mac,¬ Pt_f>
+!{Packet_out(Pt_f)
+&Flow_mod(fwd_Pt_f)}
+?<sw_id,mac,*,p'>
+p'!=Pt_f;Pt_f:=p'
+
+Figure 1: Component Models of MAC-learning
+
+2.
+
+FORMAL MODEL
+
+According to SDN architecture, the applications need to
+get global view of the networks. To achieve this target, the
+applications usually need to store some information which
+may be collected by both positive or passive ways.
+In our model, the handler component extracts information from the Packet-In messages and then saves it into data
+table. We use a group of parallel entries components to specify the data table. They deal with speciﬁc data passing from
+handler and output Packet-Out Messages.
+For example, Fig.1 shows the component models of MAClearning[5] application. This application keeps a MAC table for forwarding. Firstly, The handler ﬁlters all LLDP
+messages. Then, it extracts data < dpid, src, dst, inport >
+from other Packet-in messages and sends it to corresponding entries of the MAC table for processing. The entry is
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than
+ACM must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+CoNEXT Student Workshop’14, December 2, 2014, Sydney, Australia.
+Copyright 2014 ACM 978-1-4503-3282-8/14/12 ...$15.00.
+http://dx.doi.org/10.1145/2680821.2680828.
+
+37
+
+identiﬁed by (sw id,mac). The handler sends the data to
+entry(dpid, src) for MAC-learning and entry(dpid, dst) for
+forwarding. The Null state of entry means no this MAC
+in the MAC table. The variable P t f stores the forwarding
+port. When this MAC and ingress port are learned, the entry moves into recorded state. Diﬀerent outputs will be generated according to diﬀerent states of entry(dpid, dst) and
+value of inport. Moreover, the ingress port can be updated
+in recorded state.
+
+derive all paths, we can remove the paths included in the
+others and get the ﬁnal P aths. According to the information of Packet-In messages, we can get the corresponding
+data plane sequences. For example, P acket(A → B)@p1 is
+the data plane packet injected at port p1 with source address
+A and destination address B.
+After test generation, we can use the generated data plane
+sequences as traﬃc template. We replace the MAC addresses and ports with diﬀerent concrete host addresses and interfaces in the topology. Finally we can achieve systematic
+coverage of the topology.
+
+handler_entry(sw_id,A)_entry(sw_id,B)
+?Packet-In(LLDP)/!Drop()
+?REG(handler)/!-
+
+Initial_Null_Null
+?Packet-In(sw_id,A,B,A.Pt_f)/
+!{Packet-Out(p2) &
+Flow-mod(A,B,p2)
+7
+
+?Packet-In(sw_id,B,A,p2)/
+!{Packet-Out(A.Pt_f) &
+Flow-mod(B,A,A.Pt_f)
+
+Listen_Recorded_Recorded
+
+?Packet-In(sw_id,*,B,p2)/
+!Packet-Out(flood)
+
+Listen_Null_Null
+
+1
+
+8
+
+5
+
+3
+
+Functionality
+Documents
+
+2
+
+?Packet-In(sw_id,A,B,p1)/
+!Packet-Out(flood)
+A.Pt_f:=p1
+
+Network
+Invariants
+
+Application
+Under Test
+
+?Packet-In(sw_id,A,B,p1)/
+!Packet-Out(flood)
+?Packet-In(sw_id,A,B,p1')/
+!Packet-Out(flood)
+p1'!=A.Pt_f;A.Pt_f:=p1'
+6
+
+Design Flaws
+
+4.
+
+1.3.6.5
+
+4
+
+1.3.5.7
+
+5
+
+1.3.5.8
+
+Generation
+
+Input/
+Output
+
+Implementation Bugs
+
+TESTING TOOL
+
+Based on our formal model and corresponding test generation, we plan to implement our test tool for black-box
+testing of SDN applications. Fig.4 shows overview of our
+on-going testing tool. First, we model the application under
+test and generate data plane sequences from the model as
+stated in Section 3. Then, we build a simulation of the typical SDN network which suits the application under test and
+inject the data plane traﬃc following the guidance of generated sequences. Finally, we can check the network invariants
+for design ﬂaws and observe the diﬀerence between applications and models for implementation bugs. The simulation
+and invariant checker are developed based on the methods
+of STS[7] and HSA[3].
+
+There may be a lot of data stored in the SDN applications. As a result, if we compose all components together, its
+global state space will go explosion inevitably. However, we
+notice that each entry component behaves in the same way.
+We can systematically cover the application’s behaviors with
+partial model composition. For illustration, as shown in
+Fig.2, we make the partial composition of MAC-Learning
+from its three components, handler, entry (sw id,A) and entry (sw id,B). A and B are abstractions of MAC addresses
+of the data plane packets which trigger the Packet-In messages. Because of the similarities between entry (sw id,A)
+and entry (sw id,B), we can only keep the transitions of
+entry (sw id,A) which are learning and the ones of entry
+(sw id,B) which are forwarding. As a result, the composition can be further reduced.
+
+3
+
+Data Plane
+Sequences
+
+Figure 4: Overview of Our Test Tool
+
+3. TEST GENERATION
+
+Path
+1.2
+1.3.4
+
+SDN Network
+Simulation
+
+Listen_Recorded_Null 4
+
+Figure 2: Partial Composition of MAC-Learning
+
+No
+1
+2
+
+Formal
+Model
+
+Formal
+Modeling
+
+5.
+
+CONCLUSION
+
+In this paper, we propose a model based black-box testing
+method for SDN applications. We specify the applications
+with our model which describes the data structure into a
+group of parallel components. Based on our new model,
+we present a test generation approach to derive data plane
+sequences with partial model composition. It can cover the
+applications behaviors systematically and alleviate the sate
+explosion. For testing practice, we plan to develop our test
+tool using our test generation and SDN network simulation.
+It can expose both design ﬂaws and implementation bugs.
+
+Data Plane Sequences
+P acket(LLDP )
+P acket(A → B)@p1
+P acket(A → B)@p1
+P acket(A → B)@p1′
+P acket(B → A)@p2
+P acket(A → B)@p1
+P acket(B → A)@p2
+P acket(A → B)@p1
+P acket(A → B)@p1
+P acket(B → A)@p2
+P acket(∗ → B)@p2
+
+Acknowledgment
+
+Figure 3: Test Sequences of MAC-Learning
+
+This work is partially supported by the National Natural
+Science Foundation of China (Grant No. 61202357), the
+Project for 2012 Next Generation Internet technology research and development, industrialization, and large scale
+commercial application of China (No. 2012 1763). We also
+thank the support of HPL IRP (HP Labs Innovation Research Program).
+
+Fig.3 shows the result of test generation covering all transitions of the composition. Firstly, we choose a transition
+and ﬁnd the shortest preamble (i.e. the path from initial
+state to the start state of the transition). Then we connect
+the preamble and the transition to get a path. When we
+
+38
+
+6. REFERENCES
+
+[4] T. Nelson, A. D. Ferguson, M. J. Scheer, and
+S. Krishnamurthi. Tierless programming and reasoning
+for software-deﬁned networks. In 11th USENIX
+Symposium on Networked Systems Design and
+Implementation (NSDI 14), pages 519–531, Seattle,
+WA, 2014. USENIX.
+[5] NOX. Pyswitch application.
+https://github.com/noxrepo/nox-classic/blob/
+destiny/src/nox/coreapps/examples/pyswitch.py.
+[6] ONF. White paper (software-deﬁned networking: The
+new norm for networks).
+https://www.opennetworking.org/sdn-resources/
+sdn-library/whitepapers.
+[7] C. Scott, A. Wundsam, B. Raghavan, A. Panda, A. Or,
+J. Lai, E. Huang, Z. Liu, A. El-Hassany, S. Whitlock,
+H. Acharya, K. Zariﬁs, and S. Shenker. Troubleshooting
+blackbox sdn control software with minimal causal
+sequences. In Proceedings of the 2014 ACM Conference
+on SIGCOMM, pages 395–406. ACM, 2014.
+
+[1] T. Ball, N. Bjørner, A. Gember, S. Itzhaky,
+A. Karbyshev, M. Sagiv, M. Schapira, and
+A. Valadarsky. Vericon: Towards verifying controller
+programs in software-deﬁned networks. In Proceedings
+of the 35th ACM SIGPLAN Conference on
+Programming Language Design and Implementation,
+PLDI ’14, pages 282–293. ACM, 2014.
+[2] M. Canini, D. Venzano, P. Perešı́ni, D. Kostić, and
+J. Rexford. A nice way to test openﬂow applications. In
+Presented as part of the 9th USENIX Symposium on
+Networked Systems Design and Implementation (NSDI
+12), pages 127–140, San Jose, CA, 2012. USENIX.
+[3] P. Kazemian, G. Varghese, and N. McKeown. Header
+space analysis: Static checking for networks. In
+Presented as part of the 9th USENIX Symposium on
+Networked Systems Design and Implementation (NSDI
+12), pages 113–126, San Jose, CA, USA, 2012.
+USENIX.
+
+39
+
+

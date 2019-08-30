@@ -1,0 +1,253 @@
+Tutorial
+
+WSDM’18, February 5-9, 2018, Marina Del Rey, CA, USA
+
+A Critical Review of Online Social Data: Biases, Methodological
+Pitfalls, and Ethical Boundaries
+Alexandra Olteanu
+
+IBM T.J. Watson Research Center
+Yorktown Heights, NY, US
+alexandra.olteanu@ibm.com
+
+Emre Kıcıman
+
+Microsoft Research
+Redmond, WA, US.
+emrek@microsoft.com
+
+enables access to social traces at a scale and level of detail impractical with conventional data collection techniques. This access opens
+unprecedented opportunities to answer questions about society,
+policies, and health [4, 22, 35]. Yet, regardless of how large or varied
+such social data is, there are significant ethical and functional limitations to what can be discerned from it about real-world phenomena (online or offline), or even about media or application-specific
+phenomena—which have yet to be rigorously addressed [4, 31, 35].
+As the insights derived from these data are increasingly used to
+drive policies, to shape products, and for automated decision making, it is becoming imperative to understand the limitations around
+their use; overlooking them can lead to wrong or inappropriate
+results [4, 20]. This tutorial offers a comprehensive overview of a
+variety of data biases and other issues that occur when working
+with social data, organized along the data analysis pipeline.
+
+ABSTRACT
+Online social data like user-generated content, expressed or implicit
+relations among people, and behavioral traces are at the core of
+many popular web applications and platforms, driving the research
+agenda of researchers in both academia and industry. The promises
+of social data are many, including the understanding of “what the
+world thinks” about a social issue, brand, product, celebrity, or other
+entity, as well as enabling better decision-making in a variety of
+fields including public policy, healthcare, and economics. However,
+many academics and practitioners are increasingly warning against
+the naïve usage of social data. They highlight that there are biases
+and inaccuracies occurring at the source of the data, but also introduced during data processing pipeline; there are methodological
+limitations and pitfalls, as well as ethical boundaries and unexpected outcomes that are often overlooked. Such an overlook can
+lead to wrong or inappropriate results that can be consequential.
+This tutorial recognizes the rigor with which these issues are
+addressed by different researchers varies across a wide range, and
+aims to survey and categorize common classes of data biases and
+pitfalls that can occur both at the sources of social data as well as
+along the prototypical data processing pipeline.
+
+2
+
+TUTORIAL OUTLINE
+
+The tutorial is organized in 4 parts each covering a broad theme:
+Context and applications: Why and how social data is used.
+We begin the tutorial with a brief overview of various types
+of online social data (e.g., social interactions, social media posts,
+usage logs, location traces) and applications that use it to gain
+insights, to train models for various prediction or classification
+tasks, or to guide the design of tools. We then broadly overview the
+prototypical data processing and analysis pipeline, while providing
+examples of various pitfalls that may occur at different stages in
+the pipeline (e.g., data may under-represent a protected class, the
+relations extracted from the data may be spurious, the evaluation
+metrics may not reflect the application goals).
+This part concludes with an overview of common classes of
+threats to the validity of research leveraging social data [17, 34]:
+construct validity—do data measurements actually capture the construct one aims to measure? internal validity—does the analysis
+correctly leads from the measurements to conclusions? or external
+validity—are the research findings generalizable to other situations?
+
+CCS CONCEPTS
+• Human-centered computing → Collaborative and social
+computing; • Information systems → World Wide Web; Information systems applications;
+
+KEYWORDS
+Data biases; behavioral data; social media; evaluation; ethics
+ACM Reference Format:
+Alexandra Olteanu, Emre Kıcıman, and Carlos Castillo. 2018. A Critical
+Review of Online Social Data: Biases, Methodological Pitfalls, and Ethical
+Boundaries. In WSDM 2018: The Eleventh ACM International Conference on
+Web Search and Data Mining, February 5–9, 2018, Marina Del Rey, CA, USA.
+ACM, New York, NY, USA, 2 pages. https://doi.org/10.1145/3159652.3162004
+
+1
+
+Carlos Castillo
+
+Universitat Pompeu Fabra
+Barcelona, Spain
+carlos.castillo@upf.edu
+
+Issues at the Data Source or Origin: General classes of social
+data biases such as population, behavioral, or temporal biases due
+to, e.g., platform specific norms or functionalities, or data decay.
+In the second part, we scrutinize the representativeness of online
+social and behavioral data, covering major classes of social data biases such as population biases (distinct platforms are characterized
+by different demographic composition of users) [16, 24], or behavioral biases (users behave differently in different contexts) [23].
+Further, the behaviors we observe in online social platforms can
+hardly be considered as “naturally occurring” [33]. Instead, they
+are determined by platform capabilities and engineered towards
+
+CONTEXT AND MOTIVATION
+
+The proliferation of the Social Web—“a class of websites and applications in which user participation is the primary driver of value” [13],
+Permission to make digital or hard copies of part or all of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for third-party components of this work must be honored.
+For all other uses, contact the owner/author(s).
+WSDM 2018, February 5–9, 2018, Marina Del Rey, CA, USA
+© 2018 Copyright held by the owner/author(s).
+ACM ISBN 978-1-4503-5581-0/18/02.
+https://doi.org/10.1145/3159652.3162004
+
+785
+
+Tutorial
+
+WSDM’18, February 5-9, 2018, Marina Del Rey, CA, USA
+
+certain goals [11, 35]. To this end, we overview biases due to platform design and affordances (dubbed functional biases), or due to
+behavioral norms emerging on each platform (normative biases).
+This part will also cover issues such as the incidence of nonhumans (spammers, bots, organization accounts) along with “authentic” human users [4, 7]), temporal variations (e.g., the “swiss
+cheese” decay of social media datasets due to content deletions [2]),
+or content reliability (e.g., rumors). We will review both recent
+work raising concerns about what can be legitimately inferred from
+existing social datasets [31, 35], as well as research that tries to
+quantify the limits of such data [10, 14, 19, 27].
+
+[5] Raviv Cohen and Derek Ruths. Classifying political orientation on Twitter: It’s
+not easy! In Proc. of ICWSM, 2013.
+[6] Scott Counts, Munmun De Choudhury, Jana Diesner, Eric Gilbert, Marta Gonzalez,
+Brian Keegan, Mor Naaman, and Hanna Wallach. Computational social science:
+CSCW in the social media era. In Proc. of CSCW Companion, 2014.
+[7] Kate Crawford and Megan Finn. The limits of crisis data: Analytical and ethical
+challenges of using social and mobile data to understand disasters. GeoJournal,
+2014.
+[8] Fernando Diaz. Experimentation standards for crisis informatics. SIGIR Forum,
+48(2), 2014.
+[9] Fernando Diaz. Worst practices for designing production information access
+systems. In ACM SIGIR Forum, 2016.
+[10] Fernando Diaz, Michael Gamon, Jake Hofman, Emre Kıcıman, and David Rothschild. Online and social media data as an imperfect continuous panel survey.
+PlosONE, 11(1), 2016.
+[11] Tarleton Gillespie. Platforms intervene. Social Media+ Society, 1(1), 2015.
+[12] Daniel L Goroff. Balancing privacy versus accuracy in research protocols. Science,
+347, 2015.
+[13] Tom Gruber. Collective knowledge systems: Where the social web meets the
+semantic web. Web semantics: Science, services & agents on the WWW, 6(1), 2008.
+[14] Pedro Calais Guerra, Wagner Meira Jr, and Claire Cardie. Sentiment analysis on
+evolving social streams: How self-report imbalances can help. In WSDM, 2014.
+[15] Sara Hajian, Francesco Bonchi, and Carlos Castillo. Algorithmic bias: From
+discrimination discovery to fairness-aware data mining. In Proc. of KDD, 2016.
+[16] Eszter Hargittai. Whose space? differences among users and non-users of social
+network sites. Journal of Computer-Mediated Communication, 13(1), 2007.
+[17] James Howison, Andrea Wiggins, and Kevin Crowston. Validity issues in the use
+of social network analysis with digital trace data. J. of Assoc. for IS, 12(12), 2011.
+[18] Luke Hutton and Tristan Henderson. "I didn’t sign up for this!": Informed consent
+in social network research. In Proc. of ICWSM, 2015.
+[19] Emre Kıcıman. OMG, I have to tweet that! A study of factors that influence tweet
+rates. In Proc. of ICWSM, 2012.
+[20] Emre Kıcıman, Scott Counts, Michael Gamon, Munmun De Choudhury, and
+Bo Thiesson. Discussion graphs: Putting social media analysis in context. In
+Proc. of ICWSM, 2014.
+[21] Adam DI Kramer, Jamie E Guillory, and Jeffrey T Hancock. Experimental evidence
+of massive-scale emotional contagion through social networks. National Academy
+of Sciences, 111(24), 2014.
+[22] David Lazer, Alex Sandy Pentland, Lada Adamic, Sinan Aral, Albert Laszlo
+Barabasi, Devon Brewer, Nicholas Christakis, Noshir Contractor, James Fowler,
+Myron Gutmann, et al. Life in the network: the coming age of computational
+social science. Science, 323(5915), 2009.
+[23] Bang Hui Lim, Dongyuan Lu, Tao Chen, and Min-Yen Kan. # mytweet via
+Instagram: Exploring user behaviour across multiple social networks. In Proc. of
+ASONAM, 2015.
+[24] Alan Mislove, Sune Lehmnan, Yong-Yeol Ahn Ahn, Jukka-Pekka Onnela, and
+J Niels Rosenquist. Understanding the demographics of twitter users. In Proc. of
+ICWSM, 2011.
+[25] Dong Nguyen, A Seza Doğruöz, Carolyn P Rosé, and Franciska de Jong. Computational sociolinguistics: A survey. arXiv preprint arXiv:1508.07544, 2016.
+[26] Alexandra Olteanu, Carlos Castillo, Fernando Diaz, and Emre Kiciman. Social
+data: Biases, methodological pitfalls, and ethical boundaries. SSRN, 2016.
+[27] Alexandra Olteanu, Carlos Castillo, Fernando Diaz, and Sarah Vieweg. CrisisLex:
+A lexicon for collecting and filtering microblogged communications in crises. In
+Proc. of ICWSM, 2014.
+[28] Alexandra Olteanu, Kartik Talamadupula, and Kush R Varshney. The limits of
+abstract evaluation metrics: The case of hate speech detection. In WebSci, 2017.
+[29] Cathy O’Neil. Weapons of Math Destruction: How Big Data Increases Inequality
+and Threatens Democracy. Crown, 2016.
+[30] Mattias Rost, Louise Barkhuus, Henriette Cramer, and Barry Brown. Representation and communication: Challenges in interpreting large social media datasets.
+In Proc. of CSCW, 2013.
+[31] Derek Ruths and Jürgen Pfeffer. Social media for large studies of behavior. Science,
+346, 2014.
+[32] KJ Ryan, JV Brady, RE Cooke, DI Height, AR Jonsen, P King, K Lebacqz,
+DW Louisell, D Seldin, E Stellar, et al. The Belmont report: Ethical principles
+and guidelines for the protection of human subjects of research. Nat. Commission
+for the Protection of Hum. Subjects of Biomedical and Behavioral Research, 1978.
+[33] Matthew J. Salganik. Bit by Bit: Social Research in the Digital Age. Princeton
+University Press, 2017.
+[34] William M. Trochim. The research methods knowledge base, 2nd edition. October
+20, 2006.
+[35] Zeynep Tufekci. Big questions for social media big data: Representativeness,
+validity and other methodological pitfalls. In Proc. of ICWSM, 2014.
+[36] H Wallach. Big data, machine learning, and the social sciences: Fairness, accountability, and transparency. In NIPS Workshop on FAT/ML, 2014.
+[37] Michael Zimmer. "But the data is already public": on the ethics of research in
+Facebook. Ethics and information technology, 12(4), 2010.
+
+Issues Along the Data Analysis and Evaluation Pipelines: Data
+collection biases, use of opportunistic approaches, spurious associations, generalizability, disclaimers and negative results.
+The third part covers challenges related to the design of data (processing and) analysis frameworks and tools to explain or predict various phenomena, to offer services, or for performance gains [5, 31].
+In addition, we discuss existing solutions aiming at correcting or
+accounting for biased or innacurate datasets, and existing recommendations for adequately evaluate and validate methods and observations (including the need for disclaimers and standards [6, 8]),
+or to interpret results in context [28, 30].
+Ethical Boundaries: Ethical concerns regarding the usage of social
+data, such as privacy risks and algorithmic discrimination.
+In the last part, we will cover ethical caveats when leveraging
+social data such as discriminatory treatment as a result of algorithmic reinforcement of human prejudice [3], lack of explicit user
+consent [18, 37], user manipulation (see Facebook’s contagion experiment [21]), identity disclosure [7], the risk of breaching users
+privacy [12] or of racial, socioeconomic or gender-based profiling
+(and possible consequences across application domains) [3].
+The discussion about ethics is organized around three principles
+outlined in the Belmont report [32]: autonomy: experiments should
+show respect for individuals; beneficence and non-maleficence: experiments should minimize risk for research participants and maximize
+benefits for society; justice: the risks and benefits of experiments
+should be fairly distributed.
+We end the tutorial with open questions and research directions
+on identifying or mitigating the issues we covered.
+
+2.1
+
+Resources
+
+Our tutorial has a companion survey paper [26]. Other resources
+we recommend: books [29, 33], talks and tutorials [1, 9, 15, 36], and
+several overview papers [4, 25, 31, 35].
+Slides availability. The slide decks are available at the Social Data
+Limits Tutorial Series website:
+http://www.aolteanu.com/SocialDataLimitsTutorial/index.html.
+
+Acknowledgements. We thank Fernando Diaz, who helped co-organizing
+earlier versions of this tutorial.
+
+REFERENCES
+[1] Ricardo Baeza-Yates. Data and algorithmic bias in the web. In WebSci, 2016.
+[2] Mossaab Bagdouri and Douglas W Oard. On predicting deletions of microblog
+posts. In Proc. of CIKM, 2015.
+[3] Solon Barocas and Andrew D Selbst. Big data’s disparate impact. SSRN, 2014.
+[4] danah boyd and Kate Crawford. Critical questions for big data: Provocations for a
+cultural, technological, and scholarly phenomenon. Information, Communication
+& Society, 15(5), 2012.
+
+786
+
+
